@@ -1,0 +1,21 @@
+# Core Django
+Django==5.0.2
+
+# REST API framework
+djangorestframework==3.14.0
+
+# PostgreSQL driver (used with Docker + AWS RDS)
+psycopg2-binary==2.9.9
+
+# For environment variable management
+python-decouple==3.8
+
+# Optional but very useful:
+# Handles cross-origin requests (frontend <-> backend)
+django-cors-headers==4.3.1
+
+# For JWT authentication (if needed later)
+djangorestframework-simplejwt==5.3.1
+
+# For API documentation (Swagger / ReDoc UI)
+drf-yasg==1.21.7
