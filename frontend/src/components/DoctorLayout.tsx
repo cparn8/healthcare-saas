@@ -1,17 +1,22 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import TopNavbar from './TopNavbar';
 import Sidebar from './Sidebar';
+import Topbar from './TopNavbar';
+import '../styles/doctorLayout.css';
 
-const DoctorLayout: React.FC = () => {
+type DoctorLayoutProps = {
+  onLogout: () => void;
+};
+
+const DoctorLayout: React.FC<DoctorLayoutProps> = ({ onLogout }) => {
   return (
-    <div className='app-container'>
-      <TopNavbar />
-      <div className='content-container'>
+    <div className='doctor-layout'>
+      <Topbar providerName='Dr. Smith' onLogout={onLogout} />
+      <div className='layout-body'>
         <Sidebar />
-        <main className='page-content'>
-          <Outlet /> {/* renders child routes */}
-        </main>
+        <div className='layout-content'>
+          <Outlet />
+        </div>
       </div>
     </div>
   );
