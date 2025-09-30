@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
+import styles from './Topbar.module.css';
 
 type TopbarProps = {
   providerName: string;
@@ -11,45 +12,69 @@ const Topbar: React.FC<TopbarProps> = ({ providerName, onLogout }) => {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
   return (
-    <div className='top-navbar'>
-      {/* Provider dropdown */}
-      <div className='dropdown'>
-        <button
-          onClick={() => {
-            setShowProviderMenu(!showProviderMenu);
-            setShowSettingsMenu(false);
-          }}
-        >
-          {providerName} ⬇️
-        </button>
+    <div className={styles.topbar}>
+      {/* Provider Dropdown */}
+      <div
+        className={styles.dropdown}
+        onMouseEnter={() => setShowProviderMenu(true)}
+        onMouseLeave={() => setShowProviderMenu(false)}
+      >
+        <button className={styles.button}>{providerName} ⌄</button>
         {showProviderMenu && (
-          <div className='dropdown-menu'>
-            <Link to='/doctor/edit-info'>Edit Info</Link>
-            <Link to='/doctor/provider-options'>Other Option</Link>
+          <div className={styles.dropdownContent}>
+            <NavLink
+              to='/doctor/provider/edit'
+              className={({ isActive }) =>
+                isActive ? `${styles.link} ${styles.active}` : styles.link
+              }
+            >
+              Edit Info
+            </NavLink>
+            <NavLink
+              to='/doctor/provider/other'
+              className={({ isActive }) =>
+                isActive ? `${styles.link} ${styles.active}` : styles.link
+              }
+            >
+              Other Option
+            </NavLink>
           </div>
         )}
       </div>
 
-      {/* Settings dropdown */}
-      <div className='dropdown'>
-        <button
-          onClick={() => {
-            setShowSettingsMenu(!showSettingsMenu);
-            setShowProviderMenu(false);
-          }}
-        >
-          ⚙️ Settings
-        </button>
+      {/* Settings Dropdown */}
+      <div
+        className={styles.dropdown}
+        onMouseEnter={() => setShowSettingsMenu(true)}
+        onMouseLeave={() => setShowSettingsMenu(false)}
+      >
+        <button className={styles.button}>Settings ⚙</button>
         {showSettingsMenu && (
-          <div className='dropdown-menu'>
-            <Link to='/doctor/notifications'>Notifications</Link>
-            <Link to='/doctor/manage-users'>Manage Users</Link>
+          <div className={styles.dropdownContent}>
+            <NavLink
+              to='/doctor/settings/notifications'
+              className={({ isActive }) =>
+                isActive ? `${styles.link} ${styles.active}` : styles.link
+              }
+            >
+              Notifications
+            </NavLink>
+            <NavLink
+              to='/doctor/settings/users'
+              className={({ isActive }) =>
+                isActive ? `${styles.link} ${styles.active}` : styles.link
+              }
+            >
+              Users
+            </NavLink>
           </div>
         )}
       </div>
 
       {/* Logout */}
-      <button onClick={onLogout}>Logout</button>
+      <button className={styles.logout} onClick={onLogout}>
+        Logout
+      </button>
     </div>
   );
 };

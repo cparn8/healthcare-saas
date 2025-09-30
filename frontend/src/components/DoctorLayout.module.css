@@ -1,0 +1,21 @@
+.doctorLayout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #f9f9fb;
+  font-family: Arial, sans-serif;
+}
+
+/* ---------- Layout Body ---------- */
+.mainContent {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.pageContent {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+  background-color: #f9f9fb;
+}

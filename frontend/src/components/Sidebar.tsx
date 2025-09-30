@@ -1,24 +1,43 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
+import styles from './Sidebar.module.css';
 
 const Sidebar: React.FC = () => {
   return (
-    <aside className='sidebar'>
-      <ul>
-        <li>
-          <Link to='/doctor/schedule'>Schedule</Link>
-        </li>
-        <li>
-          <Link to='/doctor/tasks'>Tasks</Link>
-        </li>
-        <li>
-          <Link to='/doctor/charts'>Charts</Link>
-        </li>
-        <li>
-          <Link to='/doctor/messaging'>Messaging</Link>
-        </li>
-      </ul>
-    </aside>
+    <div className={styles.sidebar}>
+      <NavLink
+        to='/doctor/schedule'
+        className={({ isActive }) =>
+          isActive ? `${styles.link} ${styles.active}` : styles.link
+        }
+      >
+        Schedule
+      </NavLink>
+      <NavLink
+        to='/doctor/tasks'
+        className={({ isActive }) =>
+          isActive ? `${styles.link} ${styles.active}` : styles.link
+        }
+      >
+        Tasks
+      </NavLink>
+      <NavLink
+        to='/doctor/charts'
+        className={({ isActive }) =>
+          isActive ? `${styles.link} ${styles.active}` : styles.link
+        }
+      >
+        Charts
+      </NavLink>
+      <NavLink
+        to='/doctor/messaging'
+        className={({ isActive }) =>
+          isActive ? `${styles.link} ${styles.active}` : styles.link
+        }
+      >
+        Messaging
+      </NavLink>
+    </div>
   );
 };
 
