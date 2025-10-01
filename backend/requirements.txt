@@ -19,3 +19,7 @@ djangorestframework-simplejwt==5.3.1
 
 # For API documentation (Swagger / ReDoc UI)
 drf-yasg==1.21.7
+
+django-filter==23.2
+
+Pillow==10.0.0

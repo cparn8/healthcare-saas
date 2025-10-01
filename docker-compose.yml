@@ -20,10 +20,8 @@ services:
     restart: always
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_DB: healthcaredb
-      POSTGRES_USER: healthcare_user
-      POSTGRES_PASSWORD: healthcare_pass
+    env_file:
+      - ./backend/.env
 
 volumes:
   postgres_data:

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import api, { setAuthToken } from '../api';
+import API, { setAuthToken } from '../services/api';
 
 interface LoginProps {
   onLogin: (token: string) => void;
@@ -13,10 +13,17 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await api.post('/api/token/', { username, password });
-      const token = res.data.access;
-      setAuthToken(token);
-      onLogin(token);
+      //  Fixed path
+      const res = await API.post('token/', { username, password });
+
+      const access = res.data.access;
+      const refresh = res.data.refresh;
+
+      //  Store both tokens
+      setAuthToken(access);
+      localStorage.setItem('refresh', refresh);
+
+      onLogin(access);
     } catch (err) {
       setError('Invalid credentials');
     }

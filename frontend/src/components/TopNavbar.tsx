@@ -23,7 +23,7 @@ const Topbar: React.FC<TopbarProps> = ({ providerName, onLogout }) => {
         {showProviderMenu && (
           <div className={styles.dropdownContent}>
             <NavLink
-              to='/doctor/provider/edit'
+              to='edit-info'
               className={({ isActive }) =>
                 isActive ? `${styles.link} ${styles.active}` : styles.link
               }
@@ -31,7 +31,7 @@ const Topbar: React.FC<TopbarProps> = ({ providerName, onLogout }) => {
               Edit Info
             </NavLink>
             <NavLink
-              to='/doctor/provider/other'
+              to='provider-options'
               className={({ isActive }) =>
                 isActive ? `${styles.link} ${styles.active}` : styles.link
               }
@@ -52,7 +52,7 @@ const Topbar: React.FC<TopbarProps> = ({ providerName, onLogout }) => {
         {showSettingsMenu && (
           <div className={styles.dropdownContent}>
             <NavLink
-              to='/doctor/settings/notifications'
+              to='notifications'
               className={({ isActive }) =>
                 isActive ? `${styles.link} ${styles.active}` : styles.link
               }
@@ -60,7 +60,7 @@ const Topbar: React.FC<TopbarProps> = ({ providerName, onLogout }) => {
               Notifications
             </NavLink>
             <NavLink
-              to='/doctor/settings/users'
+              to='manage-users'
               className={({ isActive }) =>
                 isActive ? `${styles.link} ${styles.active}` : styles.link
               }

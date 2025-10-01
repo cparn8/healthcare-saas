@@ -4,7 +4,7 @@ const API = axios.create({
   baseURL: 'http://localhost:8000/api/',
 });
 
-// Helper to set or clear token
+// ✅ Helper function: set or clear token
 export const setAuthToken = (token: string | null) => {
   if (token) {
     localStorage.setItem('token', token);
@@ -15,7 +15,7 @@ export const setAuthToken = (token: string | null) => {
   }
 };
 
-// Attach token to every request
+// ✅ Attach token automatically to all requests
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -24,7 +24,7 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle expired tokens automatically
+// ✅ Handle expired tokens (refresh)
 API.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -40,7 +40,7 @@ API.interceptors.response.use(
           setAuthToken(newAccess);
           error.config.headers['Authorization'] = `Bearer ${newAccess}`;
           return API.request(error.config); // retry failed request
-        } catch (refreshError) {
+        } catch {
           setAuthToken(null);
           localStorage.removeItem('refresh');
           window.location.href = '/'; // force re-login

@@ -11,6 +11,10 @@ import EditInfo from './pages/EditInfo';
 import ProviderOptions from './pages/ProviderOptions';
 import Notifications from './pages/Notifications';
 import ManageUsers from './pages/ManageUsers';
+import PatientsList from './pages/PatientsList';
+import ProvidersList from './pages/ProvidersList';
+import PatientProfile from './pages/PatientProfile';
+import PatientChart from './pages/PatientChart';
 
 const App: React.FC = () => {
   const [token, setToken] = useState<string | null>(
@@ -31,19 +35,31 @@ const App: React.FC = () => {
     <BrowserRouter>
       <Routes>
         {token ? (
-          <Route element={<DoctorLayout onLogout={handleLogout} />}>
-            <Route path='/' element={<Navigate to='/doctor/schedule' />} />
-            <Route path='/doctor/schedule' element={<Schedule />} />
-            <Route path='/doctor/tasks' element={<Tasks />} />
-            <Route path='/doctor/charts' element={<Charts />} />
-            <Route path='/doctor/messaging' element={<Messaging />} />
-            <Route path='/doctor/edit-info' element={<EditInfo />} />
+          <Route
+            path='/doctor'
+            element={<DoctorLayout onLogout={handleLogout} />}
+          >
+            {/* Redirect root /doctor to /doctor/schedule */}
+            <Route index element={<Navigate to='schedule' replace />} />
+
+            {/* Sidebar pages */}
+            <Route path='schedule' element={<Schedule />} />
+            <Route path='tasks' element={<Tasks />} />
+            <Route path='charts' element={<Charts />} />
+            <Route path='messaging' element={<Messaging />} />
+
+            {/* Topbar dropdown pages */}
+            <Route path='edit-info' element={<EditInfo />} />
+            <Route path='provider-options' element={<ProviderOptions />} />
+            <Route path='notifications' element={<Notifications />} />
+            <Route path='manage-users' element={<ManageUsers />} />
+            <Route path='manage-users/patients' element={<PatientsList />} />
+            <Route path='manage-users/providers' element={<ProvidersList />} />
+            <Route path='charts/:id' element={<PatientChart />} />
             <Route
-              path='/doctor/provider-options'
-              element={<ProviderOptions />}
+              path='manage-users/patients/:id'
+              element={<PatientProfile />}
             />
-            <Route path='/doctor/notifications' element={<Notifications />} />
-            <Route path='/doctor/manage-users' element={<ManageUsers />} />
           </Route>
         ) : (
           <Route path='*' element={<Login onLogin={handleLogin} />} />
