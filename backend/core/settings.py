@@ -15,6 +15,9 @@ from pathlib import Path
 
 from decouple import config
 
+from datetime import timedelta
+from django.conf import settings
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -157,6 +160,19 @@ REST_FRAMEWORK = {
 # Media serving in dev
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=50),  # longer window for dev
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),     # refresh lasts 1 week
+    "ROTATE_REFRESH_TOKENS": True,                   # issue new refresh each time
+    "BLACKLIST_AFTER_ROTATION": True,
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": settings.SECRET_KEY,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
+}
 
 # REST_FRAMEWORK = {
 #     'DEFAULT_PERMISSION_CLASSES': [

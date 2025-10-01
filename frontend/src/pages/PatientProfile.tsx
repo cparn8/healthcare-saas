@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getPatient } from '../services/patients';
+import { getPatient, updatePatient } from '../services/patients';
 
 interface Patient {
   id: number;
@@ -18,13 +18,33 @@ interface Patient {
 const PatientProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [patient, setPatient] = useState<Patient | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [formData, setFormData] = useState<Partial<Patient>>({});
   const navigate = useNavigate();
 
   useEffect(() => {
     if (id) {
-      getPatient(parseInt(id)).then(setPatient);
+      getPatient(parseInt(id)).then((data) => {
+        setPatient(data);
+        setFormData(data);
+      });
     }
   }, [id]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSave = async () => {
+    if (id) {
+      const updated = await updatePatient(parseInt(id), formData);
+      setPatient(updated);
+      setEditMode(false);
+    }
+  };
 
   if (!patient) return <p>Loading...</p>;
 
@@ -37,37 +57,106 @@ const PatientProfile: React.FC = () => {
         ← Back to Patients
       </button>
 
-      <div className='flex items-center space-x-6 mb-6'>
-        {patient.profile_picture ? (
-          <img
-            src={patient.profile_picture}
-            alt='profile'
-            className='w-24 h-24 rounded-full'
-          />
-        ) : (
-          <div className='w-24 h-24 rounded-full bg-gray-300' />
-        )}
-        <div>
-          <h1 className='text-2xl font-bold'>
-            {patient.first_name} {patient.last_name}
-          </h1>
-          <p className='text-gray-600'>PRN: {patient.prn}</p>
-          <p>
-            DOB: {patient.dob} | Gender: {patient.gender}
-          </p>
-          <p>{patient.email}</p>
-          <p>{patient.phone}</p>
-          <p>{patient.address}</p>
-        </div>
-      </div>
+      {!editMode ? (
+        <>
+          <div className='flex items-center space-x-6 mb-6'>
+            <img
+              src={
+                patient.profile_picture
+                  ? patient.profile_picture
+                  : '/images/patient-placeholder.png'
+              }
+              alt='profile'
+              className='w-24 h-24 rounded-full'
+            />
+            <div>
+              <h1 className='text-2xl font-bold'>
+                {patient.first_name} {patient.last_name}
+              </h1>
+              <p className='text-gray-600'>PRN: {patient.prn}</p>
+              <p>
+                DOB: {patient.dob} | Gender: {patient.gender}
+              </p>
+              <p>{patient.email}</p>
+              <p>{patient.phone}</p>
+              <p>{patient.address}</p>
+            </div>
+          </div>
 
-      {/* Link to Charts */}
-      <Link
-        to={`/doctor/charts/${patient.id}`}
-        className='px-4 py-2 bg-blue-600 text-white rounded'
-      >
-        View Chart →
-      </Link>
+          <div className='space-x-4'>
+            <button
+              onClick={() => setEditMode(true)}
+              className='px-4 py-2 bg-yellow-500 text-white rounded'
+            >
+              Edit
+            </button>
+            <Link
+              to={`/doctor/charts/${patient.id}`}
+              className='px-4 py-2 bg-blue-600 text-white rounded'
+            >
+              View Chart →
+            </Link>
+          </div>
+        </>
+      ) : (
+        <div>
+          <h2 className='text-xl font-semibold mb-4'>Edit Patient Info</h2>
+          <form className='space-y-4'>
+            <input
+              name='first_name'
+              value={formData.first_name || ''}
+              onChange={handleChange}
+              placeholder='First Name'
+              className='border p-2 w-full'
+            />
+            <input
+              name='last_name'
+              value={formData.last_name || ''}
+              onChange={handleChange}
+              placeholder='Last Name'
+              className='border p-2 w-full'
+            />
+            <input
+              name='email'
+              value={formData.email || ''}
+              onChange={handleChange}
+              placeholder='Email'
+              className='border p-2 w-full'
+            />
+            <input
+              name='phone'
+              value={formData.phone || ''}
+              onChange={handleChange}
+              placeholder='Phone'
+              className='border p-2 w-full'
+            />
+            <input
+              name='address'
+              value={formData.address || ''}
+              onChange={handleChange}
+              placeholder='Address'
+              className='border p-2 w-full'
+            />
+
+            <div className='space-x-4'>
+              <button
+                type='button'
+                onClick={handleSave}
+                className='px-4 py-2 bg-green-600 text-white rounded'
+              >
+                Save
+              </button>
+              <button
+                type='button'
+                onClick={() => setEditMode(false)}
+                className='px-4 py-2 bg-gray-400 text-white rounded'
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 };

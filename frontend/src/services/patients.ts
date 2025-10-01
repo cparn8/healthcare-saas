@@ -17,7 +17,7 @@ export const createPatient = async (data: any) => {
 };
 
 export const updatePatient = async (id: number, data: any) => {
-  const res = await API.put(`patients/${id}/`, data);
+  const res = await API.patch(`patients/${id}/`, data);
   return res.data;
 };
 

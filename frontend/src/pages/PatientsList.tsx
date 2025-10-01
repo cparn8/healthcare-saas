@@ -56,15 +56,15 @@ const PatientsList: React.FC = () => {
           {patients.map((p) => (
             <tr key={p.id} className='border-b hover:bg-gray-50'>
               <td className='p-2'>
-                {p.profile_picture ? (
-                  <img
-                    src={p.profile_picture}
-                    alt='profile'
-                    className='w-10 h-10 rounded-full'
-                  />
-                ) : (
-                  <div className='w-10 h-10 bg-gray-300 rounded-full'></div>
-                )}
+                <img
+                  src={
+                    p.profile_picture
+                      ? p.profile_picture
+                      : '/images/patient-placeholder.png'
+                  }
+                  alt='profile'
+                  className='w-10 h-10 rounded-full'
+                />
               </td>
               <td
                 className='p-2 text-blue-600 cursor-pointer'
