@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { getPatients, createPatient } from '../services/patients';
 import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
-import styles from './PatientList.module.css';
+import { formatDate } from '../utils/formatDate';
 
 const PatientsList: React.FC = () => {
   const [patients, setPatients] = useState<any[]>([]);
@@ -17,6 +17,7 @@ const PatientsList: React.FC = () => {
     phone: '',
     address: '',
   });
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,7 +30,7 @@ const PatientsList: React.FC = () => {
       setPatients((prev) => [...prev, newPatient]);
       setShowForm(false);
     } catch (err: any) {
-      console.error(err.response?.data); // log backend validation errors
+      console.error(err.response?.data);
     }
   };
 
@@ -54,11 +55,11 @@ const PatientsList: React.FC = () => {
           placeholder='Search patients...'
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className='border p-2 w-1/2'
+          className='border p-2 w-1/2 rounded'
         />
         <button
           onClick={() => setShowForm(!showForm)}
-          className='px-4 py-2 bg-green-600 text-white rounded'
+          className='px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700'
         >
           + Add Patient
         </button>
@@ -75,7 +76,7 @@ const PatientsList: React.FC = () => {
               onChange={(e) =>
                 setFormData({ ...formData, first_name: e.target.value })
               }
-              className='border p-2'
+              className='border p-2 rounded'
             />
             <input
               placeholder='Last Name'
@@ -83,17 +84,16 @@ const PatientsList: React.FC = () => {
               onChange={(e) =>
                 setFormData({ ...formData, last_name: e.target.value })
               }
-              className='border p-2'
+              className='border p-2 rounded'
             />
             <input
               type='date'
               name='date_of_birth'
-              placeholder='DOB'
               value={formData.date_of_birth}
               onChange={(e) =>
                 setFormData({ ...formData, date_of_birth: e.target.value })
               }
-              className='border p-2'
+              className='border p-2 rounded'
             />
             <select
               name='gender'
@@ -101,7 +101,7 @@ const PatientsList: React.FC = () => {
               onChange={(e) =>
                 setFormData({ ...formData, gender: e.target.value })
               }
-              className='border p-2'
+              className='border p-2 rounded'
             >
               <option value=''>Select Gender</option>
               <option value='Male'>Male</option>
@@ -116,7 +116,7 @@ const PatientsList: React.FC = () => {
               onChange={(e) =>
                 setFormData({ ...formData, email: e.target.value })
               }
-              className='border p-2 col-span-2'
+              className='border p-2 rounded col-span-2'
             />
             <input
               placeholder='Phone'
@@ -124,7 +124,7 @@ const PatientsList: React.FC = () => {
               onChange={(e) =>
                 setFormData({ ...formData, phone: e.target.value })
               }
-              className='border p-2'
+              className='border p-2 rounded'
             />
             <input
               placeholder='Address'
@@ -132,19 +132,19 @@ const PatientsList: React.FC = () => {
               onChange={(e) =>
                 setFormData({ ...formData, address: e.target.value })
               }
-              className='border p-2 col-span-2'
+              className='border p-2 rounded col-span-2'
             />
           </div>
           <div className='mt-2 flex space-x-2'>
             <button
               onClick={handleAddPatient}
-              className='px-4 py-2 bg-blue-600 text-white rounded'
+              className='px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700'
             >
               Save
             </button>
             <button
               onClick={() => setShowForm(false)}
-              className='px-4 py-2 bg-gray-400 text-white rounded'
+              className='px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500'
             >
               Cancel
             </button>
@@ -153,7 +153,7 @@ const PatientsList: React.FC = () => {
       )}
 
       {/* Patient Table */}
-      <table className='w-full border'>
+      <table className='w-full border rounded'>
         <thead>
           <tr className='bg-gray-100'>
             <th className='p-2'>Photo</th>
@@ -171,7 +171,7 @@ const PatientsList: React.FC = () => {
                 <img
                   src='/images/patient-placeholder.png'
                   alt='profile'
-                  className={styles.patientphoto}
+                  className='w-10 h-10 rounded-full object-cover'
                 />
               </td>
               <td
@@ -193,7 +193,7 @@ const PatientsList: React.FC = () => {
                 {p.last_name}
               </td>
               <td className='p-2'>
-                {p.date_of_birth}
+                {formatDate(p.date_of_birth)}
                 <br />
                 <small className='text-sm text-gray-500'>{p.gender}</small>
               </td>
@@ -204,16 +204,36 @@ const PatientsList: React.FC = () => {
                 <br />
                 <small className='text-sm text-gray-500'>{p.address}</small>
               </td>
-              <td>
-                <div className={styles.ellipsisMenu}>
+              <td className='relative p-2'>
+                {/* Ellipsis Menu */}
+                <button
+                  onClick={() =>
+                    setOpenMenuId(openMenuId === p.id ? null : p.id)
+                  }
+                  className='px-2 py-1 rounded hover:bg-gray-200'
+                >
                   ⋮
-                  <div className={styles.menu}>
-                    <button onClick={() => console.log('Edit patient')}>
+                </button>
+                {openMenuId === p.id && (
+                  <div className='absolute right-0 mt-2 w-28 bg-white border border-gray-200 rounded shadow-md z-10'>
+                    <button
+                      onClick={() =>
+                        navigate(
+                          `/doctor/manage-users/patients/${p.id}?edit=true`
+                        )
+                      }
+                      className='block w-full text-left px-4 py-2 hover:bg-gray-100'
+                    >
                       Edit
                     </button>
-                    <button onClick={() => handleDelete(p.id)}>Delete</button>
+                    <button
+                      onClick={() => handleDelete(p.id)}
+                      className='block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600'
+                    >
+                      Delete
+                    </button>
                   </div>
-                </div>
+                )}
               </td>
             </tr>
           ))}

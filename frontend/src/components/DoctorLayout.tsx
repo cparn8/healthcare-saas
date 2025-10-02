@@ -2,7 +2,6 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './TopNavbar';
-import styles from './DoctorLayout.module.css';
 
 type DoctorLayoutProps = {
   onLogout: () => void;
@@ -10,11 +9,17 @@ type DoctorLayoutProps = {
 
 const DoctorLayout: React.FC<DoctorLayoutProps> = ({ onLogout }) => {
   return (
-    <div className={styles.doctorLayout}>
+    <div className='flex flex-col h-screen bg-gray-50 font-sans'>
+      {/* Top navigation bar */}
       <Topbar providerName='Dr. Smith' onLogout={onLogout} />
-      <div className={styles.mainContent}>
+
+      {/* Main content area */}
+      <div className='flex flex-1 overflow-hidden'>
+        {/* Sidebar navigation */}
         <Sidebar />
-        <div className={styles.pageContent}>
+
+        {/* Page content */}
+        <div className='flex-1 p-4 overflow-y-auto bg-gray-50'>
           <Outlet />
         </div>
       </div>

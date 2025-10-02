@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import styles from './Topbar.module.css';
 
 type TopbarProps = {
   providerName: string;
@@ -12,28 +11,36 @@ const Topbar: React.FC<TopbarProps> = ({ providerName, onLogout }) => {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
   return (
-    <div className={styles.topbar}>
+    <div className='flex justify-end items-center bg-white border-b border-gray-300 px-4 py-2'>
       {/* Provider Dropdown */}
-      <div
-        className={styles.dropdown}
-        onMouseEnter={() => setShowProviderMenu(true)}
-        onMouseLeave={() => setShowProviderMenu(false)}
-      >
-        <button className={styles.button}>{providerName} ⌄</button>
+      <div className='relative mr-4'>
+        <button
+          onClick={() => {
+            setShowProviderMenu(!showProviderMenu);
+            setShowSettingsMenu(false); // close other menu
+          }}
+          className='px-3 py-2 text-gray-700 hover:text-blue-600'
+        >
+          {providerName} ⌄
+        </button>
         {showProviderMenu && (
-          <div className={styles.dropdownContent}>
+          <div className='absolute top-10 right-0 bg-white border border-gray-300 shadow-md rounded w-40'>
             <NavLink
-              to='edit-info'
+              to='/doctor/edit-info'
               className={({ isActive }) =>
-                isActive ? `${styles.link} ${styles.active}` : styles.link
+                `block px-4 py-2 hover:bg-blue-50 ${
+                  isActive ? 'font-bold text-blue-700 bg-blue-50' : ''
+                }`
               }
             >
               Edit Info
             </NavLink>
             <NavLink
-              to='provider-options'
+              to='/doctor/provider-options'
               className={({ isActive }) =>
-                isActive ? `${styles.link} ${styles.active}` : styles.link
+                `block px-4 py-2 hover:bg-blue-50 ${
+                  isActive ? 'font-bold text-blue-700 bg-blue-50' : ''
+                }`
               }
             >
               Other Option
@@ -43,26 +50,34 @@ const Topbar: React.FC<TopbarProps> = ({ providerName, onLogout }) => {
       </div>
 
       {/* Settings Dropdown */}
-      <div
-        className={styles.dropdown}
-        onMouseEnter={() => setShowSettingsMenu(true)}
-        onMouseLeave={() => setShowSettingsMenu(false)}
-      >
-        <button className={styles.button}>Settings ⚙</button>
+      <div className='relative mr-4'>
+        <button
+          onClick={() => {
+            setShowSettingsMenu(!showSettingsMenu);
+            setShowProviderMenu(false); // close other menu
+          }}
+          className='px-3 py-2 text-gray-700 hover:text-blue-600'
+        >
+          ⚙️ Settings
+        </button>
         {showSettingsMenu && (
-          <div className={styles.dropdownContent}>
+          <div className='absolute top-10 right-0 bg-white border border-gray-300 shadow-md rounded w-40'>
             <NavLink
-              to='notifications'
+              to='/doctor/notifications'
               className={({ isActive }) =>
-                isActive ? `${styles.link} ${styles.active}` : styles.link
+                `block px-4 py-2 hover:bg-blue-50 ${
+                  isActive ? 'font-bold text-blue-700 bg-blue-50' : ''
+                }`
               }
             >
               Notifications
             </NavLink>
             <NavLink
-              to='manage-users'
+              to='/doctor/manage-users'
               className={({ isActive }) =>
-                isActive ? `${styles.link} ${styles.active}` : styles.link
+                `block px-4 py-2 hover:bg-blue-50 ${
+                  isActive ? 'font-bold text-blue-700 bg-blue-50' : ''
+                }`
               }
             >
               Users
@@ -71,8 +86,11 @@ const Topbar: React.FC<TopbarProps> = ({ providerName, onLogout }) => {
         )}
       </div>
 
-      {/* Logout */}
-      <button className={styles.logout} onClick={onLogout}>
+      {/* Logout Button */}
+      <button
+        onClick={onLogout}
+        className='bg-red-500 text-white px-3 py-2 rounded hover:bg-red-600'
+      >
         Logout
       </button>
     </div>
