@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getPatient, updatePatient } from '../services/patients';
+import styles from './PatientProfile.module.css';
 
 interface Patient {
   id: number;
   first_name: string;
   last_name: string;
   prn: string;
-  dob: string;
+  date_of_birth: string;
   gender: string;
   email: string;
   phone: string;
@@ -31,7 +32,9 @@ const PatientProfile: React.FC = () => {
     }
   }, [id]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -67,7 +70,7 @@ const PatientProfile: React.FC = () => {
                   : '/images/patient-placeholder.png'
               }
               alt='profile'
-              className='w-24 h-24 rounded-full'
+              className={styles.patientphoto}
             />
             <div>
               <h1 className='text-2xl font-bold'>
@@ -75,7 +78,7 @@ const PatientProfile: React.FC = () => {
               </h1>
               <p className='text-gray-600'>PRN: {patient.prn}</p>
               <p>
-                DOB: {patient.dob} | Gender: {patient.gender}
+                DOB: {patient.date_of_birth} | Gender: {patient.gender}
               </p>
               <p>{patient.email}</p>
               <p>{patient.phone}</p>
@@ -116,6 +119,27 @@ const PatientProfile: React.FC = () => {
               placeholder='Last Name'
               className='border p-2 w-full'
             />
+            <input
+              type='date'
+              name='date_of_birth'
+              value={formData.date_of_birth || ''}
+              onChange={handleChange}
+              className='border p-2 w-full'
+            />
+
+            <select
+              name='gender'
+              value={formData.gender || ''}
+              onChange={handleChange}
+              className='border p-2 w-full'
+            >
+              <option value=''>Select Gender</option>
+              <option value='Male'>Male</option>
+              <option value='Female'>Female</option>
+              <option value='Nonbinary'>Nonbinary</option>
+              <option value='Other'>Other</option>
+              <option value='Prefer not to say'>Prefer not to say</option>
+            </select>
             <input
               name='email'
               value={formData.email || ''}
