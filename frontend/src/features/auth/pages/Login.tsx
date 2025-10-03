@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import API, { setAuthToken } from '../services/api';
+import API, { setAuthToken } from '../../../services/api';
 
 interface LoginProps {
   onLogin: (token: string) => void;

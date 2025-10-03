@@ -1,20 +1,27 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useState } from 'react';
-import Login from './components/Login';
-import DoctorLayout from './components/DoctorLayout';
 
-import Schedule from './pages/Schedule';
-import Tasks from './pages/Tasks';
-import Charts from './pages/Charts';
-import Messaging from './pages/Messaging';
-import EditInfo from './pages/EditInfo';
-import ProviderOptions from './pages/ProviderOptions';
-import Notifications from './pages/Notifications';
-import ManageUsers from './pages/ManageUsers';
-import PatientsList from './pages/PatientsList';
-import ProvidersList from './pages/ProvidersList';
-import PatientProfile from './pages/PatientProfile';
-import PatientChart from './pages/PatientChart';
+import Login from '../features/auth/pages/Login';
+import DoctorLayout from '../components/layout/DoctorLayout';
+
+import Schedule from '../features/appointments/pages/Schedule';
+// import BookAppointment from '../features/appointments/pages/BookAppointment';
+
+import Charts from '../features/charts/pages/Charts';
+import PatientChart from '../features/charts/pages/PatientChart';
+
+import Messaging from '../features/messaging/pages/Messaging';
+
+import PatientsList from '../features/patients/pages/PatientsList';
+import PatientProfile from '../features/patients/pages/PatientProfile';
+
+import ProvidersList from '../features/providers/pages/ProvidersList';
+import EditInfo from '../features/providers/pages/EditInfo';
+import ProviderOptions from '../features/providers/pages/ProviderOptions';
+import ManageUsers from '../features/providers/pages/ManageUsers';
+import Notifications from '../features/providers/pages/Notifications';
+
+import Tasks from '../features/tasks/pages/Tasks';
 
 const App: React.FC = () => {
   const [token, setToken] = useState<string | null>(

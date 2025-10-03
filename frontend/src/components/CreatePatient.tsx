@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import api from '../api';
+import api from '../services/api';
 
 const CreatePatient: React.FC = () => {
   const [name, setName] = useState('');
