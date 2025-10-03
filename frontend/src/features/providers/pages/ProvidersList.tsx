@@ -1,88 +1,118 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import API from '../../../services/api';
+import { formatDate } from '../../../utils/date';
+import Skeleton from '../../../components/Skeleton';
+import Dropdown from '../../../components/ui/Dropdown';
 
 interface Provider {
   id: number;
   first_name: string;
   last_name: string;
   email: string;
-  specialty: string;
-  phone?: string | null;
-  profile_picture?: string | null;
+  phone: string;
+  specialty?: string;
+  profile_picture?: string;
 }
 
 const ProvidersList: React.FC = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
-  const [search, setSearch] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchProviders();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setLoading(true);
+    API.get('/providers/')
+      .then((res) => setProviders(res.data))
+      .finally(() => setLoading(false));
   }, []);
 
-  const fetchProviders = async () => {
+  const handleDelete = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this provider?'))
+      return;
+    setDeletingId(id);
     try {
-      const response = await axios.get<Provider[]>(
-        `/api/providers/?search=${encodeURIComponent(search)}`
-      );
-      setProviders(response.data);
-    } catch (error) {
-      // Keep error as unknown and log
-      // eslint-disable-next-line no-console
-      console.error('Error fetching providers', error);
+      await API.delete(`/providers/${id}/`);
+      setProviders((prev) => prev.filter((p) => p.id !== id));
+    } finally {
+      setDeletingId(null);
     }
   };
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value);
-  };
+  if (loading) {
+    return (
+      <div className='p-6'>
+        <Skeleton className='h-6 w-40 mb-4' />
+        <Skeleton className='h-10 w-full mb-2' />
+        <Skeleton className='h-10 w-full mb-2' />
+      </div>
+    );
+  }
 
   return (
     <div className='p-6'>
-      <h1 className='text-2xl font-bold mb-4'>Providers</h1>
-
-      <input
-        type='text'
-        placeholder='Search providers...'
-        value={search}
-        onChange={handleSearchChange}
-        className='border rounded px-4 py-2 mb-4 w-full'
-      />
-
-      <table className='min-w-full bg-white border border-gray-300 shadow-md rounded'>
+      <h1 className='text-xl font-bold mb-4'>Providers</h1>
+      <table className='w-full border'>
         <thead>
-          <tr>
-            <th className='px-4 py-2 border'>Picture</th>
-            <th className='px-4 py-2 border'>Name</th>
-            <th className='px-4 py-2 border'>Specialty</th>
-            <th className='px-4 py-2 border'>Email</th>
-            <th className='px-4 py-2 border'>Phone</th>
-            <th className='px-4 py-2 border'>Actions</th>
+          <tr className='bg-gray-100'>
+            <th className='p-2'>Photo</th>
+            <th className='p-2'>Name</th>
+            <th className='p-2'>Specialty</th>
+            <th className='p-2'>Contact</th>
+            <th className='p-2'>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {providers.map((provider) => (
-            <tr key={provider.id}>
-              <td className='px-4 py-2 border'>
+          {providers.map((p) => (
+            <tr key={p.id} className='border-t'>
+              <td className='p-2'>
                 <img
-                  src={provider.profile_picture || '/default-avatar.png'}
+                  src={p.profile_picture || '/images/provider-placeholder.png'}
                   alt='profile'
-                  className='w-10 h-10 rounded-full'
+                  className='w-10 h-10 rounded-full object-cover'
                 />
               </td>
-              <td className='px-4 py-2 border'>
-                {provider.first_name} {provider.last_name}
+              <td
+                className='p-2 text-blue-600 cursor-pointer'
+                onClick={() =>
+                  navigate(`/doctor/manage-users/providers/${p.id}`)
+                }
+              >
+                {p.first_name} {p.last_name}
               </td>
-              <td className='px-4 py-2 border'>{provider.specialty}</td>
-              <td className='px-4 py-2 border'>{provider.email}</td>
-              <td className='px-4 py-2 border'>{provider.phone ?? ''}</td>
-              <td className='px-4 py-2 border'>
-                <button className='px-2 py-1 bg-blue-500 text-white rounded mr-2'>
-                  Edit
-                </button>
-                <button className='px-2 py-1 bg-red-500 text-white rounded'>
-                  Delete
-                </button>
+              <td className='p-2'>{p.specialty || '—'}</td>
+              <td className='p-2'>
+                {p.phone}
+                <br />
+                <small className='text-gray-500'>{p.email}</small>
+              </td>
+              <td className='p-2'>
+                <Dropdown
+                  trigger={({ toggle }) => (
+                    <button onClick={toggle} className='px-2'>
+                      ⋮
+                    </button>
+                  )}
+                >
+                  <button
+                    onClick={() =>
+                      navigate(
+                        `/doctor/manage-users/providers/${p.id}?edit=true`
+                      )
+                    }
+                    className='block w-full text-left px-4 py-2 hover:bg-gray-100'
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(p.id)}
+                    disabled={deletingId === p.id}
+                    className='block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600'
+                  >
+                    {deletingId === p.id ? 'Deleting…' : 'Delete'}
+                  </button>
+                </Dropdown>
               </td>
             </tr>
           ))}

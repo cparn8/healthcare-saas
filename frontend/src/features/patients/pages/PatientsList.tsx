@@ -1,22 +1,19 @@
 import { useState, useEffect } from 'react';
+import {
+  getPatients,
+  createPatient,
+} from '../../../features/patients/services/patients';
 import { useNavigate } from 'react-router-dom';
-
-import { getPatients, createPatient } from '../services/patients';
-import API from '../../../services/api'; // global api
+import API from '../../../services/api';
 import { formatDate } from '../../../utils/date';
+import FormField from '../../../components/ui/FormField';
+import { normalizeDRFErrors } from '../../../utils/apiErrors';
+import Dropdown from '../../../components/ui/Dropdown';
 
 const PatientsList: React.FC = () => {
   const [patients, setPatients] = useState<any[]>([]);
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [successMsg, setSuccessMsg] = useState('');
-  const [generalError, setGeneralError] = useState('');
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
-
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -26,43 +23,18 @@ const PatientsList: React.FC = () => {
     phone: '',
     address: '',
   });
-
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (!(event.target as HTMLElement).closest('.relative.inline-block')) {
-        setOpenMenuId(null);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    setLoading(true);
-    getPatients(search)
-      .then((data) => {
-        setPatients(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setGeneralError('Failed to load patients.');
-        setLoading(false);
-      });
+    getPatients(search).then(setPatients);
   }, [search]);
 
   const handleAddPatient = async () => {
-    setSaving(true);
-    setFormErrors({});
-    setGeneralError('');
-    setSuccessMsg('');
-
     try {
       const newPatient = await createPatient(formData);
       setPatients((prev) => [...prev, newPatient]);
-      setShowForm(false);
-      setSuccessMsg('Patient added successfully!');
       setFormData({
         first_name: '',
         last_name: '',
@@ -72,18 +44,10 @@ const PatientsList: React.FC = () => {
         phone: '',
         address: '',
       });
+      setErrors({});
+      setShowForm(false);
     } catch (err: any) {
-      if (err.response?.status === 400 && err.response.data) {
-        const backendErrors: Record<string, string> = {};
-        for (const key in err.response.data) {
-          backendErrors[key] = err.response.data[key][0];
-        }
-        setFormErrors(backendErrors);
-      } else {
-        setGeneralError('Something went wrong. Please try again.');
-      }
-    } finally {
-      setSaving(false);
+      setErrors(normalizeDRFErrors(err.response?.data));
     }
   };
 
@@ -91,8 +55,8 @@ const PatientsList: React.FC = () => {
     if (!window.confirm('Are you sure you want to delete this patient?'))
       return;
 
-    setDeletingId(id);
     try {
+      setDeletingId(id);
       await API.delete(`/patients/${id}/`);
       setPatients((prev) => prev.filter((p) => p.id !== id));
     } catch (error) {
@@ -104,18 +68,6 @@ const PatientsList: React.FC = () => {
 
   return (
     <div className='p-6'>
-      {/* Alerts */}
-      {generalError && (
-        <div className='bg-red-100 text-red-700 p-2 rounded mb-2'>
-          {generalError}
-        </div>
-      )}
-      {successMsg && (
-        <div className='bg-green-100 text-green-700 p-2 rounded mb-2'>
-          {successMsg}
-        </div>
-      )}
-
       {/* Search + Add button */}
       <div className='flex justify-between mb-4'>
         <input
@@ -123,7 +75,7 @@ const PatientsList: React.FC = () => {
           placeholder='Search patients...'
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className='border p-2 w-1/2'
+          className='border p-2 w-1/2 rounded'
         />
         <button
           onClick={() => setShowForm(!showForm)}
@@ -138,59 +90,41 @@ const PatientsList: React.FC = () => {
         <div className='mb-4 p-4 border rounded bg-gray-50'>
           <h3 className='font-semibold mb-2'>New Patient</h3>
           <div className='grid grid-cols-2 gap-2'>
-            <input
-              placeholder='First Name'
+            <FormField
+              type='text'
+              label='First Name'
               value={formData.first_name}
-              onChange={(e) =>
+              error={errors.first_name}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setFormData({ ...formData, first_name: e.target.value })
               }
-              className={`border p-2 ${
-                formErrors.first_name ? 'border-red-500' : ''
-              }`}
             />
-            {formErrors.first_name && (
-              <p className='text-red-500 text-sm'>{formErrors.first_name}</p>
-            )}
-
-            <input
-              placeholder='Last Name'
+            <FormField
+              type='text'
+              label='Last Name'
               value={formData.last_name}
-              onChange={(e) =>
+              error={errors.last_name}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setFormData({ ...formData, last_name: e.target.value })
               }
-              className={`border p-2 ${
-                formErrors.last_name ? 'border-red-500' : ''
-              }`}
             />
-            {formErrors.last_name && (
-              <p className='text-red-500 text-sm'>{formErrors.last_name}</p>
-            )}
-
-            <input
+            <FormField
               type='date'
-              name='date_of_birth'
-              placeholder='DOB'
+              label='Date of Birth'
               value={formData.date_of_birth}
-              onChange={(e) =>
+              error={errors.date_of_birth}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setFormData({ ...formData, date_of_birth: e.target.value })
               }
-              className={`border p-2 ${
-                formErrors.date_of_birth ? 'border-red-500' : ''
-              }`}
             />
-            {formErrors.date_of_birth && (
-              <p className='text-red-500 text-sm'>{formErrors.date_of_birth}</p>
-            )}
-
-            <select
-              name='gender'
+            <FormField
+              as='select'
+              label='Gender'
               value={formData.gender}
-              onChange={(e) =>
+              error={errors.gender}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                 setFormData({ ...formData, gender: e.target.value })
               }
-              className={`border p-2 ${
-                formErrors.gender ? 'border-red-500' : ''
-              }`}
             >
               <option value=''>Select Gender</option>
               <option value='Male'>Male</option>
@@ -198,62 +132,43 @@ const PatientsList: React.FC = () => {
               <option value='Nonbinary'>Nonbinary</option>
               <option value='Other'>Other</option>
               <option value='Prefer not to say'>Prefer not to say</option>
-            </select>
-            {formErrors.gender && (
-              <p className='text-red-500 text-sm'>{formErrors.gender}</p>
-            )}
-
-            <input
-              placeholder='Email'
+            </FormField>
+            <FormField
+              type='email'
+              label='Email'
               value={formData.email}
-              onChange={(e) =>
+              error={errors.email}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setFormData({ ...formData, email: e.target.value })
               }
-              className={`border p-2 col-span-2 ${
-                formErrors.email ? 'border-red-500' : ''
-              }`}
+              className='col-span-2'
             />
-            {formErrors.email && (
-              <p className='text-red-500 text-sm'>{formErrors.email}</p>
-            )}
-
-            <input
-              placeholder='Phone'
+            <FormField
+              type='text'
+              label='Phone'
               value={formData.phone}
-              onChange={(e) =>
+              error={errors.phone}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setFormData({ ...formData, phone: e.target.value })
               }
-              className={`border p-2 ${
-                formErrors.phone ? 'border-red-500' : ''
-              }`}
             />
-            {formErrors.phone && (
-              <p className='text-red-500 text-sm'>{formErrors.phone}</p>
-            )}
-
-            <input
-              placeholder='Address'
+            <FormField
+              type='text'
+              label='Address'
               value={formData.address}
-              onChange={(e) =>
+              error={errors.address}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setFormData({ ...formData, address: e.target.value })
               }
-              className={`border p-2 col-span-2 ${
-                formErrors.address ? 'border-red-500' : ''
-              }`}
+              className='col-span-2'
             />
-            {formErrors.address && (
-              <p className='text-red-500 text-sm'>{formErrors.address}</p>
-            )}
           </div>
           <div className='mt-2 flex space-x-2'>
             <button
               onClick={handleAddPatient}
-              disabled={saving}
-              className={`px-4 py-2 text-white rounded ${
-                saving ? 'bg-gray-400' : 'bg-blue-600'
-              }`}
+              className='px-4 py-2 bg-blue-600 text-white rounded'
             >
-              {saving ? 'Saving…' : 'Save'}
+              Save
             </button>
             <button
               onClick={() => setShowForm(false)}
@@ -266,114 +181,91 @@ const PatientsList: React.FC = () => {
       )}
 
       {/* Patient Table */}
-      {loading ? (
-        <div className='animate-pulse space-y-4'>
-          <div className='h-6 bg-gray-300 rounded w-1/3'></div>
-          <div className='h-6 bg-gray-200 rounded w-2/3'></div>
-          <div className='h-6 bg-gray-200 rounded w-1/2'></div>
-        </div>
-      ) : (
-        <table className='w-full border'>
-          <thead>
-            <tr className='bg-gray-100'>
-              <th className='p-2'>Photo</th>
-              <th className='p-2'>First Name</th>
-              <th className='p-2'>Last Name</th>
-              <th className='p-2'>DOB</th>
-              <th className='p-2'>Contact</th>
-              <th className='p-2'>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {patients.map((p) => (
-              <tr key={p.id} className='border-t'>
-                <td className='p-2'>
-                  <img
-                    src='/images/patient-placeholder.png'
-                    alt='profile'
-                    className='w-10 h-10 rounded-full object-cover'
-                  />
-                </td>
-                <td
-                  className='p-2 text-blue-600 cursor-pointer'
-                  onClick={() =>
-                    navigate(`/doctor/manage-users/patients/${p.id}`)
-                  }
-                >
-                  {p.first_name}
-                  <br />
-                  <small className='text-sm text-gray-500'>PRN {p.prn}</small>
-                </td>
-                <td
-                  className='p-2 text-blue-600 cursor-pointer'
-                  onClick={() =>
-                    navigate(`/doctor/manage-users/patients/${p.id}`)
-                  }
-                >
-                  {p.last_name}
-                </td>
-                <td className='p-2'>
-                  {formatDate(p.date_of_birth)}
-                  <br />
-                  <small className='text-sm text-gray-500'>{p.gender}</small>
-                </td>
-                <td className='p-2'>
-                  {p.phone}
-                  <br />
-                  <small className='text-sm text-gray-500'>{p.email}</small>
-                  <br />
-                  <small className='text-sm text-gray-500'>{p.address}</small>
-                </td>
-
-                <td className='p-2'>
-                  <div className='relative inline-block'>
-                    {/* Toggle Button */}
+      <table className='w-full border'>
+        <thead>
+          <tr className='bg-gray-100'>
+            <th className='p-2'>Photo</th>
+            <th className='p-2'>First Name</th>
+            <th className='p-2'>Last Name</th>
+            <th className='p-2'>DOB</th>
+            <th className='p-2'>Contact</th>
+            <th className='p-2'>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {patients.map((p) => (
+            <tr key={p.id} className='border-t'>
+              <td className='p-2'>
+                <img
+                  src='/images/patient-placeholder.png'
+                  alt='profile'
+                  className='w-10 h-10 rounded-full object-cover'
+                />
+              </td>
+              <td
+                className='p-2 text-blue-600 cursor-pointer'
+                onClick={() =>
+                  navigate(`/doctor/manage-users/patients/${p.id}`)
+                }
+              >
+                {p.first_name}
+                <br />
+                <small className='text-sm text-gray-500'>PRN {p.prn}</small>
+              </td>
+              <td
+                className='p-2 text-blue-600 cursor-pointer'
+                onClick={() =>
+                  navigate(`/doctor/manage-users/patients/${p.id}`)
+                }
+              >
+                {p.last_name}
+              </td>
+              <td className='p-2'>
+                {formatDate(p.date_of_birth)}
+                <br />
+                <small className='text-sm text-gray-500'>{p.gender}</small>
+              </td>
+              <td className='p-2'>
+                {p.phone}
+                <br />
+                <small className='text-sm text-gray-500'>{p.email}</small>
+                <br />
+                <small className='text-sm text-gray-500'>{p.address}</small>
+              </td>
+              <td className='p-2'>
+                <Dropdown
+                  trigger={({ toggle }) => (
                     <button
-                      onClick={() =>
-                        setOpenMenuId(openMenuId === p.id ? null : p.id)
-                      }
-                      className='px-2'
+                      onClick={toggle}
+                      className='px-2 text-gray-600 hover:text-black'
                     >
                       ⋮
                     </button>
-
-                    {/* Dropdown Menu */}
-                    {openMenuId === p.id && (
-                      <div className='absolute right-0 mt-2 w-28 bg-white border rounded shadow-lg z-10'>
-                        <button
-                          onClick={() => {
-                            setOpenMenuId(null);
-                            navigate(
-                              `/doctor/manage-users/patients/${p.id}?edit=true`
-                            );
-                          }}
-                          className='block w-full text-left px-4 py-2 hover:bg-gray-100'
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => {
-                            setOpenMenuId(null);
-                            handleDelete(p.id);
-                          }}
-                          disabled={deletingId === p.id}
-                          className={`block w-full text-left px-4 py-2 hover:bg-gray-100 ${
-                            deletingId === p.id
-                              ? 'text-gray-400 cursor-not-allowed'
-                              : 'text-red-600'
-                          }`}
-                        >
-                          {deletingId === p.id ? 'Deleting…' : 'Delete'}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+                  )}
+                >
+                  <button
+                    onClick={() =>
+                      navigate(
+                        `/doctor/manage-users/patients/${p.id}?edit=true`
+                      )
+                    }
+                    className='block w-full text-left px-4 py-2 hover:bg-gray-100'
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(p.id)}
+                    disabled={deletingId === p.id}
+                    className='block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600'
+                  >
+                    {deletingId === p.id ? 'Deleting…' : 'Delete'}
+                  </button>
+                </Dropdown>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 };
