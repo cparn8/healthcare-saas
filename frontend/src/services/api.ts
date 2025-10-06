@@ -4,51 +4,62 @@ const API = axios.create({
   baseURL: 'http://localhost:8000/api/',
 });
 
-// ✅ Helper function: set or clear token
+// --- Token helpers --------------------------------------------------
 export const setAuthToken = (token: string | null) => {
   if (token) {
-    localStorage.setItem('token', token);
     API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
   } else {
-    localStorage.removeItem('token');
     delete API.defaults.headers.common['Authorization'];
   }
 };
 
-// ✅ Attach token automatically to all requests
-API.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// Automatically load token on start
+const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+if (token) setAuthToken(token);
 
-// ✅ Handle expired tokens (refresh)
+// --- Auto-refresh interceptor --------------------------------------
 API.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
-      const refresh = localStorage.getItem('refresh');
+    const originalRequest = error.config;
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      const refresh =
+        localStorage.getItem('refresh') || sessionStorage.getItem('refresh');
       if (refresh) {
         try {
           const res = await axios.post(
-            'http://localhost:8000/api/token/refresh/',
+            'http://localhost:8000/api/auth/refresh/',
             { refresh }
           );
           const newAccess = res.data.access;
+
+          // Persist new access token
+          if (localStorage.getItem('token'))
+            localStorage.setItem('token', newAccess);
+          else sessionStorage.setItem('token', newAccess);
+
           setAuthToken(newAccess);
-          error.config.headers['Authorization'] = `Bearer ${newAccess}`;
-          return API.request(error.config); // retry failed request
+          originalRequest.headers['Authorization'] = `Bearer ${newAccess}`;
+          return API(originalRequest);
         } catch {
-          setAuthToken(null);
-          localStorage.removeItem('refresh');
-          window.location.href = '/'; // force re-login
+          handleLogout();
         }
+      } else {
+        handleLogout();
       }
     }
     return Promise.reject(error);
   }
 );
+
+// --- Logout helper -------------------------------------------------
+export const handleLogout = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('refresh');
+  sessionStorage.removeItem('token');
+  sessionStorage.removeItem('refresh');
+  window.location.href = '/login';
+};
 
 export default API;

@@ -5,6 +5,7 @@ import Skeleton from '../../../components/Skeleton';
 import FormField from '../../../components/ui/FormField';
 import ProfileHeader from '../../../components/ui/ProfileHeader';
 import { normalizeDRFErrors } from '../../../utils/apiErrors';
+import { validateProvider, ProviderPayload } from '../../../utils/validation';
 
 interface Provider {
   id: number;
@@ -24,12 +25,21 @@ const ProviderProfile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: '',
+    new_password: '',
+    confirm_password: '',
+  });
+  const [passwordMessage, setPasswordMessage] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const navigate = useNavigate();
 
+  // Enable edit mode if ?edit=true
   useEffect(() => {
     if (searchParams.get('edit') === 'true') setEditMode(true);
   }, [searchParams]);
 
+  // Fetch provider data
   useEffect(() => {
     if (id) {
       setLoading(true);
@@ -42,20 +52,62 @@ const ProviderProfile: React.FC = () => {
     }
   }, [id]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSave = async () => {
     if (!id) return;
+
+    const validationErrors = validateProvider(formData as ProviderPayload);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
     try {
       const res = await API.put(`/providers/${id}/`, formData);
       setProvider(res.data);
       setEditMode(false);
+      setErrors({});
       navigate(`/doctor/manage-users/providers/${id}`);
     } catch (err: any) {
       if (err.response?.data) {
         setErrors(normalizeDRFErrors(err.response.data));
+      }
+    }
+  };
+
+  const handlePasswordChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    setPasswordForm({ ...passwordForm, [e.target.name]: e.target.value });
+  };
+
+  const handlePasswordUpdate = async () => {
+    setPasswordError('');
+    setPasswordMessage('');
+
+    try {
+      const res = await API.post('/auth/change-password/', passwordForm);
+      setPasswordMessage(res.data.detail || 'Password updated successfully!');
+      setPasswordForm({
+        current_password: '',
+        new_password: '',
+        confirm_password: '',
+      });
+    } catch (err: any) {
+      if (err.response?.data) {
+        const data = err.response.data;
+        const errorText =
+          typeof data === 'string'
+            ? data
+            : Object.values(data).flat().join(' ');
+        setPasswordError(errorText);
+      } else {
+        setPasswordError('An unexpected error occurred.');
       }
     }
   };
@@ -74,7 +126,7 @@ const ProviderProfile: React.FC = () => {
   if (!provider) return <p>Not found</p>;
 
   return (
-    <div className='p-6'>
+    <div className='p-6 space-y-8'>
       {!editMode ? (
         <>
           <ProfileHeader
@@ -114,7 +166,7 @@ const ProviderProfile: React.FC = () => {
             subtitle={provider.specialty || ''}
           />
 
-          <form className='space-y-4'>
+          <form className='space-y-4 mb-10'>
             <FormField
               type='text'
               name='first_name'
@@ -177,6 +229,54 @@ const ProviderProfile: React.FC = () => {
               </button>
             </div>
           </form>
+
+          {/* 🔒 Password Change Section */}
+          <div className='border-t pt-6 mt-8'>
+            <h2 className='text-xl font-semibold mb-4 text-gray-700'>
+              Change Password
+            </h2>
+
+            <div className='space-y-4'>
+              <FormField
+                type='password'
+                name='current_password'
+                label='Current Password'
+                value={passwordForm.current_password}
+                onChange={handlePasswordChange}
+              />
+
+              <FormField
+                type='password'
+                name='new_password'
+                label='New Password'
+                value={passwordForm.new_password}
+                onChange={handlePasswordChange}
+              />
+
+              <FormField
+                type='password'
+                name='confirm_password'
+                label='Confirm Password'
+                value={passwordForm.confirm_password}
+                onChange={handlePasswordChange}
+              />
+
+              {passwordError && (
+                <p className='text-red-500 text-sm'>{passwordError}</p>
+              )}
+              {passwordMessage && (
+                <p className='text-green-600 text-sm'>{passwordMessage}</p>
+              )}
+
+              <button
+                type='button'
+                onClick={handlePasswordUpdate}
+                className='px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700'
+              >
+                Update Password
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

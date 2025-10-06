@@ -2,6 +2,6 @@ from rest_framework import routers
 from .views import ProviderViewSet
 
 router = routers.DefaultRouter()
-router.register(r'providers', ProviderViewSet)
+router.register(r'providers', ProviderViewSet, basename='provider')
 
 urlpatterns = router.urls

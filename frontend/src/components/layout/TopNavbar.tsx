@@ -7,10 +7,10 @@ type TopbarProps = {
   onLogout: () => void;
 };
 
-const Topbar: React.FC<TopbarProps> = ({ providerName, onLogout }) => {
+const TopNavbar: React.FC<TopbarProps> = ({ providerName, onLogout }) => {
   return (
     <div className='flex justify-end items-center bg-white border-b border-gray-300 px-4 py-2 gap-4'>
-      {/* Provider menu */}
+      {/* Provider Menu */}
       <Dropdown
         trigger={({ toggle }) => (
           <button
@@ -25,7 +25,7 @@ const Topbar: React.FC<TopbarProps> = ({ providerName, onLogout }) => {
           to='/doctor/edit-info'
           className={({ isActive }) =>
             `block px-4 py-2 hover:bg-blue-50 ${
-              isActive ? 'font-bold text-blue-700 bg-blue-50' : ''
+              isActive ? 'font-semibold text-blue-700 bg-blue-50' : ''
             }`
           }
         >
@@ -35,7 +35,7 @@ const Topbar: React.FC<TopbarProps> = ({ providerName, onLogout }) => {
           to='/doctor/provider-options'
           className={({ isActive }) =>
             `block px-4 py-2 hover:bg-blue-50 ${
-              isActive ? 'font-bold text-blue-700 bg-blue-50' : ''
+              isActive ? 'font-semibold text-blue-700 bg-blue-50' : ''
             }`
           }
         >
@@ -43,7 +43,7 @@ const Topbar: React.FC<TopbarProps> = ({ providerName, onLogout }) => {
         </NavLink>
       </Dropdown>
 
-      {/* Settings menu */}
+      {/* Settings Menu */}
       <Dropdown
         trigger={({ toggle }) => (
           <button
@@ -58,7 +58,7 @@ const Topbar: React.FC<TopbarProps> = ({ providerName, onLogout }) => {
           to='/doctor/notifications'
           className={({ isActive }) =>
             `block px-4 py-2 hover:bg-blue-50 ${
-              isActive ? 'font-bold text-blue-700 bg-blue-50' : ''
+              isActive ? 'font-semibold text-blue-700 bg-blue-50' : ''
             }`
           }
         >
@@ -68,17 +68,18 @@ const Topbar: React.FC<TopbarProps> = ({ providerName, onLogout }) => {
           to='/doctor/manage-users'
           className={({ isActive }) =>
             `block px-4 py-2 hover:bg-blue-50 ${
-              isActive ? 'font-bold text-blue-700 bg-blue-50' : ''
+              isActive ? 'font-semibold text-blue-700 bg-blue-50' : ''
             }`
           }
         >
-          Users
+          Manage Users
         </NavLink>
       </Dropdown>
 
+      {/* Logout Button */}
       <button
         onClick={onLogout}
-        className='bg-red-500 text-white px-3 py-2 rounded hover:bg-red-600'
+        className='bg-red-500 text-white px-3 py-2 rounded hover:bg-red-600 transition'
       >
         Logout
       </button>
@@ -86,4 +87,4 @@ const Topbar: React.FC<TopbarProps> = ({ providerName, onLogout }) => {
   );
 };
 
-export default Topbar;
+export default TopNavbar;
