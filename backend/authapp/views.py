@@ -2,16 +2,20 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from providers.models import Provider
+from rest_framework_simplejwt.serializers import TokenVerifySerializer
 
 
 class ProviderLoginView(APIView):
     """
-    Authenticates a provider using username and password.
+    Public endpoint — allows providers to log in using username/password.
     Returns JWT tokens and basic provider info.
     """
+    permission_classes = [AllowAny]  # ✅ route-specific override
+
     def post(self, request):
         username = request.data.get("username")
         password = request.data.get("password")
@@ -56,8 +60,10 @@ class ProviderLoginView(APIView):
 
 class ChangePasswordView(APIView):
     """
-    Allows an authenticated provider to change their password.
+    Protected endpoint — authenticated providers can change their password.
     """
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         user = request.user
         old_password = request.data.get("old_password")
@@ -85,3 +91,21 @@ class ChangePasswordView(APIView):
         user.set_password(new_password)
         user.save()
         return Response({"detail": "Password updated successfully."}, status=200)
+
+class VerifyTokenView(APIView):
+    """
+    Public endpoint — checks if a given access token is still valid.
+    Used by the React app on page load to auto-login.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = TokenVerifySerializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+            return Response({"detail": "Token is valid."}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {"detail": "Token is invalid or expired."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )

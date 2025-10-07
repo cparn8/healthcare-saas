@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import API, { setAuthToken } from '../../../services/api';
 
 type LoginProps = {
@@ -6,34 +7,52 @@ type LoginProps = {
 };
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
+  const navigate = useNavigate();
+
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [staySignedIn, setStaySignedIn] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const rememberedUsers: string[] = JSON.parse(
     localStorage.getItem('rememberedUsers') || '[]'
   );
 
-  // Auto-login if tokens already exist
+  // Attempt auto-login if valid tokens exist
   useEffect(() => {
     const token =
       localStorage.getItem('token') || sessionStorage.getItem('token');
     const refresh =
       localStorage.getItem('refresh') || sessionStorage.getItem('refresh');
-    if (token && refresh) {
-      setAuthToken(token);
-      window.location.href = '/doctor/schedule';
-    }
-  }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
+    const verifyToken = async () => {
+      if (!token || !refresh) return;
+      try {
+        await API.post('/auth/verify/', { token });
+        setAuthToken(token);
+        navigate('/doctor/schedule', { replace: true });
+      } catch {
+        // Token invalid or expired — clear and stay on login
+        localStorage.removeItem('token');
+        localStorage.removeItem('refresh');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('refresh');
+      }
+    };
+    verifyToken();
+  }, [navigate]);
+
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
+
     try {
       const res = await API.post('/auth/login/', { username, password });
       const { access, refresh } = res.data;
 
+      // Persist tokens
       if (staySignedIn) {
         localStorage.setItem('token', access);
         localStorage.setItem('refresh', refresh);
@@ -45,6 +64,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       setAuthToken(access);
       onLogin(access, refresh, staySignedIn);
 
+      // Save remembered usernames
       if (!rememberedUsers.includes(username)) {
         localStorage.setItem(
           'rememberedUsers',
@@ -52,9 +72,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         );
       }
 
-      window.location.href = '/doctor/schedule';
+      navigate('/doctor/schedule', { replace: true });
     } catch {
       setError('Invalid username or password');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -62,6 +84,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     <div className='flex justify-center items-center h-screen bg-gray-100'>
       <form
         onSubmit={handleLogin}
+        noValidate
         className='bg-white p-6 rounded-lg shadow-md w-96'
       >
         <h2 className='text-2xl font-bold mb-4 text-center'>Provider Login</h2>
@@ -109,9 +132,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
         <button
           type='submit'
-          className='w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition'
+          disabled={loading}
+          className={`w-full text-white py-2 rounded transition ${
+            loading
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700'
+          }`}
         >
-          Sign In
+          {loading ? 'Signing in…' : 'Sign In'}
         </button>
       </form>
     </div>

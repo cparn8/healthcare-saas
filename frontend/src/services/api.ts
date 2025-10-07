@@ -1,3 +1,4 @@
+// frontend/src/services/api.ts
 import axios from 'axios';
 
 const API = axios.create({
@@ -22,33 +23,45 @@ API.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    // If access token expired (401) and we haven’t retried yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
+
       const refresh =
         localStorage.getItem('refresh') || sessionStorage.getItem('refresh');
+
       if (refresh) {
         try {
+          console.log('♻️ Refreshing expired token...');
           const res = await axios.post(
             'http://localhost:8000/api/auth/refresh/',
             { refresh }
           );
           const newAccess = res.data.access;
 
-          // Persist new access token
-          if (localStorage.getItem('token'))
+          // Save new token
+          if (localStorage.getItem('refresh')) {
             localStorage.setItem('token', newAccess);
-          else sessionStorage.setItem('token', newAccess);
+          } else {
+            sessionStorage.setItem('token', newAccess);
+          }
 
           setAuthToken(newAccess);
           originalRequest.headers['Authorization'] = `Bearer ${newAccess}`;
+
+          console.log('✅ Token refreshed — retrying request.');
           return API(originalRequest);
-        } catch {
+        } catch (refreshError) {
+          console.warn('❌ Token refresh failed:', refreshError);
           handleLogout();
         }
       } else {
+        console.warn('⚠️ No refresh token available — logging out.');
         handleLogout();
       }
     }
+
     return Promise.reject(error);
   }
 );
