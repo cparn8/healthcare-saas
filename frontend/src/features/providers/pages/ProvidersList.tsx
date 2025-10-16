@@ -21,10 +21,24 @@ const ProvidersList: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    setLoading(true);
-    API.get('/providers/')
-      .then((res) => setProviders(res.data))
-      .finally(() => setLoading(false));
+    const fetchProviders = async () => {
+      setLoading(true);
+      try {
+        const res = await API.get('/providers/');
+        console.log('Providers API response:', res.data);
+
+        // Normalize the response
+        const data = res.data;
+        const providerArray = Array.isArray(data) ? data : data.results || [];
+        setProviders(providerArray);
+      } catch (error) {
+        console.error('Error fetching providers:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProviders();
   }, []);
 
   const handleDelete = async (id: number) => {
@@ -34,6 +48,8 @@ const ProvidersList: React.FC = () => {
     try {
       await API.delete(`/providers/${id}/`);
       setProviders((prev) => prev.filter((p) => p.id !== id));
+    } catch (error) {
+      console.error('Error deleting provider:', error);
     } finally {
       setDeletingId(null);
     }
@@ -47,6 +63,10 @@ const ProvidersList: React.FC = () => {
         <Skeleton className='h-10 w-full mb-2' />
       </div>
     );
+  }
+
+  if (!providers.length) {
+    return <p className='p-6 text-gray-600'>No providers found.</p>;
   }
 
   return (

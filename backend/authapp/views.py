@@ -6,6 +6,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from providers.models import Provider
+from providers.serializers import ProviderSerializer
 from rest_framework_simplejwt.serializers import TokenVerifySerializer
 
 
@@ -57,6 +58,17 @@ class ProviderLoginView(APIView):
             status=status.HTTP_200_OK,
         )
 
+
+class CurrentProviderView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            provider = Provider.objects.get(user=request.user)
+            serializer = ProviderSerializer(provider)
+            return Response(serializer.data)
+        except Provider.DoesNotExist:
+            return Response({'detail': 'Provider not found'}, status=404)
 
 class ChangePasswordView(APIView):
     """

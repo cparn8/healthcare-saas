@@ -12,6 +12,7 @@ import Messaging from '../features/messaging/pages/Messaging';
 import PatientsList from '../features/patients/pages/PatientsList';
 import PatientProfile from '../features/patients/pages/PatientProfile';
 import ProvidersList from '../features/providers/pages/ProvidersList';
+import ProviderProfile from '../features/providers/pages/ProviderProfile';
 import CreateProvider from '../features/providers/pages/CreateProvider';
 import EditInfo from '../features/providers/pages/EditInfo';
 import ProviderOptions from '../features/providers/pages/ProviderOptions';
@@ -125,6 +126,10 @@ const App: React.FC = () => {
             <Route
               path='manage-users/patients/:id'
               element={<PatientProfile />}
+            />
+            <Route
+              path='manage-users/providers/:id'
+              element={<ProviderProfile />}
             />
           </Route>
           <Route

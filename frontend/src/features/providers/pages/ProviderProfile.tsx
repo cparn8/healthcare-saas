@@ -25,6 +25,7 @@ const ProviderProfile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     current_password: '',
     new_password: '',
@@ -58,6 +59,7 @@ const ProviderProfile: React.FC = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // ✅ Save general provider info only
   const handleSave = async () => {
     if (!id) return;
 
@@ -80,15 +82,24 @@ const ProviderProfile: React.FC = () => {
     }
   };
 
+  // ✅ Handle password form changes separately
   const handlePasswordChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     setPasswordForm({ ...passwordForm, [e.target.name]: e.target.value });
   };
 
+  // ✅ Change password only when all 3 fields are filled
   const handlePasswordUpdate = async () => {
     setPasswordError('');
     setPasswordMessage('');
+
+    const { current_password, new_password, confirm_password } = passwordForm;
+
+    if (!current_password || !new_password || !confirm_password) {
+      setPasswordError('All fields are required.');
+      return;
+    }
 
     try {
       const res = await API.post('/auth/change-password/', passwordForm);
@@ -98,6 +109,7 @@ const ProviderProfile: React.FC = () => {
         new_password: '',
         confirm_password: '',
       });
+      setShowPasswordForm(false);
     } catch (err: any) {
       if (err.response?.data) {
         const data = err.response.data;
@@ -166,6 +178,7 @@ const ProviderProfile: React.FC = () => {
             subtitle={provider.specialty || ''}
           />
 
+          {/* General Info Form */}
           <form className='space-y-4 mb-10'>
             <FormField
               type='text'
@@ -230,52 +243,77 @@ const ProviderProfile: React.FC = () => {
             </div>
           </form>
 
-          {/* 🔒 Password Change Section */}
+          {/* 🔒 Toggleable Password Change Section */}
           <div className='border-t pt-6 mt-8'>
             <h2 className='text-xl font-semibold mb-4 text-gray-700'>
-              Change Password
+              Security
             </h2>
 
-            <div className='space-y-4'>
-              <FormField
-                type='password'
-                name='current_password'
-                label='Current Password'
-                value={passwordForm.current_password}
-                onChange={handlePasswordChange}
-              />
-
-              <FormField
-                type='password'
-                name='new_password'
-                label='New Password'
-                value={passwordForm.new_password}
-                onChange={handlePasswordChange}
-              />
-
-              <FormField
-                type='password'
-                name='confirm_password'
-                label='Confirm Password'
-                value={passwordForm.confirm_password}
-                onChange={handlePasswordChange}
-              />
-
-              {passwordError && (
-                <p className='text-red-500 text-sm'>{passwordError}</p>
-              )}
-              {passwordMessage && (
-                <p className='text-green-600 text-sm'>{passwordMessage}</p>
-              )}
-
+            {!showPasswordForm ? (
               <button
-                type='button'
-                onClick={handlePasswordUpdate}
+                onClick={() => setShowPasswordForm(true)}
                 className='px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700'
               >
-                Update Password
+                Change Password
               </button>
-            </div>
+            ) : (
+              <div className='space-y-4'>
+                <FormField
+                  type='password'
+                  name='current_password'
+                  label='Current Password'
+                  value={passwordForm.current_password}
+                  onChange={handlePasswordChange}
+                />
+
+                <FormField
+                  type='password'
+                  name='new_password'
+                  label='New Password'
+                  value={passwordForm.new_password}
+                  onChange={handlePasswordChange}
+                />
+
+                <FormField
+                  type='password'
+                  name='confirm_password'
+                  label='Confirm Password'
+                  value={passwordForm.confirm_password}
+                  onChange={handlePasswordChange}
+                />
+
+                {passwordError && (
+                  <p className='text-red-500 text-sm'>{passwordError}</p>
+                )}
+                {passwordMessage && (
+                  <p className='text-green-600 text-sm'>{passwordMessage}</p>
+                )}
+
+                <div className='flex space-x-4'>
+                  <button
+                    type='button'
+                    onClick={handlePasswordUpdate}
+                    className='px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700'
+                  >
+                    Update Password
+                  </button>
+                  <button
+                    type='button'
+                    onClick={() => {
+                      setShowPasswordForm(false);
+                      setPasswordForm({
+                        current_password: '',
+                        new_password: '',
+                        confirm_password: '',
+                      });
+                    }}
+                    className='px-4 py-2 bg-gray-400 text-white rounded'
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
