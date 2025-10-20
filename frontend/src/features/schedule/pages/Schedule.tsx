@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import DayViewGrid from '../components/DayViewGrid';
 
 type TabKey = 'appointments' | 'day' | 'week' | 'settings';
 type OfficeKey = 'north' | 'south';
@@ -321,9 +322,13 @@ const SchedulePage: React.FC = () => {
           </div>
         )}
         {activeTab === 'day' && (
-          <div className='text-gray-600'>
-            Day view grid placeholder — building block schedule table next.
-          </div>
+          <DayViewGrid
+            office={office}
+            providerName='Dr. Smith' // will become dynamic from logged-in provider
+            startHour={8}
+            endHour={17}
+            slotMinutes={slotSize}
+          />
         )}
         {activeTab === 'week' && (
           <div className='text-gray-600'>Week view placeholder</div>
