@@ -5,7 +5,7 @@ import API, { setAuthToken, handleLogout } from '../services/api';
 import Login from '../features/auth/pages/Login';
 import DoctorLayout from '../components/layout/DoctorLayout';
 
-import Schedule from '../features/appointments/pages/Schedule';
+import Schedule from '../features/schedule/pages/Schedule';
 import Charts from '../features/charts/pages/Charts';
 import PatientChart from '../features/charts/pages/PatientChart';
 import Messaging from '../features/messaging/pages/Messaging';
