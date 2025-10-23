@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import DayViewGrid from '../components/DayViewGrid';
+import NewAppointmentModal from '../components/NewAppointmentModal';
 
 type TabKey = 'appointments' | 'day' | 'week' | 'settings';
 type OfficeKey = 'north' | 'south';
@@ -21,11 +22,10 @@ function formatShortDate(d: Date) {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-  }).format(d); // e.g., Thu, Oct 13, 2022
+  }).format(d);
 }
 
 function formatCompact(d: Date) {
-  // MM/DD/YY
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   const yy = String(d.getFullYear()).slice(-2);
@@ -48,8 +48,8 @@ function relativeLabel(d: Date) {
 
 function startOfWeek(d: Date) {
   const copy = new Date(d);
-  const day = copy.getDay(); // 0=Sun
-  const diffToMon = (day + 6) % 7; // make Monday start
+  const day = copy.getDay();
+  const diffToMon = (day + 6) % 7;
   copy.setDate(copy.getDate() - diffToMon);
   copy.setHours(0, 0, 0, 0);
   return copy;
@@ -58,7 +58,7 @@ function startOfWeek(d: Date) {
 function endOfWeek(d: Date) {
   const s = startOfWeek(d);
   const e = new Date(s);
-  e.setDate(s.getDate() + 4); // Mon–Fri display as per PF vibe
+  e.setDate(s.getDate() + 4);
   e.setHours(0, 0, 0, 0);
   return e;
 }
@@ -82,26 +82,16 @@ function formatWeekRange(d: Date) {
 const SchedulePage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const [showNewAppointment, setShowNewAppointment] = useState(false);
 
-  // Tab from query (default to "day")
   const initialTab = (searchParams.get('tab') as TabKey) || 'day';
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
-
-  // Office selection
   const [office, setOffice] = useState<OfficeKey>('north');
-
-  // Current cursor date for Day/Week
   const [cursorDate, setCursorDate] = useState<Date>(new Date());
-
-  // Zoom level (only for Day/Week; just a stub number)
   const [zoom, setZoom] = useState<number>(1);
-
-  // Slot size for creating new blocks (disabled on Appointments)
   const [slotSize, setSlotSize] = useState<SlotSize>(30);
 
-  // Fake count placeholder (wire later)
   const appointmentCount = 0;
-
   const isAppointments = activeTab === 'appointments';
   const isDay = activeTab === 'day';
   const isWeek = activeTab === 'week';
@@ -119,6 +109,7 @@ const SchedulePage: React.FC = () => {
     else copy.setDate(copy.getDate() - 1);
     setCursorDate(copy);
   }
+
   function goNext() {
     const copy = new Date(cursorDate);
     if (isWeek) copy.setDate(copy.getDate() + 7);
@@ -145,7 +136,7 @@ const SchedulePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main tabs */}
+      {/* Tabs */}
       <div className='flex gap-2 border-b'>
         {TABS.map((t) => (
           <button
@@ -162,27 +153,23 @@ const SchedulePage: React.FC = () => {
         ))}
       </div>
 
-      {/* Secondary toolbar for Appointments/Day/Week */}
+      {/* Secondary Toolbar */}
       {(isAppointments || isDay || isWeek) && (
         <>
           <div className='flex items-center justify-between gap-2'>
             <div className='flex items-center gap-2'>
-              <button
-                className='px-3 py-1.5 border rounded hover:bg-gray-50'
-                // TODO: open left filter drawer
-              >
+              <button className='px-3 py-1.5 border rounded hover:bg-gray-50'>
                 Filter
               </button>
               <button
                 className='px-3 py-1.5 border rounded hover:bg-gray-50'
                 onClick={() => {
-                  // TODO: re-fetch data based on activeTab/office/cursorDate
+                  // TODO: refresh logic
                 }}
               >
                 Refresh
               </button>
 
-              {/* Office select */}
               <select
                 className='px-3 py-1.5 border rounded'
                 value={office}
@@ -201,9 +188,7 @@ const SchedulePage: React.FC = () => {
               ) : (
                 <button
                   className='px-3 py-1.5 border rounded bg-green-600 text-white hover:bg-green-700'
-                  onClick={() => {
-                    // TODO: open "Add appointment" modal
-                  }}
+                  onClick={() => setShowNewAppointment(true)}
                 >
                   + Add appointment
                 </button>
@@ -213,30 +198,22 @@ const SchedulePage: React.FC = () => {
 
           <hr className='border-gray-200' />
 
-          {/* Date row */}
+          {/* Date Row */}
           <div className='flex items-center justify-between gap-2'>
-            {/* Left: date/week label */}
             <div className='text-sm text-gray-700'>{leftLabel}</div>
 
-            {/* Right controls */}
             <div className='flex items-center gap-2'>
-              {/* Calendar icon (stub) */}
               <button
                 className='px-2 py-1.5 border rounded hover:bg-gray-50'
                 title='Pick a date'
-                onClick={() => {
-                  // TODO: open date picker, then setCursorDate(selected)
-                }}
               >
                 📅
               </button>
 
-              {/* Prev / Next */}
               <div className='flex'>
                 <button
                   className='px-3 py-1.5 border rounded-l hover:bg-gray-50'
                   onClick={goPrev}
-                  aria-label='Previous'
                 >
                   ←
                 </button>
@@ -246,13 +223,11 @@ const SchedulePage: React.FC = () => {
                 <button
                   className='px-3 py-1.5 border rounded-r hover:bg-gray-50'
                   onClick={goNext}
-                  aria-label='Next'
                 >
                   →
                 </button>
               </div>
 
-              {/* Zoom */}
               <div className='flex'>
                 <button
                   className={`px-3 py-1.5 border rounded-l ${
@@ -285,7 +260,6 @@ const SchedulePage: React.FC = () => {
                 </button>
               </div>
 
-              {/* Slot size */}
               <select
                 className={`px-3 py-1.5 border rounded ${
                   isAppointments ? 'opacity-50 cursor-not-allowed' : ''
@@ -294,11 +268,6 @@ const SchedulePage: React.FC = () => {
                 disabled={isAppointments}
                 onChange={(e) =>
                   setSlotSize(Number(e.target.value) as SlotSize)
-                }
-                title={
-                  isAppointments
-                    ? 'Not available in Appointments view'
-                    : 'Set slot size'
                 }
               >
                 {SLOT_OPTIONS.map((s) => (
@@ -314,7 +283,7 @@ const SchedulePage: React.FC = () => {
         </>
       )}
 
-      {/* Content area placeholder per tab */}
+      {/* Content */}
       <div className='min-h-[400px] bg-white border rounded p-4'>
         {activeTab === 'appointments' && (
           <div className='text-gray-600'>
@@ -324,7 +293,7 @@ const SchedulePage: React.FC = () => {
         {activeTab === 'day' && (
           <DayViewGrid
             office={office}
-            providerName='Dr. Smith' // will become dynamic from logged-in provider
+            providerName='Dr. Smith'
             startHour={8}
             endHour={17}
             slotMinutes={slotSize}
@@ -340,6 +309,12 @@ const SchedulePage: React.FC = () => {
           </div>
         )}
       </div>
+
+      <NewAppointmentModal
+        isOpen={showNewAppointment}
+        onClose={() => setShowNewAppointment(false)}
+        onSave={() => setShowNewAppointment(false)}
+      />
     </div>
   );
 };
