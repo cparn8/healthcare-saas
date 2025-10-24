@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react'; // optional icon (lucide-react already available in ChatGPT projects)
+import { X } from 'lucide-react';
+import WithPatientForm from './WithPatientForm';
 
 interface NewAppointmentModalProps {
   isOpen: boolean;
@@ -64,9 +65,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
         {/* Scrollable body */}
         <div className='flex-1 overflow-y-auto p-6'>
           {activeTab === 'withPatient' ? (
-            <div className='text-gray-500 italic'>
-              With Patient form goes here
-            </div>
+            <WithPatientForm onSave={onSave} onCancel={onClose} />
           ) : (
             <div className='text-gray-500 italic'>
               Block Time form goes here
@@ -75,18 +74,18 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
         </div>
 
         {/* Footer buttons */}
-        <div className='flex justify-between items-center border-t px-6 py-4'>
+        <div className='flex justify-between mt-6'>
           <button
             onClick={onClose}
-            className='px-4 py-2 bg-gray-200 rounded hover:bg-gray-300'
+            className='px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400'
           >
             Cancel
           </button>
           <button
             onClick={onSave}
-            className='px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700'
+            className='px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700'
           >
-            Save
+            Save Appointment
           </button>
         </div>
       </div>

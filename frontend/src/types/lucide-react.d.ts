@@ -18,4 +18,7 @@ declare module 'lucide-react' {
   // Also export commonly used named icons as loose types so `import { X } from 'lucide-react'` works
   // Add more named exports here if your code imports other icons and TS still errors.
   export const X: IconComponent;
+  export const Search: IconComponent;
+  export const Mail: IconComponent;
+  export const Phone: IconComponent;
 }
