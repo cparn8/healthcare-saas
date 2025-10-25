@@ -1,11 +1,26 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import API from '../../../services/api';
 import DayViewGrid from '../components/DayViewGrid';
 import NewAppointmentModal from '../components/NewAppointmentModal';
 
 type TabKey = 'appointments' | 'day' | 'week' | 'settings';
 type OfficeKey = 'north' | 'south';
 type SlotSize = 15 | 30 | 60;
+
+interface Appointment {
+  id: number;
+  provider_name: string;
+  office: string;
+  appointment_type: string;
+  color_code: string;
+  chief_complaint: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  duration: number;
+  patient_name?: string | null;
+}
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'appointments', label: 'Appointments' },
@@ -90,6 +105,8 @@ const SchedulePage: React.FC = () => {
   const [cursorDate, setCursorDate] = useState<Date>(new Date());
   const [zoom, setZoom] = useState<number>(1);
   const [slotSize, setSlotSize] = useState<SlotSize>(30);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loadingAppts, setLoadingAppts] = useState(false);
 
   const appointmentCount = 0;
   const isAppointments = activeTab === 'appointments';
@@ -121,6 +138,24 @@ const SchedulePage: React.FC = () => {
     if (isWeek) return formatWeekRange(cursorDate);
     return formatShortDate(cursorDate);
   }, [cursorDate, isWeek]);
+
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        setLoadingAppts(true);
+        const dateStr = cursorDate.toISOString().split('T')[0];
+        const res = await API.get('/appointments/', {
+          params: { date: dateStr, office },
+        });
+        setAppointments(res.data.results || []);
+      } catch (err) {
+        console.error('❌ Failed to fetch appointments:', err);
+      } finally {
+        setLoadingAppts(false);
+      }
+    };
+    fetchAppointments();
+  }, [cursorDate, office]);
 
   return (
     <div className='space-y-4'>
@@ -297,6 +332,8 @@ const SchedulePage: React.FC = () => {
             startHour={8}
             endHour={17}
             slotMinutes={slotSize}
+            appointments={appointments}
+            loading={loadingAppts}
           />
         )}
         {activeTab === 'week' && (

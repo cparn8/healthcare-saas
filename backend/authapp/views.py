@@ -1,4 +1,4 @@
-# authapp/views.py
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -10,12 +10,13 @@ from providers.serializers import ProviderSerializer
 from rest_framework_simplejwt.serializers import TokenVerifySerializer
 
 
+
 class ProviderLoginView(APIView):
     """
     Public endpoint — allows providers to log in using username/password.
     Returns JWT tokens and basic provider info.
     """
-    permission_classes = [AllowAny]  # ✅ route-specific override
+    permission_classes = [AllowAny]  # route-specific override
 
     def post(self, request):
         username = request.data.get("username")

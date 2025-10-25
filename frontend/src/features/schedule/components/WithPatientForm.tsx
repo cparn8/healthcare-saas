@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { Search, Mail, Phone } from 'lucide-react';
+import {
+  appointmentsApi,
+  AppointmentPayload,
+} from '../../appointments/services/appointmentsApi';
 
 interface WithPatientFormProps {
-  onSave: (data: any) => void;
+  onSave: () => void;
   onCancel: () => void;
 }
 
@@ -12,32 +16,34 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
 }) => {
   const [selectedPatient, setSelectedPatient] = useState<any | null>(null);
   const [repeatEnabled, setRepeatEnabled] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // ---- Form state ----
   const [formData, setFormData] = useState({
     patientId: null,
-    provider: '',
-    facility: 'North Office',
-    complaint: '',
-    type: 'Wellness Exam',
-    duration: 30,
+    provider: 1, // ✅ temporary placeholder until linked with logged-in provider
+    office: 'north',
+    appointment_type: 'Wellness Exam',
+    color_code: '#FF6B6B',
+    chief_complaint: '',
     date: '',
-    startTime: '',
-    endTime: '',
-    repeat: false,
-    repeatDays: [] as string[],
-    repeatEvery: 1,
-    repeatEndDate: '',
-    repeatCount: 1,
-    sendIntakeForm: 'Yes',
+    start_time: '',
+    end_time: '',
+    duration: 30,
+    is_recurring: false,
+    repeat_days: [] as string[],
+    repeat_interval_weeks: 1,
+    repeat_end_date: '',
+    repeat_occurrences: 1,
+    send_intake_form: false,
   });
 
   // ---- Validation ----
   function validateForm() {
-    const required = ['provider', 'facility', 'date', 'startTime', 'endTime'];
+    const required = ['provider', 'office', 'date', 'start_time', 'end_time'];
     for (const key of required) {
-      if (!formData[key as keyof typeof formData]) {
-        alert(`Please fill out ${key.replace(/([A-Z])/g, ' $1')}.`);
+      if (!(formData as any)[key]) {
+        alert(`Please fill out ${key.replace(/_/g, ' ')}.`);
         return false;
       }
     }
@@ -63,8 +69,46 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     }));
   };
 
-  const handleSave = () => {
-    if (validateForm()) onSave(formData);
+  // ---- Submit Handler ----
+  const handleSave = async () => {
+    if (!validateForm()) return;
+    setIsSubmitting(true);
+    try {
+      const payload: AppointmentPayload = {
+        patient: selectedPatient ? selectedPatient.id : null,
+        provider: formData.provider,
+        office: formData.office as 'north' | 'south',
+        appointment_type: formData.appointment_type,
+        color_code: formData.color_code,
+        chief_complaint: formData.chief_complaint,
+        date: formData.date,
+        start_time: formData.start_time,
+        end_time: formData.end_time,
+        duration: formData.duration,
+        is_recurring: repeatEnabled,
+        repeat_days: formData.repeat_days,
+        repeat_interval_weeks: formData.repeat_interval_weeks,
+        repeat_end_date: formData.repeat_end_date || null,
+        repeat_occurrences: formData.repeat_occurrences,
+        send_intake_form: formData.send_intake_form,
+      };
+
+      console.log('📤 Submitting appointment payload:', payload);
+
+      const result = await appointmentsApi.create(payload);
+      console.log('✅ Appointment created:', result);
+
+      alert('Appointment saved successfully!');
+      onSave();
+    } catch (error: any) {
+      console.error(
+        '❌ Failed to create appointment:',
+        error.response?.data || error
+      );
+      alert('Failed to save appointment — check console for details.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // ---- Render ----
@@ -100,7 +144,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
           <button
             className='text-blue-600 text-sm hover:underline'
             onClick={() => {
-              // navigate to Add Patient page later
+              // TODO: link to Add Patient page
             }}
           >
             + Add new patient
@@ -155,7 +199,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
       <section>
         <h3 className='text-lg font-semibold mb-2'>Appointment details</h3>
 
-        {/* Provider & Facility */}
+        {/* Provider & Office */}
         <div className='grid grid-cols-2 gap-4 mb-4'>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>
@@ -168,23 +212,24 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
               className='w-full border rounded p-2'
             >
               <option value=''>Select Provider</option>
-              <option>Dr. Smith</option>
-              <option>Dr. Johnson</option>
-              <option>Dr. Lee</option>
+              <option value={1}>Dr. Smith</option>
+              <option value={2}>Dr. Johnson</option>
+              <option value={3}>Dr. Lee</option>
             </select>
           </div>
+
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Facility
+              Office
             </label>
             <select
-              name='facility'
-              value={formData.facility}
+              name='office'
+              value={formData.office}
               onChange={handleChange}
               className='w-full border rounded p-2'
             >
-              <option>North Office</option>
-              <option>South Office</option>
+              <option value='north'>North Office</option>
+              <option value='south'>South Office</option>
             </select>
           </div>
         </div>
@@ -195,8 +240,8 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
             Chief Complaint
           </label>
           <textarea
-            name='complaint'
-            value={formData.complaint}
+            name='chief_complaint'
+            value={formData.chief_complaint}
             onChange={handleChange}
             className='w-full border rounded p-2'
             placeholder='Brief description of symptoms or reason for visit'
@@ -204,15 +249,15 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
           />
         </div>
 
-        {/* Type & Duration */}
+        {/* Appointment Type & Duration */}
         <div className='grid grid-cols-2 gap-4 mb-4'>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>
               Appointment Type
             </label>
             <select
-              name='type'
-              value={formData.type}
+              name='appointment_type'
+              value={formData.appointment_type}
               onChange={handleChange}
               className='w-full border rounded p-2'
             >
@@ -221,6 +266,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
               <option>Consultation</option>
             </select>
           </div>
+
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>
               Duration
@@ -260,8 +306,8 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
             </label>
             <input
               type='time'
-              name='startTime'
-              value={formData.startTime}
+              name='start_time'
+              value={formData.start_time}
               onChange={handleChange}
               className='w-full border rounded p-2'
             />
@@ -272,8 +318,8 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
             </label>
             <input
               type='time'
-              name='endTime'
-              value={formData.endTime}
+              name='end_time'
+              value={formData.end_time}
               onChange={handleChange}
               className='w-full border rounded p-2'
             />
@@ -284,7 +330,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
               checked={repeatEnabled}
               onChange={(e) => {
                 setRepeatEnabled(e.target.checked);
-                setFormData({ ...formData, repeat: e.target.checked });
+                setFormData({ ...formData, is_recurring: e.target.checked });
               }}
               className='h-4 w-4'
             />
@@ -308,12 +354,12 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
                     >
                       <input
                         type='checkbox'
-                        checked={formData.repeatDays.includes(day)}
+                        checked={formData.repeat_days.includes(day)}
                         onChange={(e) => {
                           const days = e.target.checked
-                            ? [...formData.repeatDays, day]
-                            : formData.repeatDays.filter((d) => d !== day);
-                          setFormData({ ...formData, repeatDays: days });
+                            ? [...formData.repeat_days, day]
+                            : formData.repeat_days.filter((d) => d !== day);
+                          setFormData({ ...formData, repeat_days: days });
                         }}
                         className='h-3 w-3'
                       />{' '}
@@ -327,12 +373,12 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
             <div className='flex items-center gap-2'>
               <span className='text-sm'>Every</span>
               <select
-                name='repeatEvery'
-                value={formData.repeatEvery}
+                name='repeat_interval_weeks'
+                value={formData.repeat_interval_weeks}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    repeatEvery: Number(e.target.value),
+                    repeat_interval_weeks: Number(e.target.value),
                   })
                 }
                 className='border rounded p-1 text-sm'
@@ -348,20 +394,20 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
               <span className='text-sm'>Ends on</span>
               <input
                 type='date'
-                name='repeatEndDate'
-                value={formData.repeatEndDate}
+                name='repeat_end_date'
+                value={formData.repeat_end_date}
                 onChange={handleChange}
                 className='border rounded p-1 text-sm'
               />
               <span className='text-sm'>after</span>
               <input
                 type='number'
-                name='repeatCount'
-                value={formData.repeatCount}
+                name='repeat_occurrences'
+                value={formData.repeat_occurrences}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    repeatCount: Number(e.target.value),
+                    repeat_occurrences: Number(e.target.value),
                   })
                 }
                 className='border rounded p-1 text-sm w-16'
@@ -382,9 +428,14 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
         <label className='flex items-center gap-2 text-sm'>
           <span>Send Intake Form?</span>
           <select
-            name='sendIntakeForm'
-            value={formData.sendIntakeForm}
-            onChange={handleChange}
+            name='send_intake_form'
+            value={formData.send_intake_form ? 'Yes' : 'No'}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                send_intake_form: e.target.value === 'Yes',
+              })
+            }
             className='border rounded p-1'
           >
             <option>Yes</option>
@@ -403,9 +454,14 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
         </button>
         <button
           onClick={handleSave}
-          className='px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700'
+          disabled={isSubmitting}
+          className={`px-4 py-2 rounded text-white ${
+            isSubmitting
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-green-600 hover:bg-green-700'
+          }`}
         >
-          Save Appointment
+          {isSubmitting ? 'Saving...' : 'Save Appointment'}
         </button>
       </div>
     </div>

@@ -6,6 +6,8 @@ interface DayViewGridProps {
   startHour: number; // e.g. 8
   endHour: number; // e.g. 17
   slotMinutes: number; // e.g. 30
+  appointments?: any[];
+  loading?: boolean;
 }
 
 /**
@@ -19,7 +21,12 @@ const DayViewGrid: React.FC<DayViewGridProps> = ({
   startHour,
   endHour,
   slotMinutes,
+  appointments = [],
+  loading = false,
 }) => {
+  // ✅ This is the top of the component body
+  console.log('📅 Appointments for this day:', appointments);
+
   // Build time slot labels (e.g., 8:00 AM, 8:30 AM, etc.)
   const slots: string[] = [];
   for (let h = startHour; h < endHour; h++) {
@@ -42,20 +49,27 @@ const DayViewGrid: React.FC<DayViewGridProps> = ({
         </div>
       </div>
 
-      {/* Time rows */}
-      <div className='grid grid-cols-[120px_1fr] text-sm'>
-        {slots.map((time) => (
-          <React.Fragment key={time}>
-            <div className='border-r border-b p-2 text-gray-700'>{time}</div>
-            <div
-              className='border-b p-2 h-12 hover:bg-blue-50 cursor-pointer'
-              // TODO: onClick to open Add Appointment modal
-            >
-              {/* Appointment blocks will be rendered here later */}
-            </div>
-          </React.Fragment>
-        ))}
-      </div>
+      {/* Optional loading state */}
+      {loading ? (
+        <div className='p-6 text-center text-gray-500 italic'>Loading…</div>
+      ) : (
+        <div className='grid grid-cols-[120px_1fr] text-sm'>
+          {slots.map((time) => (
+            <React.Fragment key={time}>
+              {/* Time column */}
+              <div className='border-r border-b p-2 text-gray-700'>{time}</div>
+
+              {/* Appointment cell */}
+              <div
+                className='border-b p-2 h-12 hover:bg-blue-50 cursor-pointer'
+                // TODO: onClick → open Add Appointment modal
+              >
+                {/* Placeholder for future appointments */}
+              </div>
+            </React.Fragment>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
