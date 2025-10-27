@@ -1,27 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Mail, Phone } from 'lucide-react';
-import {
-  appointmentsApi,
-  AppointmentPayload,
-} from '../../appointments/services/appointmentsApi';
 
 interface WithPatientFormProps {
-  onSave: () => void;
   onCancel: () => void;
+  onGetFormData?: (data: any) => void;
 }
 
 const WithPatientForm: React.FC<WithPatientFormProps> = ({
-  onSave,
   onCancel,
+  onGetFormData,
 }) => {
   const [selectedPatient, setSelectedPatient] = useState<any | null>(null);
   const [repeatEnabled, setRepeatEnabled] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ---- Form state ----
   const [formData, setFormData] = useState({
     patientId: null,
-    provider: 1, // ✅ temporary placeholder until linked with logged-in provider
+    provider: 1, // temporary placeholder until linked with logged-in provider
     office: 'north',
     appointment_type: 'Wellness Exam',
     color_code: '#FF6B6B',
@@ -38,19 +32,12 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     send_intake_form: false,
   });
 
-  // ---- Validation ----
-  function validateForm() {
-    const required = ['provider', 'office', 'date', 'start_time', 'end_time'];
-    for (const key of required) {
-      if (!(formData as any)[key]) {
-        alert(`Please fill out ${key.replace(/_/g, ' ')}.`);
-        return false;
-      }
-    }
-    return true;
-  }
+  // Send formData to parent anytime it changes
+  useEffect(() => {
+    onGetFormData?.(formData);
+  }, [formData, onGetFormData]);
 
-  // ---- Handlers ----
+  // ---- Form field change handler ----
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -63,52 +50,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
         ? target.checked
         : target.value;
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  // ---- Submit Handler ----
-  const handleSave = async () => {
-    if (!validateForm()) return;
-    setIsSubmitting(true);
-    try {
-      const payload: AppointmentPayload = {
-        patient: selectedPatient ? selectedPatient.id : null,
-        provider: formData.provider,
-        office: formData.office as 'north' | 'south',
-        appointment_type: formData.appointment_type,
-        color_code: formData.color_code,
-        chief_complaint: formData.chief_complaint,
-        date: formData.date,
-        start_time: formData.start_time,
-        end_time: formData.end_time,
-        duration: formData.duration,
-        is_recurring: repeatEnabled,
-        repeat_days: formData.repeat_days,
-        repeat_interval_weeks: formData.repeat_interval_weeks,
-        repeat_end_date: formData.repeat_end_date || null,
-        repeat_occurrences: formData.repeat_occurrences,
-        send_intake_form: formData.send_intake_form,
-      };
-
-      console.log('📤 Submitting appointment payload:', payload);
-
-      const result = await appointmentsApi.create(payload);
-      console.log('✅ Appointment created:', result);
-
-      alert('Appointment saved successfully!');
-      onSave();
-    } catch (error: any) {
-      console.error(
-        '❌ Failed to create appointment:',
-        error.response?.data || error
-      );
-      alert('Failed to save appointment — check console for details.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   // ---- Render ----
@@ -337,87 +279,6 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
             <span className='text-sm font-medium text-gray-700'>Repeat</span>
           </label>
         </div>
-
-        {/* Repeat sections */}
-        {repeatEnabled && (
-          <div className='space-y-3 border rounded p-3 bg-gray-50 mb-4'>
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Occurs On
-              </label>
-              <div className='flex flex-wrap gap-2'>
-                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(
-                  (day) => (
-                    <label
-                      key={day}
-                      className='flex items-center gap-1 text-sm border rounded px-2 py-1 cursor-pointer hover:bg-white'
-                    >
-                      <input
-                        type='checkbox'
-                        checked={formData.repeat_days.includes(day)}
-                        onChange={(e) => {
-                          const days = e.target.checked
-                            ? [...formData.repeat_days, day]
-                            : formData.repeat_days.filter((d) => d !== day);
-                          setFormData({ ...formData, repeat_days: days });
-                        }}
-                        className='h-3 w-3'
-                      />{' '}
-                      {day}
-                    </label>
-                  )
-                )}
-              </div>
-            </div>
-
-            <div className='flex items-center gap-2'>
-              <span className='text-sm'>Every</span>
-              <select
-                name='repeat_interval_weeks'
-                value={formData.repeat_interval_weeks}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    repeat_interval_weeks: Number(e.target.value),
-                  })
-                }
-                className='border rounded p-1 text-sm'
-              >
-                {Array.from({ length: 9 }, (_, i) => i + 1).map((n) => (
-                  <option key={n}>{n}</option>
-                ))}
-              </select>
-              <span className='text-sm'>week(s)</span>
-            </div>
-
-            <div className='flex items-center gap-3'>
-              <span className='text-sm'>Ends on</span>
-              <input
-                type='date'
-                name='repeat_end_date'
-                value={formData.repeat_end_date}
-                onChange={handleChange}
-                className='border rounded p-1 text-sm'
-              />
-              <span className='text-sm'>after</span>
-              <input
-                type='number'
-                name='repeat_occurrences'
-                value={formData.repeat_occurrences}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    repeat_occurrences: Number(e.target.value),
-                  })
-                }
-                className='border rounded p-1 text-sm w-16'
-                min={1}
-                max={99}
-              />
-              <span className='text-sm'>appointments</span>
-            </div>
-          </div>
-        )}
       </section>
 
       <hr className='border-gray-200' />
@@ -443,27 +304,6 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
           </select>
         </label>
       </section>
-
-      {/* Footer Buttons */}
-      <div className='flex justify-between pt-4'>
-        <button
-          onClick={onCancel}
-          className='px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400'
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleSave}
-          disabled={isSubmitting}
-          className={`px-4 py-2 rounded text-white ${
-            isSubmitting
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-green-600 hover:bg-green-700'
-          }`}
-        >
-          {isSubmitting ? 'Saving...' : 'Save Appointment'}
-        </button>
-      </div>
     </div>
   );
 };

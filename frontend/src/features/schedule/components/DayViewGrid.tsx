@@ -1,19 +1,18 @@
 import React from 'react';
+import { Appointment } from '../../schedule/types/appointment';
 
 interface DayViewGridProps {
   office: string;
   providerName: string;
-  startHour: number; // e.g. 8
-  endHour: number; // e.g. 17
-  slotMinutes: number; // e.g. 30
-  appointments?: any[];
+  startHour: number;
+  endHour: number;
+  slotMinutes: number;
+  appointments?: Appointment[];
   loading?: boolean;
 }
 
 /**
- * Renders the block-style schedule grid for the Day view.
- * Shows time labels (left column) and provider appointment area (right column).
- * Later phases will populate these cells with appointment blocks.
+ * DayViewGrid: shows the time grid + provider column with colored appointment blocks.
  */
 const DayViewGrid: React.FC<DayViewGridProps> = ({
   office,
@@ -24,10 +23,9 @@ const DayViewGrid: React.FC<DayViewGridProps> = ({
   appointments = [],
   loading = false,
 }) => {
-  // ✅ This is the top of the component body
-  console.log('📅 Appointments for this day:', appointments);
+  console.log('📅 Rendering appointments:', appointments);
 
-  // Build time slot labels (e.g., 8:00 AM, 8:30 AM, etc.)
+  // Helper: build time labels
   const slots: string[] = [];
   for (let h = startHour; h < endHour; h++) {
     for (let m = 0; m < 60; m += slotMinutes) {
@@ -39,8 +37,44 @@ const DayViewGrid: React.FC<DayViewGridProps> = ({
     }
   }
 
+  // Helper: convert "HH:MM:SS" to minutes since startHour
+  function timeToMinutes(t: string): number {
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+  }
+
+  // Calculate vertical position and height (in px) per appointment
+  const minuteHeight = 48 / (60 / slotMinutes); // Each slot is ~48px tall
+
+  const renderAppointmentBlocks = () =>
+    appointments.map((appt) => {
+      const startMins = timeToMinutes(appt.start_time);
+      const endMins = timeToMinutes(appt.end_time);
+      const blockTop =
+        (startMins - startHour * 60) * (minuteHeight / slotMinutes);
+      const blockHeight = (endMins - startMins) * (minuteHeight / slotMinutes);
+
+      return (
+        <div
+          key={appt.id}
+          title={`${appt.appointment_type} — ${appt.chief_complaint || ''}`}
+          className='absolute left-0 right-0 mx-1 rounded text-white text-xs p-1 overflow-hidden shadow-sm'
+          style={{
+            top: `${blockTop}px`,
+            height: `${blockHeight}px`,
+            backgroundColor: appt.color_code || '#2563eb', // fallback blue
+          }}
+        >
+          <div className='font-semibold truncate'>
+            {appt.patient_name || '(Block)'}
+          </div>
+          <div className='truncate opacity-90'>{appt.appointment_type}</div>
+        </div>
+      );
+    });
+
   return (
-    <div className='border rounded overflow-hidden'>
+    <div className='border rounded overflow-hidden relative'>
       {/* Header */}
       <div className='grid grid-cols-[120px_1fr] bg-gray-100 border-b text-sm font-semibold'>
         <div className='p-2 border-r'>Time</div>
@@ -49,25 +83,35 @@ const DayViewGrid: React.FC<DayViewGridProps> = ({
         </div>
       </div>
 
-      {/* Optional loading state */}
       {loading ? (
         <div className='p-6 text-center text-gray-500 italic'>Loading…</div>
       ) : (
-        <div className='grid grid-cols-[120px_1fr] text-sm'>
-          {slots.map((time) => (
-            <React.Fragment key={time}>
-              {/* Time column */}
-              <div className='border-r border-b p-2 text-gray-700'>{time}</div>
-
-              {/* Appointment cell */}
+        <div className='grid grid-cols-[120px_1fr] text-sm relative'>
+          {/* Left time column */}
+          <div>
+            {slots.map((time) => (
               <div
-                className='border-b p-2 h-12 hover:bg-blue-50 cursor-pointer'
-                // TODO: onClick → open Add Appointment modal
+                key={time}
+                className='border-r border-b p-2 text-gray-700 h-12'
               >
-                {/* Placeholder for future appointments */}
+                {time}
               </div>
-            </React.Fragment>
-          ))}
+            ))}
+          </div>
+
+          {/* Right schedule column */}
+          <div className='relative border-l'>
+            {/* Grid background lines */}
+            {slots.map((_, idx) => (
+              <div
+                key={idx}
+                className='border-b h-12 hover:bg-blue-50 transition-colors cursor-pointer'
+              />
+            ))}
+
+            {/* Appointment blocks */}
+            <div className='absolute inset-0'>{renderAppointmentBlocks()}</div>
+          </div>
         </div>
       )}
     </div>
