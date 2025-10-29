@@ -1,21 +1,22 @@
+// frontend/src/features/schedule/pages/Schedule.tsx
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import DayViewGrid from '../components/DayViewGrid';
 import NewAppointmentModal from '../components/NewAppointmentModal';
 import { Appointment } from '../types/appointment';
 import { appointmentsApi } from '../../appointments/services/appointmentsApi';
-import { providersApi } from '../../providers/services/providersApi';
+import { providersApi, Provider } from '../../providers/services/providersApi';
 
 type TabKey = 'appointments' | 'day' | 'week' | 'settings';
 type OfficeKey = 'north' | 'south';
 type SlotSize = 15 | 30 | 60;
 
-const TABS: { key: TabKey; label: string }[] = [
+const TABS = [
   { key: 'appointments', label: 'Appointments' },
   { key: 'day', label: 'Day' },
   { key: 'week', label: 'Week' },
   { key: 'settings', label: 'Settings' },
-];
+] as const;
 
 const SLOT_OPTIONS: SlotSize[] = [15, 30, 60];
 
@@ -57,15 +58,13 @@ const SchedulePage: React.FC = () => {
   );
   const [office, setOffice] = useState<OfficeKey>('north');
   const [cursorDate, setCursorDate] = useState<Date>(new Date());
-  const [zoom, setZoom] = useState<number>(1);
   const [slotSize, setSlotSize] = useState<SlotSize>(30);
   const [providerId, setProviderId] = useState<number | null>(null);
-
+  const [provider, setProvider] = useState<Provider | null>(null);
   const [showNewAppointment, setShowNewAppointment] = useState(false);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingAppts, setLoadingAppts] = useState(false);
 
-  // collect form data from the modal (using useCallback to avoid re-renders)
   const handleFormData = useCallback((data: any) => {
     console.log('📄 Modal form data updated:', data);
   }, []);
@@ -91,33 +90,34 @@ const SchedulePage: React.FC = () => {
     setCursorDate(copy);
   };
 
-  const leftLabel = useMemo(() => {
-    return activeTab === 'week'
-      ? formatWeekRange(cursorDate)
-      : formatShortDate(cursorDate);
-  }, [cursorDate, activeTab]);
+  const leftLabel = useMemo(
+    () =>
+      activeTab === 'week'
+        ? formatWeekRange(cursorDate)
+        : formatShortDate(cursorDate),
+    [cursorDate, activeTab]
+  );
 
   useEffect(() => {
-    const fetchProvider = async () => {
+    async function fetchProvider() {
       try {
-        const me = await providersApi.getMe();
+        const me = await providersApi.getCurrent();
         console.log('👤 Logged-in provider:', me);
+        setProvider(me);
         setProviderId(me.id);
       } catch (err) {
         console.error('❌ Failed to load provider info:', err);
       }
-    };
+    }
     fetchProvider();
   }, []);
 
-  // Load appointments from the backend
   const loadAppointments = async () => {
-    if (!providerId) return; // Wait until provider is known
+    if (!providerId) return;
     try {
       setLoadingAppts(true);
       const params = { office, provider: providerId };
       console.log('📥 Fetching appointments with filters:', params);
-
       const result = await appointmentsApi.list(params);
       setAppointments(result.results || []);
       console.log('✅ Loaded', result.results?.length || 0, 'appointments');
@@ -129,10 +129,23 @@ const SchedulePage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (providerId) {
-      loadAppointments();
-    }
-  }, [office, providerId]);
+    if (!providerId) return;
+    const params = {
+      provider: providerId,
+      office,
+      date: cursorDate.toISOString().split('T')[0],
+    };
+    console.log('📥 Fetching appointments with filters:', params);
+
+    appointmentsApi
+      .list(params)
+      .then((result) => {
+        setAppointments(result.results || []);
+        console.log('✅ Loaded', result.results?.length || 0, 'appointments');
+      })
+      .catch((err) => console.error('❌ Failed to load appointments:', err))
+      .finally(() => setLoadingAppts(false));
+  }, [providerId, office, cursorDate]);
 
   return (
     <div className='space-y-4'>
@@ -146,7 +159,7 @@ const SchedulePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Tabs */}
+      {/* Tabs */}
       <div className='flex gap-2 border-b'>
         {TABS.map((t) => (
           <button
@@ -179,8 +192,6 @@ const SchedulePage: React.FC = () => {
               >
                 Refresh
               </button>
-
-              {/* Office select */}
               <select
                 className='px-3 py-1.5 border rounded'
                 value={office}
@@ -191,23 +202,20 @@ const SchedulePage: React.FC = () => {
               </select>
             </div>
 
-            <div className='flex items-center gap-2'>
-              <button
-                className='px-3 py-1.5 border rounded bg-green-600 text-white hover:bg-green-700'
-                onClick={() => setShowNewAppointment(true)}
-              >
-                + Add appointment
-              </button>
-            </div>
+            <button
+              className='px-3 py-1.5 border rounded bg-green-600 text-white hover:bg-green-700'
+              onClick={() => setShowNewAppointment(true)}
+            >
+              + Add appointment
+            </button>
           </div>
 
           <hr className='border-gray-200' />
 
-          {/* Date row */}
+          {/* Date Navigation */}
           <div className='flex items-center justify-between gap-2'>
             <div className='text-sm text-gray-700'>{leftLabel}</div>
             <div className='flex items-center gap-2'>
-              {/* Prev / Next */}
               <div className='flex'>
                 <button
                   className='px-3 py-1.5 border rounded-l hover:bg-gray-50'
@@ -225,8 +233,6 @@ const SchedulePage: React.FC = () => {
                   →
                 </button>
               </div>
-
-              {/* Slot size */}
               <select
                 className='px-3 py-1.5 border rounded'
                 value={slotSize}
@@ -249,13 +255,14 @@ const SchedulePage: React.FC = () => {
 
       {/* Content */}
       <div className='min-h-[400px] bg-white border rounded p-4'>
-        {activeTab === 'appointments' && (
-          <div className='text-gray-600'>Appointments list (coming soon)</div>
-        )}
         {activeTab === 'day' && (
           <DayViewGrid
             office={office}
-            providerName='Dr. Smith'
+            providerName={
+              provider
+                ? `${provider.first_name} ${provider.last_name}`
+                : 'Loading...'
+            }
             startHour={8}
             endHour={17}
             slotMinutes={slotSize}
@@ -263,23 +270,18 @@ const SchedulePage: React.FC = () => {
             loading={loadingAppts}
           />
         )}
-        {activeTab === 'week' && (
-          <div className='text-gray-600'>Week view placeholder</div>
-        )}
-        {activeTab === 'settings' && (
-          <div className='text-gray-600'>Settings placeholder</div>
-        )}
       </div>
 
-      {/* Modal rendered conditionally */}
       {showNewAppointment && (
         <NewAppointmentModal
           onClose={() => setShowNewAppointment(false)}
           onSaved={() => {
             console.log('✅ Appointment saved — reloading list...');
-            loadAppointments(); // reload from backend
+            loadAppointments();
             setShowNewAppointment(false);
           }}
+          onGetFormData={handleFormData}
+          providerId={providerId}
         />
       )}
     </div>

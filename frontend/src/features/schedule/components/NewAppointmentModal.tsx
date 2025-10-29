@@ -8,25 +8,23 @@ import {
 
 interface NewAppointmentModalProps {
   onClose: () => void;
-  onSaved: () => void; // called after successful save
+  onSaved: () => void;
+  onGetFormData?: (data: any) => void;
+  providerId?: number | null;
 }
 
-/**
- * Modal for creating new appointments or block times.
- * Contains tab navigation for "With Patient" and "Block Time".
- */
 const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
   onClose,
   onSaved,
+  onGetFormData,
+  providerId,
 }) => {
   const [activeTab, setActiveTab] = useState<'withPatient' | 'blockTime'>(
     'withPatient'
   );
-
   const [formData, setFormData] = useState<AppointmentPayload | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ---- Handle form submission ----
   async function handleSave() {
     if (!formData) {
       alert('Please complete the appointment form before saving.');
@@ -36,13 +34,11 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
     try {
       setIsSubmitting(true);
       console.log('📤 Submitting appointment payload:', formData);
-
       const result = await appointmentsApi.create(formData);
       console.log('✅ Appointment created:', result);
-
       alert('Appointment saved successfully!');
-      onSaved(); // refresh schedule view
-      onClose(); // close modal
+      onSaved();
+      onClose();
     } catch (error: any) {
       console.error(
         '❌ Failed to create appointment:',
@@ -56,9 +52,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
 
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/40'>
-      {/* Modal box */}
       <div className='bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col'>
-        {/* Header */}
         <div className='flex items-center justify-between px-6 py-4 border-b'>
           <h2 className='text-xl font-semibold'>New Appointment</h2>
           <button
@@ -69,7 +63,6 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
           </button>
         </div>
 
-        {/* Tabs */}
         <div className='flex border-b text-sm font-medium'>
           <button
             className={`px-6 py-2 ${
@@ -93,11 +86,11 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
           </button>
         </div>
 
-        {/* Scrollable body */}
         <div className='flex-1 overflow-y-auto p-6'>
           {activeTab === 'withPatient' ? (
             <WithPatientForm
               onCancel={onClose}
+              providerId={providerId}
               onGetFormData={(data: AppointmentPayload) => setFormData(data)}
             />
           ) : (
@@ -107,7 +100,6 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
           )}
         </div>
 
-        {/* Footer buttons */}
         <div className='flex justify-between px-6 py-4 border-t bg-gray-50'>
           <button
             onClick={onClose}
