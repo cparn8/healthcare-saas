@@ -1,7 +1,7 @@
-
 from rest_framework import viewsets, permissions, filters
 from .models import Appointment
 from .serializers import AppointmentSerializer
+from rest_framework.exceptions import ValidationError
 
 
 class AppointmentViewSet(viewsets.ModelViewSet):
@@ -16,6 +16,17 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     ordering_fields = ["start_time", "end_time", "created_at"]
 
     def perform_create(self, serializer):
-        # Auto-assign the logged-in provider if not manually selected
-        provider = getattr(self.request.user, "provider", None)
+        """
+        Ensure every appointment gets a valid provider.
+        Use the logged-in user's linked provider if not explicitly set in the payload.
+        """
+        provider = serializer.validated_data.get("provider")
+
+        # Fallback to authenticated provider if missing
+        if not provider and hasattr(self.request.user, "provider"):
+            provider = self.request.user.provider
+
+        if not provider:
+            raise ValidationError({"provider": "No provider found for this user."})
+
         serializer.save(provider=provider)

@@ -12,12 +12,12 @@ export interface Provider {
 
 export const providersApi = {
   async getCurrent(): Promise<Provider> {
-    const res = await API.get('/auth/me/');
+    const res = await API.get('auth/me/');
     return res.data;
   },
 
   async list(): Promise<Provider[]> {
-    const res = await API.get('/providers/');
+    const res = await API.get('providers/');
     return res.data;
   },
 };

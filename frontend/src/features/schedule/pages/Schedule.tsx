@@ -99,16 +99,18 @@ const SchedulePage: React.FC = () => {
   );
 
   useEffect(() => {
-    async function fetchProvider() {
+    const fetchProvider = async () => {
       try {
         const me = await providersApi.getCurrent();
         console.log('👤 Logged-in provider:', me);
         setProvider(me);
         setProviderId(me.id);
+        if (!me.id)
+          console.error('⚠️ Provider ID is missing from backend response');
       } catch (err) {
         console.error('❌ Failed to load provider info:', err);
       }
-    }
+    };
     fetchProvider();
   }, []);
 
@@ -280,7 +282,6 @@ const SchedulePage: React.FC = () => {
             loadAppointments();
             setShowNewAppointment(false);
           }}
-          onGetFormData={handleFormData}
           providerId={providerId}
         />
       )}

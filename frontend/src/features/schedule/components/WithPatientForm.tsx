@@ -157,6 +157,44 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
           />
         </div>
 
+        {/* Appointment Type & Duration */}
+        <div className='grid grid-cols-2 gap-4 mb-4'>
+          <div>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>
+              Appointment Type
+            </label>
+            <select
+              name='appointment_type'
+              value={formData.appointment_type}
+              onChange={handleChange}
+              className='w-full border rounded p-2'
+            >
+              <option value='Wellness Exam'>Wellness Exam</option>
+              <option value='Follow-Up'>Follow-Up</option>
+              <option value='Consultation'>Consultation</option>
+              <option value='Physical Therapy'>Physical Therapy</option>
+            </select>
+          </div>
+
+          <div>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>
+              Duration
+            </label>
+            <select
+              name='duration'
+              value={formData.duration}
+              onChange={(e) =>
+                setFormData({ ...formData, duration: Number(e.target.value) })
+              }
+              className='w-full border rounded p-2'
+            >
+              <option value={15}>15 min</option>
+              <option value={30}>30 min</option>
+              <option value={60}>60 min</option>
+            </select>
+          </div>
+        </div>
+
         {/* Date & Times */}
         <div className='grid grid-cols-4 gap-4 items-end mb-4'>
           <div>
