@@ -6,6 +6,7 @@ import NewAppointmentModal from '../components/NewAppointmentModal';
 import { Appointment } from '../types/appointment';
 import { appointmentsApi } from '../../appointments/services/appointmentsApi';
 import { providersApi, Provider } from '../../providers/services/providersApi';
+import EditAppointmentModal from '../components/EditAppointmentModal';
 
 type TabKey = 'appointments' | 'day' | 'week' | 'settings';
 type OfficeKey = 'north' | 'south';
@@ -64,6 +65,7 @@ const SchedulePage: React.FC = () => {
   const [showNewAppointment, setShowNewAppointment] = useState(false);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingAppts, setLoadingAppts] = useState(false);
+  const [editingAppt, setEditingAppt] = useState<Appointment | null>(null);
 
   const handleFormData = useCallback((data: any) => {
     console.log('📄 Modal form data updated:', data);
@@ -270,6 +272,7 @@ const SchedulePage: React.FC = () => {
             slotMinutes={slotSize}
             appointments={appointments}
             loading={loadingAppts}
+            onEditAppointment={(appt) => setEditingAppt(appt)}
           />
         )}
       </div>
@@ -283,6 +286,17 @@ const SchedulePage: React.FC = () => {
             setShowNewAppointment(false);
           }}
           providerId={providerId}
+        />
+      )}
+
+      {editingAppt && (
+        <EditAppointmentModal
+          appointment={{
+            ...editingAppt,
+            repeat_days: editingAppt.repeat_days || [], // ensure not null
+          }}
+          onClose={() => setEditingAppt(null)}
+          onUpdated={loadAppointments}
         />
       )}
     </div>

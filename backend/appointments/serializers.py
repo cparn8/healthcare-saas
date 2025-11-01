@@ -1,6 +1,7 @@
 # appointments/serializers.py
 from rest_framework import serializers
 from .models import Appointment
+from django.db.models import Q
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
@@ -68,5 +69,22 @@ class AppointmentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"patient": "Patient is required unless creating a block time."}
             )
+        
+        # Check for overlaps with same provider + date
+        if start and end and data.get("provider"):
+            overlapping = Appointment.objects.filter(
+                provider=data["provider"],
+                date=data["date"],
+            ).filter(
+                Q(start_time__lt=end) & Q(end_time__gt=start)
+            )
+
+            if self.instance:
+                overlapping = overlapping.exclude(pk=self.instance.pk)
+
+            if overlapping.exists():
+                raise serializers.ValidationError(
+                    {"non_field_errors": ["This time overlaps with another appointment or block time."]}
+                )
 
         return data

@@ -1,5 +1,5 @@
 // frontend/src/features/schedule/components/DayViewGrid.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { Appointment } from '../../schedule/types/appointment';
 
 interface DayViewGridProps {
@@ -10,11 +10,12 @@ interface DayViewGridProps {
   slotMinutes: number;
   appointments?: Appointment[];
   loading?: boolean;
+  onEditAppointment?: (appt: Appointment) => void;
 }
 
 /**
- * DayViewGrid: shows a single-day schedule grid for a provider.
- * Displays appointment blocks aligned by start_time and duration.
+ * DayViewGrid: Displays a single provider’s daily schedule
+ * with overlapping appointments, smooth transitions, and hover tooltips.
  */
 const DayViewGrid: React.FC<DayViewGridProps> = ({
   office,
@@ -24,7 +25,10 @@ const DayViewGrid: React.FC<DayViewGridProps> = ({
   slotMinutes,
   appointments = [],
   loading = false,
+  onEditAppointment,
 }) => {
+  const [hoveredId, setHoveredId] = useState<number | null>(null);
+
   console.log('📅 Rendering appointments:', appointments);
 
   // ---- Build time slots ----
@@ -39,87 +43,110 @@ const DayViewGrid: React.FC<DayViewGridProps> = ({
     }
   }
 
-  // ---- Convert "HH:MM:SS" to total minutes ----
+  // ---- Helpers ----
   const timeToMinutes = (t: string) => {
     const [h, m] = t.split(':').map(Number);
     return h * 60 + m;
   };
 
-  // ---- Config ----
-  const slotHeightPx = 48; // Each slot is ~48px tall
+  const slotHeightPx = 48;
   const minuteHeight = slotHeightPx / slotMinutes;
 
-  // ---- Render appointment blocks ----
-  // ---- Render appointment blocks ----
-  const renderAppointmentBlocks = () => {
-    if (!appointments.length) return null;
+  // ---- Preprocess: group overlapping appointments ----
+  const apptsWithRange = appointments
+    .filter((a) => a.start_time && a.end_time)
+    .map((a) => ({
+      ...a,
+      start: timeToMinutes(a.start_time),
+      end: timeToMinutes(a.end_time),
+    }))
+    .sort((a, b) => a.start - b.start);
 
-    // 1️⃣ Convert to enriched array with time ranges
-    const apptsWithRange = appointments
-      .filter((a) => a.start_time && a.end_time)
-      .map((a) => ({
-        ...a,
-        start: timeToMinutes(a.start_time),
-        end: timeToMinutes(a.end_time),
-      }))
-      .sort((a, b) => a.start - b.start);
+  const clusters: (typeof apptsWithRange)[] = [];
+  let currentCluster: typeof apptsWithRange = [];
 
-    // 2️⃣ Group overlapping appointments
-    const clusters: { group: typeof apptsWithRange }[] = [];
-    let currentCluster: typeof apptsWithRange = [];
-
-    for (const appt of apptsWithRange) {
-      if (
-        currentCluster.length === 0 ||
-        appt.start < currentCluster[currentCluster.length - 1].end
-      ) {
-        // Still overlapping
-        currentCluster.push(appt);
-      } else {
-        // Start a new cluster
-        clusters.push({ group: currentCluster });
-        currentCluster = [appt];
-      }
+  for (const appt of apptsWithRange) {
+    if (
+      currentCluster.length === 0 ||
+      appt.start < currentCluster[currentCluster.length - 1].end
+    ) {
+      currentCluster.push(appt);
+    } else {
+      clusters.push(currentCluster);
+      currentCluster = [appt];
     }
-    if (currentCluster.length) clusters.push({ group: currentCluster });
+  }
+  if (currentCluster.length) clusters.push(currentCluster);
 
-    // 3️⃣ Render clusters (side-by-side per group)
-    return clusters.flatMap(({ group }) => {
+  // ---- Render appointment blocks ----
+  const renderAppointmentBlocks = () =>
+    clusters.flatMap((group) => {
       const count = group.length;
 
       return group.map((appt, index) => {
         const blockTop = (appt.start - startHour * 60) * minuteHeight;
         const blockHeight = (appt.end - appt.start) * minuteHeight;
-
-        // Each appointment gets a fraction of the width
         const widthPercent = 100 / count;
         const leftPercent = index * widthPercent;
+
+        const bgColor =
+          appt.appointment_type === 'Block Time'
+            ? '#9CA3AF'
+            : appt.color_code || '#3B82F6';
+
+        const isHovered = hoveredId === appt.id;
 
         return (
           <div
             key={appt.id}
-            className='absolute rounded text-white text-xs p-1.5 shadow-sm overflow-hidden transition-all'
+            onMouseEnter={() => setHoveredId(appt.id!)}
+            onMouseLeave={() => setHoveredId(null)}
+            onClick={() => onEditAppointment?.(appt)}
+            className={`absolute rounded text-white text-xs p-1.5 shadow-sm overflow-hidden cursor-pointer 
+  hover:brightness-105 transition-all transition-opacity duration-300 ease-out
+  ${hoveredId === appt.id ? 'opacity-100' : 'opacity-90'}`}
             style={{
               top: `${blockTop}px`,
               height: `${blockHeight}px`,
               left: `${leftPercent}%`,
               width: `${widthPercent}%`,
-              backgroundColor: appt.color_code || '#3B82F6',
+              backgroundColor: bgColor,
             }}
-            title={`Type: ${appt.appointment_type}\nPatient: ${
-              appt.patient_name || 'N/A'
-            }\nComplaint: ${appt.chief_complaint || '—'}`}
           >
             <div className='font-semibold truncate'>
-              {appt.patient_name || '(Block Time)'}
+              {appt.appointment_type === 'Block Time'
+                ? '— Blocked —'
+                : appt.patient_name || '(No Patient)'}
             </div>
-            <div className='truncate opacity-90'>{appt.appointment_type}</div>
+            {appt.appointment_type !== 'Block Time' && (
+              <div className='truncate opacity-90'>{appt.appointment_type}</div>
+            )}
+
+            {/* Tooltip */}
+            {isHovered && (
+              <div
+                className='absolute z-50 left-1/2 top-0 -translate-x-1/2 -translate-y-full mb-1 
+                           w-max max-w-xs bg-gray-900 text-white text-xs rounded-md px-3 py-2 
+                           shadow-lg opacity-90 transition-opacity duration-150 ease-out'
+              >
+                <div className='font-semibold'>
+                  {appt.appointment_type || 'Appointment'}
+                </div>
+                {appt.patient_name && <div>Patient: {appt.patient_name}</div>}
+                {appt.chief_complaint && (
+                  <div>Reason: {appt.chief_complaint}</div>
+                )}
+                <div>
+                  {appt.start_time.slice(0, 5)} – {appt.end_time.slice(0, 5)}
+                </div>
+              </div>
+            )}
           </div>
         );
       });
     });
-  };
 
+  // ---- Render Layout ----
   return (
     <div className='border rounded overflow-hidden relative bg-white'>
       {/* Header */}
@@ -137,7 +164,7 @@ const DayViewGrid: React.FC<DayViewGridProps> = ({
         </div>
       ) : (
         <div className='grid grid-cols-[120px_1fr] text-sm relative'>
-          {/* Time column */}
+          {/* Left: Time column */}
           <div>
             {slots.map((time) => (
               <div
@@ -149,9 +176,9 @@ const DayViewGrid: React.FC<DayViewGridProps> = ({
             ))}
           </div>
 
-          {/* Schedule column */}
+          {/* Right: Schedule grid */}
           <div className='relative border-l bg-white'>
-            {/* Background grid lines */}
+            {/* Grid lines */}
             {slots.map((_, idx) => (
               <div
                 key={idx}
@@ -159,7 +186,7 @@ const DayViewGrid: React.FC<DayViewGridProps> = ({
               />
             ))}
 
-            {/* Appointment blocks (absolute positioning) */}
+            {/* Appointment blocks */}
             <div className='absolute inset-0'>{renderAppointmentBlocks()}</div>
           </div>
         </div>

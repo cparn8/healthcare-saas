@@ -1,11 +1,16 @@
 // frontend/src/features/schedule/components/NewAppointmentModal.tsx
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x';
 import WithPatientForm from './WithPatientForm';
 import {
   appointmentsApi,
   AppointmentPayload,
 } from '../../appointments/services/appointmentsApi';
+import {
+  toastError,
+  toastSuccess,
+  toastPromise,
+} from '../../../utils/toastUtils';
 
 interface NewAppointmentModalProps {
   onClose: () => void;
@@ -13,9 +18,6 @@ interface NewAppointmentModalProps {
   providerId?: number | null;
 }
 
-/**
- * Modal for creating new appointments or block times.
- */
 const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
   onClose,
   onSaved,
@@ -24,59 +26,53 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
   const [activeTab, setActiveTab] = useState<'withPatient' | 'blockTime'>(
     'withPatient'
   );
-
   const [formData, setFormData] = useState<AppointmentPayload | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ---- Save handler ------------------------------------------------
   async function handleSave() {
     if (!formData) {
-      alert('Please complete the appointment form before saving.');
+      toastError('Please complete the appointment form before saving.');
       return;
     }
 
     if (!providerId) {
-      alert(
-        'Provider ID is missing — please make sure you are logged in as a provider.'
-      );
-      console.error('❌ No providerId available');
+      toastError('Provider ID missing — please log in as a provider.');
       return;
     }
 
     try {
       setIsSubmitting(true);
-
-      // Always inject the provider ID into the payload
       const payload: AppointmentPayload = {
         ...formData,
-        provider: providerId || 1,
+        provider: providerId,
         office: formData.office || 'north',
         repeat_end_date: formData.repeat_end_date || null,
       };
 
       console.log('📤 Submitting appointment payload:', payload);
 
-      const result = await appointmentsApi.create(payload);
-      console.log('✅ Appointment created:', result);
+      await toastPromise(appointmentsApi.create(payload), {
+        loading: 'Saving appointment...',
+        success: '✅ Appointment saved successfully!',
+        error: '❌ Failed to save appointment.',
+      });
 
-      alert('Appointment saved successfully!');
+      toastSuccess('Appointment created!');
       onSaved();
       onClose();
     } catch (error: any) {
       console.error(
-        '❌ Failed to create appointment:',
+        '❌ Appointment creation failed:',
         error.response?.data || error
       );
-      alert('Failed to save appointment — check console for details.');
+      toastError('Server error — check console for details.');
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  // ---- Render ------------------------------------------------------
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/40'>
-      {/* Modal container */}
       <div className='bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col'>
         {/* Header */}
         <div className='flex items-center justify-between px-6 py-4 border-b'>
@@ -125,12 +121,10 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
             <div className='space-y-4'>
               <h3 className='text-lg font-semibold'>Block Time</h3>
               <p className='text-sm text-gray-600'>
-                Use this to reserve time on your schedule (e.g., lunch, meeting,
-                or admin time).
+                Reserve time for lunch, meetings, or administrative work.
               </p>
 
               <div className='grid grid-cols-2 gap-4'>
-                {/* ---- Date ---- */}
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-1'>
                     Date
@@ -147,7 +141,6 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
                             appointment_type: 'Block Time',
                             chief_complaint: 'Block Time',
                             color_code: '#9CA3AF',
-                            date: e.target.value,
                             start_time: '',
                             end_time: '',
                             duration: 30,
@@ -155,77 +148,43 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
                           }),
                           date: e.target.value,
                           patient: null,
-                          chief_complaint: 'Block Time',
                           appointment_type: 'Block Time',
-                          color_code: '#9CA3AF',
-                          is_recurring: false,
-                          provider: providerId ?? 1,
-                          office: prev?.office ?? 'north',
                         })
                       )
                     }
                   />
                 </div>
 
-                {/* ---- Start Time ---- */}
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 mb-1'>
-                    Start Time
-                  </label>
-                  <input
-                    type='time'
-                    className='w-full border rounded p-2'
-                    onChange={(e) =>
-                      setFormData(
-                        (prev): AppointmentPayload => ({
-                          ...(prev || {
-                            provider: providerId ?? 1,
-                            office: 'north',
-                            appointment_type: 'Block Time',
-                            chief_complaint: 'Block Time',
-                            color_code: '#9CA3AF',
-                            date: '',
-                            start_time: e.target.value,
-                            end_time: '',
-                            duration: 30,
-                            is_recurring: false,
-                          }),
-                          start_time: e.target.value,
-                        })
-                      )
-                    }
-                  />
-                </div>
-
-                {/* ---- End Time ---- */}
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 mb-1'>
-                    End Time
-                  </label>
-                  <input
-                    type='time'
-                    className='w-full border rounded p-2'
-                    onChange={(e) =>
-                      setFormData(
-                        (prev): AppointmentPayload => ({
-                          ...(prev || {
-                            provider: providerId ?? 1,
-                            office: 'north',
-                            appointment_type: 'Block Time',
-                            chief_complaint: 'Block Time',
-                            color_code: '#9CA3AF',
-                            date: '',
-                            start_time: '',
-                            end_time: e.target.value,
-                            duration: 30,
-                            is_recurring: false,
-                          }),
-                          end_time: e.target.value,
-                        })
-                      )
-                    }
-                  />
-                </div>
+                {['start_time', 'end_time'].map((field) => (
+                  <div key={field}>
+                    <label className='block text-sm font-medium text-gray-700 mb-1'>
+                      {field === 'start_time' ? 'Start Time' : 'End Time'}
+                    </label>
+                    <input
+                      type='time'
+                      className='w-full border rounded p-2'
+                      onChange={(e) =>
+                        setFormData(
+                          (prev): AppointmentPayload => ({
+                            ...(prev || {
+                              provider: providerId ?? 1,
+                              office: 'north',
+                              appointment_type: 'Block Time',
+                              chief_complaint: 'Block Time',
+                              color_code: '#9CA3AF',
+                              date: '',
+                              start_time: '',
+                              end_time: '',
+                              duration: 30,
+                              is_recurring: false,
+                            }),
+                            [field]: e.target.value,
+                          })
+                        )
+                      }
+                    />
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -239,7 +198,6 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
           >
             Cancel
           </button>
-
           <button
             onClick={handleSave}
             disabled={isSubmitting}

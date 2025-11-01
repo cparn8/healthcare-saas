@@ -1,24 +1,32 @@
-declare module 'lucide-react' {
+// frontend/src/types/lucide-react.d.ts
+declare module 'lucide-react/dist/esm/icons/*' {
   import * as React from 'react';
 
-  // Minimal generic icon props used by lucide-react icons
-  export type LucideProps = React.SVGProps<SVGSVGElement> & {
+  export interface LucideProps extends React.SVGProps<SVGSVGElement> {
     size?: number | string;
     strokeWidth?: number;
     className?: string;
-  };
+  }
 
-  // Generic icon component type
-  export type IconComponent = React.FC<LucideProps>;
+  const Icon: React.FC<LucideProps>;
+  export default Icon;
+}
 
-  // Default export: an indexable object of icons
-  const _default: { [key: string]: IconComponent };
-  export default _default;
+// Optional: fallback for root import (older style)
+declare module 'lucide-react' {
+  import * as React from 'react';
 
-  // Also export commonly used named icons as loose types so `import { X } from 'lucide-react'` works
-  // Add more named exports here if your code imports other icons and TS still errors.
-  export const X: IconComponent;
-  export const Search: IconComponent;
-  export const Mail: IconComponent;
-  export const Phone: IconComponent;
+  export interface LucideProps extends React.SVGProps<SVGSVGElement> {
+    size?: number | string;
+    strokeWidth?: number;
+    className?: string;
+  }
+
+  export const X: React.FC<LucideProps>;
+  export const Search: React.FC<LucideProps>;
+  export const Mail: React.FC<LucideProps>;
+  export const Phone: React.FC<LucideProps>;
+
+  const icons: Record<string, React.FC<LucideProps>>;
+  export default icons;
 }
