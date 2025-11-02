@@ -1,12 +1,14 @@
 // frontend/src/features/schedule/pages/Schedule.tsx
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { parseISO } from 'date-fns';
 import DayViewGrid from '../components/DayViewGrid';
+import WeekViewGrid from '../components/WeekViewGrid';
 import NewAppointmentModal from '../components/NewAppointmentModal';
+import EditAppointmentModal from '../components/EditAppointmentModal';
 import { Appointment } from '../types/appointment';
 import { appointmentsApi } from '../../appointments/services/appointmentsApi';
 import { providersApi, Provider } from '../../providers/services/providersApi';
-import EditAppointmentModal from '../components/EditAppointmentModal';
 
 type TabKey = 'appointments' | 'day' | 'week' | 'settings';
 type OfficeKey = 'north' | 'south';
@@ -21,6 +23,7 @@ const TABS = [
 
 const SLOT_OPTIONS: SlotSize[] = [15, 30, 60];
 
+/* ----------------------------- Formatters ----------------------------- */
 function formatShortDate(d: Date) {
   return new Intl.DateTimeFormat('en-US', {
     weekday: 'short',
@@ -50,27 +53,35 @@ function formatWeekRange(d: Date) {
   return `${startFmt} – ${endFmt}`;
 }
 
+/* ----------------------------- Main Page ----------------------------- */
 const SchedulePage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
+  // UI State
   const [activeTab, setActiveTab] = useState<TabKey>(
     (searchParams.get('tab') as TabKey) || 'day'
   );
   const [office, setOffice] = useState<OfficeKey>('north');
   const [cursorDate, setCursorDate] = useState<Date>(new Date());
   const [slotSize, setSlotSize] = useState<SlotSize>(30);
+
+  // Data State
   const [providerId, setProviderId] = useState<number | null>(null);
   const [provider, setProvider] = useState<Provider | null>(null);
-  const [showNewAppointment, setShowNewAppointment] = useState(false);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingAppts, setLoadingAppts] = useState(false);
+
+  // Modal State
+  const [showNewAppointment, setShowNewAppointment] = useState(false);
   const [editingAppt, setEditingAppt] = useState<Appointment | null>(null);
+  const [prefill, setPrefill] = useState<{
+    date?: string;
+    start_time?: string;
+    end_time?: string;
+  } | null>(null);
 
-  const handleFormData = useCallback((data: any) => {
-    console.log('📄 Modal form data updated:', data);
-  }, []);
-
+  /* ----------------------------- Navigation ----------------------------- */
   const changeTab = (tab: TabKey) => {
     setActiveTab(tab);
     const next = new URLSearchParams(searchParams);
@@ -100,6 +111,7 @@ const SchedulePage: React.FC = () => {
     [cursorDate, activeTab]
   );
 
+  /* ----------------------------- Provider Fetch ----------------------------- */
   useEffect(() => {
     const fetchProvider = async () => {
       try {
@@ -107,8 +119,6 @@ const SchedulePage: React.FC = () => {
         console.log('👤 Logged-in provider:', me);
         setProvider(me);
         setProviderId(me.id);
-        if (!me.id)
-          console.error('⚠️ Provider ID is missing from backend response');
       } catch (err) {
         console.error('❌ Failed to load provider info:', err);
       }
@@ -116,12 +126,12 @@ const SchedulePage: React.FC = () => {
     fetchProvider();
   }, []);
 
+  /* ----------------------------- Appointment Loading ----------------------------- */
   const loadAppointments = async () => {
     if (!providerId) return;
     try {
       setLoadingAppts(true);
       const params = { office, provider: providerId };
-      console.log('📥 Fetching appointments with filters:', params);
       const result = await appointmentsApi.list(params);
       setAppointments(result.results || []);
       console.log('✅ Loaded', result.results?.length || 0, 'appointments');
@@ -139,18 +149,28 @@ const SchedulePage: React.FC = () => {
       office,
       date: cursorDate.toISOString().split('T')[0],
     };
-    console.log('📥 Fetching appointments with filters:', params);
 
     appointmentsApi
       .list(params)
       .then((result) => {
         setAppointments(result.results || []);
-        console.log('✅ Loaded', result.results?.length || 0, 'appointments');
       })
       .catch((err) => console.error('❌ Failed to load appointments:', err))
       .finally(() => setLoadingAppts(false));
   }, [providerId, office, cursorDate]);
 
+  /* ----------------------------- Empty Slot Selection ----------------------------- */
+  const handleSelectEmptySlot = (start: Date, end: Date) => {
+    console.log('🆕 Selected slot range:', start, end);
+    setPrefill({
+      date: start.toISOString().split('T')[0],
+      start_time: start.toTimeString().slice(0, 5),
+      end_time: end.toTimeString().slice(0, 5),
+    });
+    setShowNewAppointment(true);
+  };
+
+  /* ----------------------------- Render ----------------------------- */
   return (
     <div className='space-y-4'>
       {/* Header */}
@@ -275,17 +295,51 @@ const SchedulePage: React.FC = () => {
             onEditAppointment={(appt) => setEditingAppt(appt)}
           />
         )}
+
+        {activeTab === 'week' && (
+          <WeekViewGrid
+            baseDate={cursorDate}
+            office={office}
+            providerName={
+              provider
+                ? `${provider.first_name} ${provider.last_name}`
+                : 'Loading...'
+            }
+            startHour={8}
+            endHour={17}
+            slotMinutes={slotSize}
+            appointments={appointments}
+            loading={loadingAppts}
+            onEditAppointment={(appt) => setEditingAppt(appt)}
+            onSelectEmptySlot={handleSelectEmptySlot}
+          />
+        )}
       </div>
 
+      {/* Modals */}
       {showNewAppointment && (
         <NewAppointmentModal
-          onClose={() => setShowNewAppointment(false)}
+          onClose={() => {
+            setShowNewAppointment(false);
+            setPrefill(null);
+          }}
           onSaved={() => {
-            console.log('✅ Appointment saved — reloading list...');
             loadAppointments();
             setShowNewAppointment(false);
+            setPrefill(null);
           }}
           providerId={providerId}
+          initialDate={prefill?.date ? new Date(prefill.date) : undefined}
+          initialStartTime={
+            prefill?.start_time
+              ? new Date(`1970-01-01T${prefill.start_time}`)
+              : undefined
+          }
+          initialEndTime={
+            prefill?.end_time
+              ? new Date(`1970-01-01T${prefill.end_time}`)
+              : undefined
+          }
         />
       )}
 
@@ -293,7 +347,7 @@ const SchedulePage: React.FC = () => {
         <EditAppointmentModal
           appointment={{
             ...editingAppt,
-            repeat_days: editingAppt.repeat_days || [], // ensure not null
+            repeat_days: editingAppt.repeat_days || [],
           }}
           onClose={() => setEditingAppt(null)}
           onUpdated={loadAppointments}

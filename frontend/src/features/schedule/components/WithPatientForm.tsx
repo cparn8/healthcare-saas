@@ -1,16 +1,23 @@
+// frontend/src/features/schedule/components/WithPatientForm.tsx
 import React, { useState, useEffect } from 'react';
 import { Search, Mail, Phone } from 'lucide-react';
 
-interface WithPatientFormProps {
+export interface WithPatientFormProps {
   onCancel: () => void;
   onGetFormData?: (data: any) => void;
   providerId?: number | null;
+  initialDate?: string;
+  initialStartTime?: string;
+  initialEndTime?: string;
 }
 
 const WithPatientForm: React.FC<WithPatientFormProps> = ({
   onCancel,
   onGetFormData,
   providerId,
+  initialDate,
+  initialStartTime,
+  initialEndTime,
 }) => {
   const [selectedPatient, setSelectedPatient] = useState<any | null>(null);
   const [repeatEnabled, setRepeatEnabled] = useState(false);
@@ -22,9 +29,9 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     appointment_type: 'Wellness Exam',
     color_code: '#FF6B6B',
     chief_complaint: '',
-    date: '',
-    start_time: '',
-    end_time: '',
+    date: initialDate || '',
+    start_time: initialStartTime || '',
+    end_time: initialEndTime || '',
     duration: 30,
     is_recurring: false,
     repeat_days: [] as string[],
@@ -33,6 +40,16 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     repeat_occurrences: 1,
     send_intake_form: false,
   });
+
+  // 🧠 Prefill form when new props arrive (e.g. from drag-to-select)
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      date: initialDate || prev.date || '',
+      start_time: initialStartTime || prev.start_time || '',
+      end_time: initialEndTime || prev.end_time || '',
+    }));
+  }, [initialDate, initialStartTime, initialEndTime]);
 
   useEffect(() => {
     if (providerId) {
@@ -112,7 +129,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
       <section>
         <h3 className='text-lg font-semibold mb-2'>Appointment details</h3>
 
-        {/* Provider (auto-filled) */}
+        {/* Provider + Office */}
         <div className='grid grid-cols-2 gap-4 mb-4'>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>

@@ -16,12 +16,18 @@ interface NewAppointmentModalProps {
   onClose: () => void;
   onSaved: () => void;
   providerId?: number | null;
+  initialDate?: Date;
+  initialStartTime?: Date;
+  initialEndTime?: Date;
 }
 
 const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
   onClose,
   onSaved,
   providerId,
+  initialDate,
+  initialStartTime,
+  initialEndTime,
 }) => {
   const [activeTab, setActiveTab] = useState<'withPatient' | 'blockTime'>(
     'withPatient'
@@ -34,7 +40,6 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
       toastError('Please complete the appointment form before saving.');
       return;
     }
-
     if (!providerId) {
       toastError('Provider ID missing — please log in as a provider.');
       return;
@@ -50,7 +55,6 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
       };
 
       console.log('📤 Submitting appointment payload:', payload);
-
       await toastPromise(appointmentsApi.create(payload), {
         loading: 'Saving appointment...',
         success: '✅ Appointment saved successfully!',
@@ -116,6 +120,9 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
               providerId={providerId}
               onCancel={onClose}
               onGetFormData={(data: AppointmentPayload) => setFormData(data)}
+              initialDate={initialDate?.toISOString().split('T')[0]}
+              initialStartTime={initialStartTime?.toTimeString().slice(0, 5)}
+              initialEndTime={initialEndTime?.toTimeString().slice(0, 5)}
             />
           ) : (
             <div className='space-y-4'>
@@ -131,6 +138,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
                   </label>
                   <input
                     type='date'
+                    defaultValue={initialDate?.toISOString().split('T')[0]}
                     className='w-full border rounded p-2'
                     onChange={(e) =>
                       setFormData(
@@ -141,8 +149,12 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
                             appointment_type: 'Block Time',
                             chief_complaint: 'Block Time',
                             color_code: '#9CA3AF',
-                            start_time: '',
-                            end_time: '',
+                            start_time: initialStartTime
+                              ? initialStartTime.toTimeString().slice(0, 5)
+                              : '',
+                            end_time: initialEndTime
+                              ? initialEndTime.toTimeString().slice(0, 5)
+                              : '',
                             duration: 30,
                             is_recurring: false,
                           }),
@@ -162,6 +174,11 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
                     </label>
                     <input
                       type='time'
+                      defaultValue={
+                        field === 'start_time'
+                          ? initialStartTime?.toTimeString().slice(0, 5)
+                          : initialEndTime?.toTimeString().slice(0, 5)
+                      }
                       className='w-full border rounded p-2'
                       onChange={(e) =>
                         setFormData(
@@ -172,9 +189,8 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
                               appointment_type: 'Block Time',
                               chief_complaint: 'Block Time',
                               color_code: '#9CA3AF',
-                              date: '',
-                              start_time: '',
-                              end_time: '',
+                              date:
+                                initialDate?.toISOString().split('T')[0] || '',
                               duration: 30,
                               is_recurring: false,
                             }),
