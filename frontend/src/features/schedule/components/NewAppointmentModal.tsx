@@ -1,4 +1,3 @@
-// frontend/src/features/schedule/components/NewAppointmentModal.tsx
 import React, { useState } from 'react';
 import X from 'lucide-react/dist/esm/icons/x';
 import WithPatientForm from './WithPatientForm';
@@ -44,6 +43,10 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
       toastError('Provider ID missing — please log in as a provider.');
       return;
     }
+    if (!formData.start_time || !formData.end_time) {
+      toastError('Please provide valid start and end times.');
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -54,7 +57,6 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
         repeat_end_date: formData.repeat_end_date || null,
       };
 
-      console.log('📤 Submitting appointment payload:', payload);
       await toastPromise(appointmentsApi.create(payload), {
         loading: 'Saving appointment...',
         success: '✅ Appointment saved successfully!',
@@ -130,78 +132,6 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
               <p className='text-sm text-gray-600'>
                 Reserve time for lunch, meetings, or administrative work.
               </p>
-
-              <div className='grid grid-cols-2 gap-4'>
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 mb-1'>
-                    Date
-                  </label>
-                  <input
-                    type='date'
-                    defaultValue={initialDate?.toISOString().split('T')[0]}
-                    className='w-full border rounded p-2'
-                    onChange={(e) =>
-                      setFormData(
-                        (prev): AppointmentPayload => ({
-                          ...(prev || {
-                            provider: providerId ?? 1,
-                            office: 'north',
-                            appointment_type: 'Block Time',
-                            chief_complaint: 'Block Time',
-                            color_code: '#9CA3AF',
-                            start_time: initialStartTime
-                              ? initialStartTime.toTimeString().slice(0, 5)
-                              : '',
-                            end_time: initialEndTime
-                              ? initialEndTime.toTimeString().slice(0, 5)
-                              : '',
-                            duration: 30,
-                            is_recurring: false,
-                          }),
-                          date: e.target.value,
-                          patient: null,
-                          appointment_type: 'Block Time',
-                        })
-                      )
-                    }
-                  />
-                </div>
-
-                {['start_time', 'end_time'].map((field) => (
-                  <div key={field}>
-                    <label className='block text-sm font-medium text-gray-700 mb-1'>
-                      {field === 'start_time' ? 'Start Time' : 'End Time'}
-                    </label>
-                    <input
-                      type='time'
-                      defaultValue={
-                        field === 'start_time'
-                          ? initialStartTime?.toTimeString().slice(0, 5)
-                          : initialEndTime?.toTimeString().slice(0, 5)
-                      }
-                      className='w-full border rounded p-2'
-                      onChange={(e) =>
-                        setFormData(
-                          (prev): AppointmentPayload => ({
-                            ...(prev || {
-                              provider: providerId ?? 1,
-                              office: 'north',
-                              appointment_type: 'Block Time',
-                              chief_complaint: 'Block Time',
-                              color_code: '#9CA3AF',
-                              date:
-                                initialDate?.toISOString().split('T')[0] || '',
-                              duration: 30,
-                              is_recurring: false,
-                            }),
-                            [field]: e.target.value,
-                          })
-                        )
-                      }
-                    />
-                  </div>
-                ))}
-              </div>
             </div>
           )}
         </div>

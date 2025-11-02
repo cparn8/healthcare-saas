@@ -1,8 +1,20 @@
-// frontend/src/features/schedule/components/WithPatientForm.tsx
 import React, { useState, useEffect } from 'react';
-import { Search, Mail, Phone } from 'lucide-react';
+import Search from 'lucide-react/dist/esm/icons/search';
+import UserPlus from 'lucide-react/dist/esm/icons/user-plus';
+import API from '../../../services/api';
+import { useNavigate } from 'react-router-dom';
 
-export interface WithPatientFormProps {
+interface Patient {
+  id: number;
+  first_name: string;
+  last_name: string;
+  prn: string;
+  date_of_birth: string;
+  phone?: string;
+  gender?: string;
+}
+
+interface WithPatientFormProps {
   onCancel: () => void;
   onGetFormData?: (data: any) => void;
   providerId?: number | null;
@@ -19,10 +31,31 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
   initialStartTime,
   initialEndTime,
 }) => {
-  const [selectedPatient, setSelectedPatient] = useState<any | null>(null);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<Patient[]>([]);
+  const [loading, setLoading] = useState(false);
   const [repeatEnabled, setRepeatEnabled] = useState(false);
+  const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    patient: number | null;
+    provider: number;
+    office: string;
+    appointment_type: string;
+    color_code: string;
+    chief_complaint: string;
+    date: string;
+    start_time: string;
+    end_time: string;
+    duration: number;
+    is_recurring: boolean;
+    repeat_days: string[];
+    repeat_interval_weeks: number;
+    repeat_end_date: string;
+    repeat_occurrences: number;
+    send_intake_form: boolean;
+  }>({
     patient: null,
     provider: providerId || 1,
     office: 'north',
@@ -34,56 +67,88 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     end_time: initialEndTime || '',
     duration: 30,
     is_recurring: false,
-    repeat_days: [] as string[],
+    repeat_days: [],
     repeat_interval_weeks: 1,
     repeat_end_date: '',
     repeat_occurrences: 1,
     send_intake_form: false,
   });
 
-  // 🧠 Prefill form when new props arrive (e.g. from drag-to-select)
+  // Update formData when providerId or patient changes
   useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      date: initialDate || prev.date || '',
-      start_time: initialStartTime || prev.start_time || '',
-      end_time: initialEndTime || prev.end_time || '',
-    }));
-  }, [initialDate, initialStartTime, initialEndTime]);
+    if (providerId) setFormData((p) => ({ ...p, provider: providerId }));
+  }, [providerId]);
 
   useEffect(() => {
-    if (providerId) {
-      setFormData((prev) => ({ ...prev, provider: providerId }));
-    }
-  }, [providerId]);
+    if (selectedPatient)
+      setFormData((p) => ({ ...p, patient: selectedPatient.id }));
+  }, [selectedPatient]);
 
   useEffect(() => {
     onGetFormData?.(formData);
   }, [formData, onGetFormData]);
 
+  // -------------------------------
+  // Predictive Search (debounced)
+  // -------------------------------
+  useEffect(() => {
+    const delay = setTimeout(async () => {
+      if (!query.trim()) {
+        setResults([]);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const res = await API.get(
+          `/patients/?search=${encodeURIComponent(query)}`
+        );
+        setResults(res.data || []);
+      } catch (err) {
+        console.error('❌ Patient search failed', err);
+      } finally {
+        setLoading(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(delay);
+  }, [query]);
+
+  // -------------------------------
+  // Handlers
+  // -------------------------------
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >
   ) => {
-    const { name, value, type, checked } = e.target as any;
+    const { name, value, type } = e.target;
+    const checked =
+      type === 'checkbox' && e.target instanceof HTMLInputElement
+        ? e.target.checked
+        : undefined;
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
   };
 
+  // -------------------------------
+  // UI
+  // -------------------------------
   return (
     <div className='max-h-[70vh] overflow-y-auto space-y-6 p-4'>
-      {/* --- Patient Section (Static for Now) --- */}
+      {/* --- Patient Section --- */}
       {!selectedPatient ? (
-        <section>
+        <section className='relative'>
           <label className='block text-sm font-medium text-gray-700 mb-1'>
             Search Patient
           </label>
-          <div className='relative mb-2'>
+          <div className='relative'>
             <input
               type='text'
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
               className='w-full border rounded p-2 pl-8'
               placeholder='Search by name, phone, PRN, or DOB'
             />
@@ -92,16 +157,49 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
               size={18}
             />
           </div>
-          <div className='text-xs text-gray-500 mb-2 leading-5'>
-            Name: First Last <br />
-            Phone: 123-456-7890 <br />
-            DOB: MM/DD/YYYY <br />
-            PRN: A1BC234DE
-          </div>
+
+          {loading && (
+            <div className='text-xs text-gray-500 mt-1'>Searching...</div>
+          )}
+
+          {/* Results dropdown */}
+          {results.length > 0 && (
+            <div className='absolute z-20 bg-white border rounded w-full shadow-md mt-1 max-h-56 overflow-y-auto'>
+              {results.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => {
+                    setSelectedPatient(p);
+                    setQuery('');
+                    setResults([]);
+                  }}
+                  className='block w-full text-left px-3 py-2 hover:bg-blue-50 text-sm'
+                >
+                  <div className='font-medium'>
+                    {p.first_name} {p.last_name}
+                  </div>
+                  <div className='text-xs text-gray-500'>
+                    PRN: {p.prn} • DOB: {p.date_of_birth}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Add new patient button */}
+          <button
+            onClick={() => navigate('/patients/add')}
+            className='mt-3 flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 transition'
+          >
+            <UserPlus size={16} /> Add New Patient
+          </button>
         </section>
       ) : (
         <section>
           <div className='flex justify-between items-center mb-2 text-sm'>
+            <div className='font-semibold text-gray-800'>
+              {selectedPatient.first_name} {selectedPatient.last_name}
+            </div>
             <button
               className='text-red-500 hover:underline'
               onClick={() => setSelectedPatient(null)}
@@ -109,16 +207,9 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
               Remove patient
             </button>
           </div>
-          <div className='flex gap-4 items-start'>
-            <img
-              src='/images/patient-placeholder.png'
-              alt='patient'
-              className='w-16 h-16 rounded-full object-cover'
-            />
-            <div className='text-sm leading-5'>
-              <div className='font-semibold text-base'>John Smith</div>
-              <div className='text-gray-500'>Male 63 yrs • PRN: A1BC234DE</div>
-            </div>
+          <div className='text-xs text-gray-600'>
+            PRN: {selectedPatient.prn} • DOB: {selectedPatient.date_of_birth}
+            {selectedPatient.phone && <> • Phone: {selectedPatient.phone}</>}
           </div>
         </section>
       )}
@@ -129,7 +220,6 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
       <section>
         <h3 className='text-lg font-semibold mb-2'>Appointment details</h3>
 
-        {/* Provider + Office */}
         <div className='grid grid-cols-2 gap-4 mb-4'>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>
@@ -174,45 +264,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
           />
         </div>
 
-        {/* Appointment Type & Duration */}
-        <div className='grid grid-cols-2 gap-4 mb-4'>
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Appointment Type
-            </label>
-            <select
-              name='appointment_type'
-              value={formData.appointment_type}
-              onChange={handleChange}
-              className='w-full border rounded p-2'
-            >
-              <option value='Wellness Exam'>Wellness Exam</option>
-              <option value='Follow-Up'>Follow-Up</option>
-              <option value='Consultation'>Consultation</option>
-              <option value='Physical Therapy'>Physical Therapy</option>
-            </select>
-          </div>
-
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Duration
-            </label>
-            <select
-              name='duration'
-              value={formData.duration}
-              onChange={(e) =>
-                setFormData({ ...formData, duration: Number(e.target.value) })
-              }
-              className='w-full border rounded p-2'
-            >
-              <option value={15}>15 min</option>
-              <option value={30}>30 min</option>
-              <option value={60}>60 min</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Date & Times */}
+        {/* Date & Time */}
         <div className='grid grid-cols-4 gap-4 items-end mb-4'>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>
