@@ -18,6 +18,7 @@ interface NewAppointmentModalProps {
   initialDate?: Date;
   initialStartTime?: Date;
   initialEndTime?: Date;
+  initialPatient?: any;
 }
 
 const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
@@ -27,6 +28,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
   initialDate,
   initialStartTime,
   initialEndTime,
+  initialPatient,
 }) => {
   const [activeTab, setActiveTab] = useState<'withPatient' | 'blockTime'>(
     'withPatient'
@@ -125,6 +127,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
               initialDate={initialDate?.toISOString().split('T')[0]}
               initialStartTime={initialStartTime?.toTimeString().slice(0, 5)}
               initialEndTime={initialEndTime?.toTimeString().slice(0, 5)}
+              initialPatient={initialPatient}
             />
           ) : (
             <div className='space-y-4'>

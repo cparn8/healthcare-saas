@@ -38,8 +38,8 @@ const WeekViewGrid: React.FC<WeekViewGridProps> = ({
     dayIndex: number;
     slotIndex: number;
   } | null>(null);
+  const [showSelection, setShowSelection] = useState(false); // 🆕
 
-  // ---- Week and slot setup ----
   const weekDays = useMemo(
     () =>
       Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(baseDate), i)),
@@ -66,7 +66,6 @@ const WeekViewGrid: React.FC<WeekViewGridProps> = ({
     return h * 60 + m;
   };
 
-  /* -------------------- Appointments -------------------- */
   const renderAppointmentsForDay = (day: Date) => {
     const apptsForDay = appointments.filter((a) => {
       const date = a.date ? parseISO(a.date) : null;
@@ -110,7 +109,6 @@ const WeekViewGrid: React.FC<WeekViewGridProps> = ({
           {appt.appointment_type !== 'Block Time' && (
             <div className='truncate opacity-90'>{appt.appointment_type}</div>
           )}
-
           {isHovered && (
             <div className='absolute z-50 left-1/2 -translate-x-1/2 -translate-y-full mb-1 w-max max-w-xs bg-gray-900 text-white text-xs rounded-md px-3 py-2 shadow-lg opacity-90'>
               <div className='font-semibold'>
@@ -130,11 +128,11 @@ const WeekViewGrid: React.FC<WeekViewGridProps> = ({
     });
   };
 
-  /* -------------------- Drag Selection -------------------- */
   const handleMouseDown = (dayIndex: number, slotIndex: number) => {
     setIsSelecting(true);
     setSelectionStart({ dayIndex, slotIndex });
     setSelectionEnd({ dayIndex, slotIndex });
+    setShowSelection(true);
   };
 
   const handleMouseEnter = (dayIndex: number, slotIndex: number) => {
@@ -162,12 +160,12 @@ const WeekViewGrid: React.FC<WeekViewGridProps> = ({
 
     onSelectEmptySlot?.(start, end);
 
+    setTimeout(() => setShowSelection(false), 400); // 🆕 smooth fade
     setIsSelecting(false);
     setSelectionStart(null);
     setSelectionEnd(null);
   };
 
-  /* -------------------- Render -------------------- */
   return (
     <div className='border rounded overflow-hidden relative bg-white select-none'>
       {/* Header */}
@@ -207,10 +205,11 @@ const WeekViewGrid: React.FC<WeekViewGridProps> = ({
             >
               {slots.map((_, slotIndex) => {
                 const isSelected =
+                  showSelection &&
                   isSelecting &&
                   selectionStart &&
-                  selectionStart.dayIndex === dayIndex &&
                   selectionEnd &&
+                  selectionStart.dayIndex === dayIndex &&
                   slotIndex >=
                     Math.min(
                       selectionStart.slotIndex,
@@ -233,11 +232,8 @@ const WeekViewGrid: React.FC<WeekViewGridProps> = ({
                 );
               })}
 
-              {/* Appointment overlay */}
-              <div
-                className='absolute inset-0 pointer-events-none'
-                style={{ zIndex: 1 }}
-              >
+              {/* Appointments overlay */}
+              <div className='absolute inset-0 pointer-events-none'>
                 {renderAppointmentsForDay(day)}
               </div>
             </div>

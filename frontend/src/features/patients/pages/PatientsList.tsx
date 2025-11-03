@@ -27,14 +27,20 @@ const PatientsList: React.FC = () => {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const navigate = useNavigate();
 
+  // 🔄 Fetch patient list (with search)
   useEffect(() => {
     getPatients(search).then(setPatients);
   }, [search]);
 
+  /* ------------------------------------------------------
+   ✅ handleAddPatient
+   ------------------------------------------------------ */
   const handleAddPatient = async () => {
     try {
       const newPatient = await createPatient(formData);
       setPatients((prev) => [...prev, newPatient]);
+
+      // Reset form
       setFormData({
         first_name: '',
         last_name: '',
@@ -46,11 +52,26 @@ const PatientsList: React.FC = () => {
       });
       setErrors({});
       setShowForm(false);
+
+      // 🧠 Save patient + any pending slot to sessionStorage
+      const prefillSlot = sessionStorage.getItem('prefillSlot');
+      if (prefillSlot) {
+        sessionStorage.setItem('pendingSlot', prefillSlot);
+        sessionStorage.removeItem('prefillSlot');
+      }
+
+      sessionStorage.setItem('newPatient', JSON.stringify(newPatient));
+
+      // 🔁 Redirect back to Schedule (triggers modal reopen)
+      navigate(`/doctor/schedule?newPatientId=${newPatient.id}`);
     } catch (err: any) {
       setErrors(normalizeDRFErrors(err.response?.data));
     }
   };
 
+  /* ------------------------------------------------------
+   Delete patient (unchanged)
+   ------------------------------------------------------ */
   const handleDelete = async (id: number) => {
     if (!window.confirm('Are you sure you want to delete this patient?'))
       return;

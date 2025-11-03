@@ -1,11 +1,13 @@
 // frontend/src/features/schedule/pages/Schedule.tsx
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { parseISO } from 'date-fns';
+
 import DayViewGrid from '../components/DayViewGrid';
 import WeekViewGrid from '../components/WeekViewGrid';
 import NewAppointmentModal from '../components/NewAppointmentModal';
 import EditAppointmentModal from '../components/EditAppointmentModal';
+
 import { Appointment } from '../types/appointment';
 import { appointmentsApi } from '../../appointments/services/appointmentsApi';
 import { providersApi, Provider } from '../../providers/services/providersApi';
@@ -14,6 +16,7 @@ type TabKey = 'appointments' | 'day' | 'week' | 'settings';
 type OfficeKey = 'north' | 'south';
 type SlotSize = 15 | 30 | 60;
 
+/* ----------------------------- Helpers ----------------------------- */
 const TABS = [
   { key: 'appointments', label: 'Appointments' },
   { key: 'day', label: 'Day' },
@@ -23,7 +26,6 @@ const TABS = [
 
 const SLOT_OPTIONS: SlotSize[] = [15, 30, 60];
 
-/* ----------------------------- Formatters ----------------------------- */
 function formatShortDate(d: Date) {
   return new Intl.DateTimeFormat('en-US', {
     weekday: 'short',
@@ -53,12 +55,13 @@ function formatWeekRange(d: Date) {
   return `${startFmt} – ${endFmt}`;
 }
 
-/* ----------------------------- Main Page ----------------------------- */
+/* ----------------------------- Component ----------------------------- */
 const SchedulePage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
 
-  // UI State
+  // --- UI State ---
   const [activeTab, setActiveTab] = useState<TabKey>(
     (searchParams.get('tab') as TabKey) || 'day'
   );
@@ -66,13 +69,13 @@ const SchedulePage: React.FC = () => {
   const [cursorDate, setCursorDate] = useState<Date>(new Date());
   const [slotSize, setSlotSize] = useState<SlotSize>(30);
 
-  // Data State
+  // --- Data State ---
   const [providerId, setProviderId] = useState<number | null>(null);
   const [provider, setProvider] = useState<Provider | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingAppts, setLoadingAppts] = useState(false);
 
-  // Modal State
+  // --- Modal State ---
   const [showNewAppointment, setShowNewAppointment] = useState(false);
   const [editingAppt, setEditingAppt] = useState<Appointment | null>(null);
   const [prefill, setPrefill] = useState<{
@@ -80,6 +83,7 @@ const SchedulePage: React.FC = () => {
     start_time?: string;
     end_time?: string;
   } | null>(null);
+  const [initialPatient, setInitialPatient] = useState<any>(null);
 
   /* ----------------------------- Navigation ----------------------------- */
   const changeTab = (tab: TabKey) => {
@@ -127,7 +131,7 @@ const SchedulePage: React.FC = () => {
   }, []);
 
   /* ----------------------------- Appointment Loading ----------------------------- */
-  const loadAppointments = async () => {
+  const loadAppointments = useCallback(async () => {
     if (!providerId) return;
     try {
       setLoadingAppts(true);
@@ -140,7 +144,7 @@ const SchedulePage: React.FC = () => {
     } finally {
       setLoadingAppts(false);
     }
-  };
+  }, [providerId, office]);
 
   useEffect(() => {
     if (!providerId) return;
@@ -152,12 +156,35 @@ const SchedulePage: React.FC = () => {
 
     appointmentsApi
       .list(params)
-      .then((result) => {
-        setAppointments(result.results || []);
-      })
+      .then((result) => setAppointments(result.results || []))
       .catch((err) => console.error('❌ Failed to load appointments:', err))
       .finally(() => setLoadingAppts(false));
   }, [providerId, office, cursorDate]);
+
+  /* ----------------------------- Handle Return from Add Patient ----------------------------- */
+  useEffect(() => {
+    const newPatientId = searchParams.get('newPatientId');
+    if (!newPatientId) return;
+
+    const storedPatient = sessionStorage.getItem('newPatient');
+    const parsedPatient = storedPatient ? JSON.parse(storedPatient) : null;
+
+    const storedSlot = sessionStorage.getItem('pendingSlot');
+    const parsedSlot = storedSlot ? JSON.parse(storedSlot) : null;
+
+    if (parsedPatient) setInitialPatient(parsedPatient);
+    if (parsedSlot) setPrefill(parsedSlot);
+
+    // Open modal with both patient and slot
+    setShowNewAppointment(true);
+
+    // Cleanup
+    sessionStorage.removeItem('newPatient');
+    sessionStorage.removeItem('pendingSlot');
+    const next = new URLSearchParams(searchParams);
+    next.delete('newPatientId');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   /* ----------------------------- Empty Slot Selection ----------------------------- */
   const handleSelectEmptySlot = (start: Date, end: Date) => {
@@ -292,7 +319,18 @@ const SchedulePage: React.FC = () => {
             slotMinutes={slotSize}
             appointments={appointments}
             loading={loadingAppts}
+            date={cursorDate}
             onEditAppointment={(appt) => setEditingAppt(appt)}
+            onSelectEmptySlot={(start, end) => {
+              const prefill = {
+                date: start.toISOString().split('T')[0],
+                start_time: start.toTimeString().slice(0, 5),
+                end_time: end.toTimeString().slice(0, 5),
+              };
+              sessionStorage.setItem('pendingSlot', JSON.stringify(prefill));
+              setPrefill(prefill);
+              setShowNewAppointment(true);
+            }}
           />
         )}
 
@@ -311,7 +349,19 @@ const SchedulePage: React.FC = () => {
             appointments={appointments}
             loading={loadingAppts}
             onEditAppointment={(appt) => setEditingAppt(appt)}
-            onSelectEmptySlot={handleSelectEmptySlot}
+            onSelectEmptySlot={(start, end) => {
+              const prefillData = {
+                date: start.toISOString().split('T')[0],
+                start_time: start.toTimeString().slice(0, 5),
+                end_time: end.toTimeString().slice(0, 5),
+              };
+              sessionStorage.setItem(
+                'prefillSlot',
+                JSON.stringify(prefillData)
+              );
+              setPrefill(prefillData);
+              setShowNewAppointment(true);
+            }}
           />
         )}
       </div>
@@ -322,11 +372,13 @@ const SchedulePage: React.FC = () => {
           onClose={() => {
             setShowNewAppointment(false);
             setPrefill(null);
+            setInitialPatient(null);
           }}
           onSaved={() => {
             loadAppointments();
             setShowNewAppointment(false);
             setPrefill(null);
+            setInitialPatient(null);
           }}
           providerId={providerId}
           initialDate={prefill?.date ? new Date(prefill.date) : undefined}
@@ -340,6 +392,7 @@ const SchedulePage: React.FC = () => {
               ? new Date(`1970-01-01T${prefill.end_time}`)
               : undefined
           }
+          initialPatient={initialPatient}
         />
       )}
 

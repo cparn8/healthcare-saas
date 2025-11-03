@@ -1,8 +1,9 @@
+// frontend/src/features/schedule/components/WithPatientForm.tsx
 import React, { useState, useEffect } from 'react';
 import Search from 'lucide-react/dist/esm/icons/search';
 import UserPlus from 'lucide-react/dist/esm/icons/user-plus';
 import API from '../../../services/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 
 interface Patient {
   id: number;
@@ -18,9 +19,10 @@ interface WithPatientFormProps {
   onCancel: () => void;
   onGetFormData?: (data: any) => void;
   providerId?: number | null;
-  initialDate?: string;
-  initialStartTime?: string;
-  initialEndTime?: string;
+  initialDate?: string; // "YYYY-MM-DD"
+  initialStartTime?: string; // "HH:MM"
+  initialEndTime?: string; // "HH:MM"
+  initialPatient?: any;
 }
 
 const WithPatientForm: React.FC<WithPatientFormProps> = ({
@@ -30,14 +32,24 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
   initialDate,
   initialStartTime,
   initialEndTime,
+  initialPatient,
 }) => {
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+
+  // --- Patient selection & search ---
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(
+    initialPatient || null
+  );
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(false);
-  const [repeatEnabled, setRepeatEnabled] = useState(false);
-  const navigate = useNavigate();
 
+  // --- Repeat toggle (UI helper) ---
+  const [repeatEnabled, setRepeatEnabled] = useState(false);
+
+  // --- Form state ---
   const [formData, setFormData] = useState<{
     patient: number | null;
     provider: number;
@@ -74,16 +86,27 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     send_intake_form: false,
   });
 
-  // Update formData when providerId or patient changes
+  useEffect(() => {
+    const stored = sessionStorage.getItem('newPatient');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      setSelectedPatient(parsed);
+      sessionStorage.removeItem('newPatient');
+    }
+  }, []);
+
+  // Keep provider in sync if it loads later
   useEffect(() => {
     if (providerId) setFormData((p) => ({ ...p, provider: providerId }));
   }, [providerId]);
 
+  // When a patient is chosen, store their id in the payload
   useEffect(() => {
     if (selectedPatient)
       setFormData((p) => ({ ...p, patient: selectedPatient.id }));
   }, [selectedPatient]);
 
+  // Bubble up form data to parent (modal)
   useEffect(() => {
     onGetFormData?.(formData);
   }, [formData, onGetFormData]);
@@ -97,22 +120,39 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
         setResults([]);
         return;
       }
-
       setLoading(true);
       try {
         const res = await API.get(
           `/patients/?search=${encodeURIComponent(query)}`
         );
-        setResults(res.data || []);
+        // DRF pagination: results under .results; bare list otherwise
+        const list = res.data?.results ?? res.data ?? [];
+        setResults(Array.isArray(list) ? list : []);
       } catch (err) {
         console.error('❌ Patient search failed', err);
       } finally {
         setLoading(false);
       }
-    }, 400);
+    }, 350);
 
     return () => clearTimeout(delay);
   }, [query]);
+
+  useEffect(() => {
+    const newPatientId = searchParams.get('newPatientId');
+    if (!newPatientId) return;
+
+    const fetchNewPatient = async () => {
+      try {
+        const res = await API.get(`/patients/${newPatientId}/`);
+        setSelectedPatient(res.data);
+      } catch (err) {
+        console.error('❌ Failed to load new patient', err);
+      }
+    };
+
+    fetchNewPatient();
+  }, [searchParams]);
 
   // -------------------------------
   // Handlers
@@ -123,13 +163,20 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     >
   ) => {
     const { name, value, type } = e.target;
-    const checked =
-      type === 'checkbox' && e.target instanceof HTMLInputElement
-        ? e.target.checked
-        : undefined;
+    let next: string | number | boolean = value;
+
+    // Narrow for checkboxes to avoid TS "checked" errors
+    if (type === 'checkbox' && e.target instanceof HTMLInputElement) {
+      next = e.target.checked;
+    }
+    // Duration should be a number
+    if (name === 'duration') {
+      next = Number(next);
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: next,
     }));
   };
 
@@ -186,9 +233,15 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
             </div>
           )}
 
-          {/* Add new patient button */}
+          {/* Add new patient button (hidden when a patient is selected) */}
           <button
-            onClick={() => navigate('/patients/add')}
+            onClick={() => {
+              // Tell PatientsList that we came from Schedule
+              localStorage.setItem('afterAddPatient', '/doctor/schedule');
+              // Also preserve the current modal state (timeslot, provider)
+              sessionStorage.setItem('prefillSlot', JSON.stringify(formData));
+              navigate('/doctor/manage-users/patients');
+            }}
             className='mt-3 flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 transition'
           >
             <UserPlus size={16} /> Add New Patient
@@ -302,11 +355,13 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
               className='w-full border rounded p-2'
             />
           </div>
+
+          {/* Repeat toggle */}
           <label className='flex items-center gap-2 mb-2'>
             <input
               type='checkbox'
               checked={repeatEnabled}
-              onChange={(e) => {
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                 setRepeatEnabled(e.target.checked);
                 setFormData((prev) => ({
                   ...prev,
