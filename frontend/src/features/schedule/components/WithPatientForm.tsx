@@ -1,9 +1,9 @@
 // frontend/src/features/schedule/components/WithPatientForm.tsx
-import React, { useState, useEffect } from 'react';
-import Search from 'lucide-react/dist/esm/icons/search';
-import UserPlus from 'lucide-react/dist/esm/icons/user-plus';
-import API from '../../../services/api';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import Search from "lucide-react/dist/esm/icons/search";
+import UserPlus from "lucide-react/dist/esm/icons/user-plus";
+import API from "../../../services/api";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 
 interface Patient {
   id: number;
@@ -23,6 +23,12 @@ interface WithPatientFormProps {
   initialStartTime?: string; // "HH:MM"
   initialEndTime?: string; // "HH:MM"
   initialPatient?: any;
+  appointmentTypes?: {
+    id?: number;
+    name: string;
+    default_duration: number;
+    color_code: string;
+  }[];
 }
 
 const WithPatientForm: React.FC<WithPatientFormProps> = ({
@@ -33,6 +39,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
   initialStartTime,
   initialEndTime,
   initialPatient,
+  appointmentTypes,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -42,7 +49,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(
     initialPatient || null
   );
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [results, setResults] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -70,28 +77,29 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
   }>({
     patient: null,
     provider: providerId || 1,
-    office: 'north',
-    appointment_type: 'Wellness Exam',
-    color_code: '#FF6B6B',
-    chief_complaint: '',
-    date: initialDate || '',
-    start_time: initialStartTime || '',
-    end_time: initialEndTime || '',
-    duration: 30,
+    office: "north",
+    appointment_type: appointmentTypes?.[0]?.name || "",
+    color_code: appointmentTypes?.[0]?.color_code || "#FF6B6B",
+    duration: appointmentTypes?.[0]?.default_duration || 30,
+    chief_complaint: "",
+    date: initialDate || "",
+    start_time: initialStartTime || "",
+    end_time: initialEndTime || "",
+
     is_recurring: false,
     repeat_days: [],
     repeat_interval_weeks: 1,
-    repeat_end_date: '',
+    repeat_end_date: "",
     repeat_occurrences: 1,
     send_intake_form: false,
   });
 
   useEffect(() => {
-    const stored = sessionStorage.getItem('newPatient');
+    const stored = sessionStorage.getItem("newPatient");
     if (stored) {
       const parsed = JSON.parse(stored);
       setSelectedPatient(parsed);
-      sessionStorage.removeItem('newPatient');
+      sessionStorage.removeItem("newPatient");
     }
   }, []);
 
@@ -129,7 +137,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
         const list = res.data?.results ?? res.data ?? [];
         setResults(Array.isArray(list) ? list : []);
       } catch (err) {
-        console.error('❌ Patient search failed', err);
+        console.error("❌ Patient search failed", err);
       } finally {
         setLoading(false);
       }
@@ -139,7 +147,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
   }, [query]);
 
   useEffect(() => {
-    const newPatientId = searchParams.get('newPatientId');
+    const newPatientId = searchParams.get("newPatientId");
     if (!newPatientId) return;
 
     const fetchNewPatient = async () => {
@@ -147,7 +155,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
         const res = await API.get(`/patients/${newPatientId}/`);
         setSelectedPatient(res.data);
       } catch (err) {
-        console.error('❌ Failed to load new patient', err);
+        console.error("❌ Failed to load new patient", err);
       }
     };
 
@@ -166,11 +174,11 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     let next: string | number | boolean = value;
 
     // Narrow for checkboxes to avoid TS "checked" errors
-    if (type === 'checkbox' && e.target instanceof HTMLInputElement) {
+    if (type === "checkbox" && e.target instanceof HTMLInputElement) {
       next = e.target.checked;
     }
     // Duration should be a number
-    if (name === 'duration') {
+    if (name === "duration") {
       next = Number(next);
     }
 
@@ -184,48 +192,48 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
   // UI
   // -------------------------------
   return (
-    <div className='max-h-[70vh] overflow-y-auto space-y-6 p-4'>
+    <div className="max-h-[70vh] overflow-y-auto space-y-6 p-4">
       {/* --- Patient Section --- */}
       {!selectedPatient ? (
-        <section className='relative'>
-          <label className='block text-sm font-medium text-gray-700 mb-1'>
+        <section className="relative">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             Search Patient
           </label>
-          <div className='relative'>
+          <div className="relative">
             <input
-              type='text'
+              type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className='w-full border rounded p-2 pl-8'
-              placeholder='Search by name, phone, PRN, or DOB'
+              className="w-full border rounded p-2 pl-8"
+              placeholder="Search by name, phone, PRN, or DOB"
             />
             <Search
-              className='absolute left-2 top-2.5 text-gray-400'
+              className="absolute left-2 top-2.5 text-gray-400"
               size={18}
             />
           </div>
 
           {loading && (
-            <div className='text-xs text-gray-500 mt-1'>Searching...</div>
+            <div className="text-xs text-gray-500 mt-1">Searching...</div>
           )}
 
           {/* Results dropdown */}
           {results.length > 0 && (
-            <div className='absolute z-20 bg-white border rounded w-full shadow-md mt-1 max-h-56 overflow-y-auto'>
+            <div className="absolute z-20 bg-white border rounded w-full shadow-md mt-1 max-h-56 overflow-y-auto">
               {results.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => {
                     setSelectedPatient(p);
-                    setQuery('');
+                    setQuery("");
                     setResults([]);
                   }}
-                  className='block w-full text-left px-3 py-2 hover:bg-blue-50 text-sm'
+                  className="block w-full text-left px-3 py-2 hover:bg-blue-50 text-sm"
                 >
-                  <div className='font-medium'>
+                  <div className="font-medium">
                     {p.first_name} {p.last_name}
                   </div>
-                  <div className='text-xs text-gray-500'>
+                  <div className="text-xs text-gray-500">
                     PRN: {p.prn} • DOB: {p.date_of_birth}
                   </div>
                 </button>
@@ -237,129 +245,153 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
           <button
             onClick={() => {
               // Tell PatientsList that we came from Schedule
-              localStorage.setItem('afterAddPatient', '/doctor/schedule');
+              localStorage.setItem("afterAddPatient", "/doctor/schedule");
               // Also preserve the current modal state (timeslot, provider)
-              sessionStorage.setItem('prefillSlot', JSON.stringify(formData));
-              navigate('/doctor/manage-users/patients');
+              sessionStorage.setItem("prefillSlot", JSON.stringify(formData));
+              navigate("/doctor/manage-users/patients");
             }}
-            className='mt-3 flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 transition'
+            className="mt-3 flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 transition"
           >
             <UserPlus size={16} /> Add New Patient
           </button>
         </section>
       ) : (
         <section>
-          <div className='flex justify-between items-center mb-2 text-sm'>
-            <div className='font-semibold text-gray-800'>
+          <div className="flex justify-between items-center mb-2 text-sm">
+            <div className="font-semibold text-gray-800">
               {selectedPatient.first_name} {selectedPatient.last_name}
             </div>
             <button
-              className='text-red-500 hover:underline'
+              className="text-red-500 hover:underline"
               onClick={() => setSelectedPatient(null)}
             >
               Remove patient
             </button>
           </div>
-          <div className='text-xs text-gray-600'>
+          <div className="text-xs text-gray-600">
             PRN: {selectedPatient.prn} • DOB: {selectedPatient.date_of_birth}
             {selectedPatient.phone && <> • Phone: {selectedPatient.phone}</>}
           </div>
         </section>
       )}
 
-      <hr className='border-gray-200' />
+      <hr className="border-gray-200" />
 
       {/* --- Appointment Details --- */}
       <section>
-        <h3 className='text-lg font-semibold mb-2'>Appointment details</h3>
+        <h3 className="text-lg font-semibold mb-2">Appointment details</h3>
 
-        <div className='grid grid-cols-2 gap-4 mb-4'>
+        <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Provider
             </label>
             <input
-              type='text'
+              type="text"
               readOnly
-              value={providerId ? `Provider #${providerId}` : 'Loading...'}
-              className='w-full border rounded p-2 bg-gray-50 text-gray-600'
+              value={providerId ? `Provider #${providerId}` : "Loading..."}
+              className="w-full border rounded p-2 bg-gray-50 text-gray-600"
             />
           </div>
 
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Office
             </label>
             <select
-              name='office'
+              name="office"
               value={formData.office}
               onChange={handleChange}
-              className='w-full border rounded p-2'
+              className="w-full border rounded p-2"
             >
-              <option value='north'>North Office</option>
-              <option value='south'>South Office</option>
+              <option value="north">North Office</option>
+              <option value="south">South Office</option>
             </select>
           </div>
         </div>
 
         {/* Chief Complaint */}
-        <div className='mb-4'>
-          <label className='block text-sm font-medium text-gray-700 mb-1'>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             Chief Complaint
           </label>
           <textarea
-            name='chief_complaint'
+            name="chief_complaint"
             value={formData.chief_complaint}
             onChange={handleChange}
-            className='w-full border rounded p-2'
-            placeholder='Brief description of symptoms or reason for visit'
+            className="w-full border rounded p-2"
+            placeholder="Brief description of symptoms or reason for visit"
             rows={2}
           />
         </div>
 
+        {/* Appointment Type */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Appointment Type
+          </label>
+          <select
+            name="appointment_type"
+            value={formData.appointment_type}
+            onChange={handleChange}
+            className="w-full border rounded p-2"
+          >
+            <option value="">Select type</option>
+            {appointmentTypes?.length ? (
+              appointmentTypes.map((t) => (
+                <option key={t.name} value={t.name}>
+                  {t.name} ({t.default_duration} min)
+                </option>
+              ))
+            ) : (
+              <option disabled>No types configured</option>
+            )}
+          </select>
+        </div>
+
         {/* Date & Time */}
-        <div className='grid grid-cols-4 gap-4 items-end mb-4'>
+        <div className="grid grid-cols-4 gap-4 items-end mb-4">
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Date
             </label>
             <input
-              type='date'
-              name='date'
+              type="date"
+              name="date"
               value={formData.date}
               onChange={handleChange}
-              className='w-full border rounded p-2'
+              className="w-full border rounded p-2"
             />
           </div>
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Start Time
             </label>
             <input
-              type='time'
-              name='start_time'
+              type="time"
+              name="start_time"
               value={formData.start_time}
               onChange={handleChange}
-              className='w-full border rounded p-2'
+              className="w-full border rounded p-2"
             />
           </div>
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               End Time
             </label>
             <input
-              type='time'
-              name='end_time'
+              type="time"
+              name="end_time"
               value={formData.end_time}
               onChange={handleChange}
-              className='w-full border rounded p-2'
+              className="w-full border rounded p-2"
             />
           </div>
 
           {/* Repeat toggle */}
-          <label className='flex items-center gap-2 mb-2'>
+          <label className="flex items-center gap-2 mb-2">
             <input
-              type='checkbox'
+              type="checkbox"
               checked={repeatEnabled}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                 setRepeatEnabled(e.target.checked);
@@ -368,9 +400,9 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
                   is_recurring: e.target.checked,
                 }));
               }}
-              className='h-4 w-4'
+              className="h-4 w-4"
             />
-            <span className='text-sm font-medium text-gray-700'>Repeat</span>
+            <span className="text-sm font-medium text-gray-700">Repeat</span>
           </label>
         </div>
       </section>

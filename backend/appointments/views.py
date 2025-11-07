@@ -2,6 +2,7 @@ from rest_framework import viewsets, permissions, filters
 from .models import Appointment
 from .serializers import AppointmentSerializer
 from rest_framework.exceptions import ValidationError
+from schedule.models import ScheduleSettings
 
 
 class AppointmentViewSet(viewsets.ModelViewSet):
@@ -28,5 +29,17 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
         if not provider:
             raise ValidationError({"provider": "No provider found for this user."})
+        
+        # Pull color/duration from ScheduleSettings
+        appt_type = serializer.validated_data.get("appointment_type", "")
+        color = serializer.validated_data.get("color_code") or "#3B82F6"
+        duration = serializer.validated_data.get("duration") or 30
 
-        serializer.save(provider=provider)
+        ss = ScheduleSettings.objects.first()
+        if ss and isinstance(ss.appointment_types, list):
+            match = next((t for t in ss.appointment_types if t.get("name") == appt_type), None)
+            if match:
+                color = match.get("color_code", color)
+                duration = match.get("default_duration", duration)
+
+        serializer.save(provider=provider, color_code=color, duration=duration)

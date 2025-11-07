@@ -7,11 +7,13 @@ from rest_framework import routers
 from patients.views import PatientViewSet
 from providers.views import ProviderViewSet
 from appointments.views import AppointmentViewSet
+from schedule.urls import router as schedule_router
 
 router = routers.DefaultRouter()
 router.register(r"patients", PatientViewSet)
 router.register(r"providers", ProviderViewSet)
 router.register(r"appointments", AppointmentViewSet)
+router.registry.extend(schedule_router.registry)
 
 urlpatterns = [
     path("admin/", admin.site.urls),

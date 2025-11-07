@@ -1,169 +1,111 @@
 // frontend/src/features/schedule/components/DayViewGrid.tsx
-import React, { useState, useEffect } from 'react';
-import { isSameDay, parseISO } from 'date-fns';
-import { Appointment } from '../../schedule/types/appointment';
+import React, { useMemo, useState } from "react";
+import { isSameDay, parseISO } from "date-fns";
+import { Appointment } from "../types/appointment";
+import { ScheduleSettings, Weekday } from "../types/scheduleSettings";
 
 interface DayViewGridProps {
   office: string;
   providerName: string;
-  startHour: number;
-  endHour: number;
   slotMinutes: number;
   appointments?: Appointment[];
   loading?: boolean;
   onEditAppointment?: (appt: Appointment) => void;
   onSelectEmptySlot?: (start: Date, end: Date) => void;
-  date: Date; // 🆕 current date shown
+  onChangeDate?: (newDate: Date) => void; // used by parent for date navigation
+  date: Date;
+  scheduleSettings?: ScheduleSettings | null;
+  startHour: number;
+  endHour: number;
+}
+
+const SLOT_ROW_PX = 48;
+
+function getWeekdayKey(date: Date): Weekday {
+  return date
+    .toLocaleDateString("en-US", { weekday: "short" })
+    .toLowerCase()
+    .slice(0, 3) as Weekday;
 }
 
 const DayViewGrid: React.FC<DayViewGridProps> = ({
   office,
   providerName,
-  startHour,
-  endHour,
   slotMinutes,
   appointments = [],
   loading = false,
   onEditAppointment,
   onSelectEmptySlot,
   date,
+  scheduleSettings,
 }) => {
-  const [hoveredId, setHoveredId] = useState<number | null>(null);
-  const [isSelecting, setIsSelecting] = useState(false);
-  const [selectionStart, setSelectionStart] = useState<number | null>(null);
-  const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
-  const [showSelection, setShowSelection] = useState(false); // 🆕 for highlight fade
+  // --- determine working hours for the selected day ---
+  const weekday = getWeekdayKey(date);
+  const defaultHours = { open: true, start: "08:00", end: "17:00" };
 
-  // ---- Build time slots ----
-  const slots: string[] = [];
-  for (let h = startHour; h < endHour; h++) {
-    for (let m = 0; m < 60; m += slotMinutes) {
-      slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+  const hours =
+    scheduleSettings?.business_hours?.[
+      office as keyof ScheduleSettings["business_hours"]
+    ]?.[weekday] ?? defaultHours;
+
+  const open = !!hours.open;
+  const startHour = parseInt(hours.start.split(":")[0], 10);
+  const endHour = parseInt(hours.end.split(":")[0], 10);
+
+  // --- build visible time slots ---
+  const slots = useMemo(() => {
+    if (!open) return [];
+    const times: string[] = [];
+    for (let h = startHour; h < endHour; h++) {
+      for (let m = 0; m < 60; m += slotMinutes) {
+        times.push(
+          `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`
+        );
+      }
     }
-  }
+    return times;
+  }, [startHour, endHour, slotMinutes, open]);
 
-  const slotHeightPx = 48;
-  const minuteHeight = slotHeightPx / slotMinutes;
-
+  const minuteHeight = SLOT_ROW_PX / slotMinutes;
   const timeToMinutes = (t: string) => {
-    const [h, m] = t.split(':').map(Number);
+    const [h, m] = t.split(":").map(Number);
     return h * 60 + m;
   };
 
-  // ---- Filter appointments for this date ----
-  const apptsForDay = appointments.filter((a) => {
-    const dateObj = a.date ? parseISO(a.date) : null;
-    return dateObj && isSameDay(dateObj, date);
-  });
+  // --- filter appointments for this specific day ---
+  const apptsForDay = useMemo(
+    () =>
+      appointments.filter((a) => {
+        const d = a.date ? parseISO(a.date) : null;
+        return d && isSameDay(d, date);
+      }),
+    [appointments, date]
+  );
 
-  // ---- Cluster overlapping appointments ----
-  const apptsWithRange = apptsForDay
-    .filter((a) => a.start_time && a.end_time)
-    .map((a) => ({
-      ...a,
-      start: timeToMinutes(a.start_time),
-      end: timeToMinutes(a.end_time),
-    }))
-    .sort((a, b) => a.start - b.start);
+  // --- slot selection for creating appointments ---
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selStartIdx, setSelStartIdx] = useState<number | null>(null);
+  const [selEndIdx, setSelEndIdx] = useState<number | null>(null);
 
-  const clusters: (typeof apptsWithRange)[] = [];
-  let currentCluster: typeof apptsWithRange = [];
-  for (const appt of apptsWithRange) {
-    if (
-      currentCluster.length === 0 ||
-      appt.start < currentCluster[currentCluster.length - 1].end
-    ) {
-      currentCluster.push(appt);
-    } else {
-      clusters.push(currentCluster);
-      currentCluster = [appt];
-    }
-  }
-  if (currentCluster.length) clusters.push(currentCluster);
-
-  // ---- Render appointments ----
-  const renderAppointmentBlocks = () =>
-    clusters.flatMap((group) => {
-      const count = group.length;
-
-      return group.map((appt, index) => {
-        const blockTop = (appt.start - startHour * 60) * minuteHeight;
-        const blockHeight = (appt.end - appt.start) * minuteHeight;
-        const widthPercent = 100 / count;
-        const leftPercent = index * widthPercent;
-        const bgColor =
-          appt.appointment_type === 'Block Time'
-            ? '#9CA3AF'
-            : appt.color_code || '#3B82F6';
-        const isHovered = hoveredId === appt.id;
-
-        return (
-          <div
-            key={appt.id}
-            onMouseEnter={() => setHoveredId(appt.id!)}
-            onMouseLeave={() => setHoveredId(null)}
-            onClick={() => onEditAppointment?.(appt)}
-            className={`absolute rounded text-white text-xs p-1.5 shadow-sm cursor-pointer 
-              hover:brightness-105 transition-all duration-200 ease-out
-              ${hoveredId === appt.id ? 'opacity-100' : 'opacity-90'}`}
-            style={{
-              top: `${blockTop}px`,
-              height: `${blockHeight}px`,
-              left: `${leftPercent}%`,
-              width: `${widthPercent}%`,
-              backgroundColor: bgColor,
-            }}
-          >
-            <div className='font-semibold truncate'>
-              {appt.appointment_type === 'Block Time'
-                ? '— Blocked —'
-                : appt.patient_name || '(No Patient)'}
-            </div>
-            {appt.appointment_type !== 'Block Time' && (
-              <div className='truncate opacity-90'>{appt.appointment_type}</div>
-            )}
-
-            {isHovered && (
-              <div className='absolute z-50 left-1/2 -translate-x-1/2 -translate-y-full mb-1 w-max max-w-xs bg-gray-900 text-white text-xs rounded-md px-3 py-2 shadow-lg opacity-90'>
-                <div className='font-semibold'>
-                  {appt.appointment_type || 'Appointment'}
-                </div>
-                {appt.patient_name && <div>Patient: {appt.patient_name}</div>}
-                {appt.chief_complaint && (
-                  <div>Reason: {appt.chief_complaint}</div>
-                )}
-                <div>
-                  {appt.start_time.slice(0, 5)} – {appt.end_time.slice(0, 5)}
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      });
-    });
-
-  // ---- Drag-to-select logic ----
-  const handleMouseDown = (slotIndex: number) => {
+  const handleMouseDown = (idx: number) => {
     setIsSelecting(true);
-    setSelectionStart(slotIndex);
-    setSelectionEnd(slotIndex);
-    setShowSelection(true);
+    setSelStartIdx(idx);
+    setSelEndIdx(idx);
   };
 
-  const handleMouseEnter = (slotIndex: number) => {
-    if (!isSelecting || selectionStart === null) return;
-    setSelectionEnd(slotIndex);
+  const handleMouseEnter = (idx: number) => {
+    if (!isSelecting || selStartIdx === null) return;
+    setSelEndIdx(idx);
   };
 
   const handleMouseUp = () => {
-    if (!isSelecting || selectionStart === null || selectionEnd === null)
-      return;
+    if (!isSelecting || selStartIdx === null || selEndIdx === null) return;
 
-    const startSlot = Math.min(selectionStart, selectionEnd);
-    const endSlot = Math.max(selectionStart, selectionEnd);
+    const startIdx = Math.min(selStartIdx, selEndIdx);
+    const endIdx = Math.max(selStartIdx, selEndIdx);
 
-    const startMinutes = startHour * 60 + startSlot * slotMinutes;
-    const endMinutes = startHour * 60 + (endSlot + 1) * slotMinutes;
+    const startMinutes = startHour * 60 + startIdx * slotMinutes;
+    const endMinutes = startHour * 60 + (endIdx + 1) * slotMinutes;
 
     const start = new Date(date);
     start.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
@@ -172,70 +114,108 @@ const DayViewGrid: React.FC<DayViewGridProps> = ({
 
     onSelectEmptySlot?.(start, end);
 
-    // Fade highlight for 400ms after release
-    setTimeout(() => setShowSelection(false), 400);
     setIsSelecting(false);
-    setSelectionStart(null);
-    setSelectionEnd(null);
+    setSelStartIdx(null);
+    setSelEndIdx(null);
   };
 
+  // --- render scheduled appointments ---
+  const renderAppointments = () =>
+    apptsForDay
+      .filter((a) => a.start_time && a.end_time)
+      .map((a) => {
+        const start = timeToMinutes(a.start_time);
+        const end = timeToMinutes(a.end_time);
+        const top = (start - startHour * 60) * minuteHeight;
+        const height = (end - start) * minuteHeight;
+        const bg =
+          a.appointment_type === "Block Time"
+            ? "#9CA3AF"
+            : a.color_code || "#3B82F6";
+
+        return (
+          <div
+            key={a.id}
+            className="absolute left-0 right-0 rounded text-white text-xs p-1.5 shadow-sm cursor-pointer hover:brightness-105"
+            style={{ top, height, backgroundColor: bg }}
+            onClick={() => onEditAppointment?.(a)}
+          >
+            <div className="font-semibold truncate">
+              {a.appointment_type === "Block Time"
+                ? "— Blocked —"
+                : a.patient_name || "(No Patient)"}
+            </div>
+            {a.appointment_type !== "Block Time" && (
+              <div className="truncate opacity-90">{a.appointment_type}</div>
+            )}
+          </div>
+        );
+      });
+
+  // --- render ---
+  if (!open) {
+    return (
+      <div className="p-10 text-center text-gray-500 italic border rounded bg-gray-50">
+        This office is closed on{" "}
+        <span className="font-medium">{weekday.toUpperCase()}</span>.
+      </div>
+    );
+  }
+
   return (
-    <div className='border rounded overflow-hidden relative bg-white select-none'>
+    <div className="border rounded overflow-hidden bg-white select-none">
       {/* Header */}
-      <div className='grid grid-cols-[120px_1fr] bg-gray-100 border-b text-sm font-semibold'>
-        <div className='p-2 border-r text-gray-700'>Time</div>
-        <div className='p-2'>
+      <div className="grid grid-cols-[120px_1fr] bg-gray-100 border-b text-sm font-semibold">
+        <div className="p-2 border-r text-gray-700">Time</div>
+        <div className="p-2">
           {providerName} — {office}
         </div>
       </div>
 
       {/* Body */}
       {loading ? (
-        <div className='p-6 text-center text-gray-500 italic'>
+        <div className="p-6 text-center text-gray-500 italic">
           Loading appointments…
         </div>
       ) : (
-        <div className='grid grid-cols-[120px_1fr] text-sm relative'>
-          {/* Left column: Times */}
+        <div className="grid grid-cols-[120px_1fr] text-sm relative">
+          {/* Left: Time labels */}
           <div>
             {slots.map((time) => (
               <div
                 key={time}
-                className='border-r border-b p-2 text-gray-700 h-12 bg-gray-50'
+                className="border-r border-b p-2 text-gray-700 h-12 bg-gray-50"
               >
                 {time}
               </div>
             ))}
           </div>
 
-          {/* Right column: Slots */}
-          <div className='relative border-l'>
+          {/* Right: Interactive slots */}
+          <div className="relative border-l" onMouseUp={handleMouseUp}>
             {slots.map((_, idx) => {
-              const isSelected =
-                showSelection &&
-                selectionStart !== null &&
-                selectionEnd !== null &&
-                idx >= Math.min(selectionStart, selectionEnd) &&
-                idx <= Math.max(selectionStart, selectionEnd);
+              const selected =
+                isSelecting &&
+                selStartIdx !== null &&
+                selEndIdx !== null &&
+                idx >= Math.min(selStartIdx, selEndIdx) &&
+                idx <= Math.max(selStartIdx, selEndIdx);
 
               return (
                 <div
                   key={idx}
-                  className={`border-b h-12 transition-colors ${
-                    isSelected
-                      ? 'bg-blue-200'
-                      : 'hover:bg-blue-50 cursor-crosshair'
-                  }`}
+                  className={`border-b h-12 ${
+                    selected ? "bg-gray-200" : "hover:bg-blue-50"
+                  } cursor-crosshair`}
                   onMouseDown={() => handleMouseDown(idx)}
                   onMouseEnter={() => handleMouseEnter(idx)}
-                  onMouseUp={handleMouseUp}
                 />
               );
             })}
 
             {/* Appointment overlays */}
-            <div className='absolute inset-0 pointer-events-none'>
-              {renderAppointmentBlocks()}
+            <div className="absolute inset-0 pointer-events-none">
+              {renderAppointments()}
             </div>
           </div>
         </div>

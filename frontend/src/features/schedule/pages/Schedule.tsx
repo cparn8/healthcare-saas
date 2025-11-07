@@ -1,37 +1,44 @@
 // frontend/src/features/schedule/pages/Schedule.tsx
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { parseISO } from 'date-fns';
+import React, { useMemo, useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
+import { addDays } from "date-fns";
 
-import DayViewGrid from '../components/DayViewGrid';
-import WeekViewGrid from '../components/WeekViewGrid';
-import NewAppointmentModal from '../components/NewAppointmentModal';
-import EditAppointmentModal from '../components/EditAppointmentModal';
+import DayViewGrid from "../components/DayViewGrid";
+import WeekViewGrid from "../components/WeekViewGrid";
+import NewAppointmentModal from "../components/NewAppointmentModal";
+import EditAppointmentModal from "../components/EditAppointmentModal";
+import SettingsPanel from "../components/SettingsPanel";
 
-import { Appointment } from '../types/appointment';
-import { appointmentsApi } from '../../appointments/services/appointmentsApi';
-import { providersApi, Provider } from '../../providers/services/providersApi';
+import { Appointment } from "../types/appointment";
+import { appointmentsApi } from "../../appointments/services/appointmentsApi";
+import { providersApi, Provider } from "../../providers/services/providersApi";
+import { scheduleSettingsApi } from "../services/scheduleSettingsApi";
+import {
+  ScheduleSettings,
+  AppointmentTypeDef,
+} from "../types/scheduleSettings";
 
-type TabKey = 'appointments' | 'day' | 'week' | 'settings';
-type OfficeKey = 'north' | 'south';
+type TabKey = "appointments" | "day" | "week" | "settings";
+type OfficeKey = "north" | "south";
 type SlotSize = 15 | 30 | 60;
+type OfficeKeyStrict = keyof ScheduleSettings["business_hours"];
+type WeekdayKeyStrict = keyof ScheduleSettings["business_hours"]["north"];
 
-/* ----------------------------- Helpers ----------------------------- */
 const TABS = [
-  { key: 'appointments', label: 'Appointments' },
-  { key: 'day', label: 'Day' },
-  { key: 'week', label: 'Week' },
-  { key: 'settings', label: 'Settings' },
+  { key: "appointments", label: "Appointments" },
+  { key: "day", label: "Day" },
+  { key: "week", label: "Week" },
+  { key: "settings", label: "Settings" },
 ] as const;
 
 const SLOT_OPTIONS: SlotSize[] = [15, 30, 60];
 
 function formatShortDate(d: Date) {
-  return new Intl.DateTimeFormat('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   }).format(d);
 }
 
@@ -43,29 +50,26 @@ function formatWeekRange(d: Date) {
   end.setDate(start.getDate() + 4);
 
   const sameMonth = start.getMonth() === end.getMonth();
-  const startFmt = new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
+  const startFmt = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
   }).format(start);
-  const endFmt = new Intl.DateTimeFormat('en-US', {
-    month: sameMonth ? undefined : 'short',
-    day: 'numeric',
-    year: 'numeric',
+  const endFmt = new Intl.DateTimeFormat("en-US", {
+    month: sameMonth ? undefined : "short",
+    day: "numeric",
+    year: "numeric",
   }).format(end);
   return `${startFmt} – ${endFmt}`;
 }
 
-/* ----------------------------- Component ----------------------------- */
 const SchedulePage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const location = useLocation();
-  const navigate = useNavigate();
 
   // --- UI State ---
   const [activeTab, setActiveTab] = useState<TabKey>(
-    (searchParams.get('tab') as TabKey) || 'day'
+    (searchParams.get("tab") as TabKey) || "day"
   );
-  const [office, setOffice] = useState<OfficeKey>('north');
+  const [office, setOffice] = useState<OfficeKey>("north");
   const [cursorDate, setCursorDate] = useState<Date>(new Date());
   const [slotSize, setSlotSize] = useState<SlotSize>(30);
 
@@ -74,6 +78,11 @@ const SchedulePage: React.FC = () => {
   const [provider, setProvider] = useState<Provider | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingAppts, setLoadingAppts] = useState(false);
+  const [appointmentTypes, setAppointmentTypes] = useState<
+    AppointmentTypeDef[]
+  >([]);
+  const [scheduleSettings, setScheduleSettings] =
+    useState<ScheduleSettings | null>(null);
 
   // --- Modal State ---
   const [showNewAppointment, setShowNewAppointment] = useState(false);
@@ -89,42 +98,81 @@ const SchedulePage: React.FC = () => {
   const changeTab = (tab: TabKey) => {
     setActiveTab(tab);
     const next = new URLSearchParams(searchParams);
-    next.set('tab', tab);
+    next.set("tab", tab);
     setSearchParams(next, { replace: true });
   };
 
+  // Smart skip to next/previous *open* day based on ScheduleSettings
+  function findNextOpenDay(current: Date, direction: 1 | -1): Date {
+    if (!scheduleSettings || !office) return current;
+
+    const maxAttempts = 7;
+    let next = new Date(current);
+
+    for (let i = 0; i < maxAttempts; i++) {
+      next = addDays(next, direction);
+      const weekday = next
+        .toLocaleDateString("en-US", { weekday: "short" })
+        .toLowerCase()
+        .slice(0, 3) as WeekdayKeyStrict;
+
+      const officeHours =
+        scheduleSettings.business_hours?.[office as OfficeKeyStrict]?.[weekday];
+
+      if (!officeHours || officeHours.open) {
+        return next;
+      }
+    }
+
+    return current; // fallback if all days are closed
+  }
+
   const goPrev = () => {
-    const copy = new Date(cursorDate);
-    if (activeTab === 'week') copy.setDate(copy.getDate() - 7);
-    else copy.setDate(copy.getDate() - 1);
-    setCursorDate(copy);
+    if (activeTab === "week") {
+      setCursorDate((prev) => addDays(prev, -7));
+    } else {
+      setCursorDate((prev) => findNextOpenDay(prev, -1));
+    }
   };
 
   const goNext = () => {
-    const copy = new Date(cursorDate);
-    if (activeTab === 'week') copy.setDate(copy.getDate() + 7);
-    else copy.setDate(copy.getDate() + 1);
-    setCursorDate(copy);
+    if (activeTab === "week") {
+      setCursorDate((prev) => addDays(prev, 7));
+    } else {
+      setCursorDate((prev) => findNextOpenDay(prev, 1));
+    }
   };
 
   const leftLabel = useMemo(
     () =>
-      activeTab === 'week'
+      activeTab === "week"
         ? formatWeekRange(cursorDate)
         : formatShortDate(cursorDate),
     [cursorDate, activeTab]
   );
+
+  /* ----------------------------- Load Settings ----------------------------- */
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const data = await scheduleSettingsApi.get();
+        setScheduleSettings(data);
+      } catch {
+        console.warn("⚠️ Falling back to default hours");
+      }
+    }
+    loadSettings();
+  }, []);
 
   /* ----------------------------- Provider Fetch ----------------------------- */
   useEffect(() => {
     const fetchProvider = async () => {
       try {
         const me = await providersApi.getCurrent();
-        console.log('👤 Logged-in provider:', me);
         setProvider(me);
         setProviderId(me.id);
       } catch (err) {
-        console.error('❌ Failed to load provider info:', err);
+        console.error("❌ Failed to load provider info:", err);
       }
     };
     fetchProvider();
@@ -138,9 +186,8 @@ const SchedulePage: React.FC = () => {
       const params = { office, provider: providerId };
       const result = await appointmentsApi.list(params);
       setAppointments(result.results || []);
-      console.log('✅ Loaded', result.results?.length || 0, 'appointments');
     } catch (err) {
-      console.error('❌ Failed to load appointments:', err);
+      console.error("❌ Failed to load appointments:", err);
     } finally {
       setLoadingAppts(false);
     }
@@ -151,75 +198,94 @@ const SchedulePage: React.FC = () => {
     const params = {
       provider: providerId,
       office,
-      date: cursorDate.toISOString().split('T')[0],
+      date: cursorDate.toISOString().split("T")[0],
     };
 
     appointmentsApi
       .list(params)
       .then((result) => setAppointments(result.results || []))
-      .catch((err) => console.error('❌ Failed to load appointments:', err))
+      .catch((err) => console.error("❌ Failed to load appointments:", err))
       .finally(() => setLoadingAppts(false));
   }, [providerId, office, cursorDate]);
 
-  /* ----------------------------- Handle Return from Add Patient ----------------------------- */
+  /* ----------------------------- Appointment Types ----------------------------- */
   useEffect(() => {
-    const newPatientId = searchParams.get('newPatientId');
+    import("../services/scheduleSettingsApi").then(
+      ({ scheduleSettingsApi }) => {
+        scheduleSettingsApi.get().then((data) => {
+          setAppointmentTypes(data.appointment_types || []);
+        });
+      }
+    );
+  }, []);
+
+  /* ----------------------------- Return from Add Patient ----------------------------- */
+  useEffect(() => {
+    const newPatientId = searchParams.get("newPatientId");
     if (!newPatientId) return;
 
-    const storedPatient = sessionStorage.getItem('newPatient');
+    const storedPatient = sessionStorage.getItem("newPatient");
     const parsedPatient = storedPatient ? JSON.parse(storedPatient) : null;
 
-    const storedSlot = sessionStorage.getItem('pendingSlot');
+    const storedSlot = sessionStorage.getItem("pendingSlot");
     const parsedSlot = storedSlot ? JSON.parse(storedSlot) : null;
 
     if (parsedPatient) setInitialPatient(parsedPatient);
     if (parsedSlot) setPrefill(parsedSlot);
 
-    // Open modal with both patient and slot
     setShowNewAppointment(true);
 
-    // Cleanup
-    sessionStorage.removeItem('newPatient');
-    sessionStorage.removeItem('pendingSlot');
+    sessionStorage.removeItem("newPatient");
+    sessionStorage.removeItem("pendingSlot");
     const next = new URLSearchParams(searchParams);
-    next.delete('newPatientId');
+    next.delete("newPatientId");
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
 
-  /* ----------------------------- Empty Slot Selection ----------------------------- */
-  const handleSelectEmptySlot = (start: Date, end: Date) => {
-    console.log('🆕 Selected slot range:', start, end);
-    setPrefill({
-      date: start.toISOString().split('T')[0],
-      start_time: start.toTimeString().slice(0, 5),
-      end_time: end.toTimeString().slice(0, 5),
-    });
-    setShowNewAppointment(true);
-  };
+  /* ----------------------------- Compute Hours ----------------------------- */
+  const { startHour, endHour } = useMemo(() => {
+    if (!scheduleSettings || !office) return { startHour: 8, endHour: 17 };
+
+    const weekday = cursorDate
+      .toLocaleDateString("en-US", { weekday: "short" })
+      .toLowerCase()
+      .slice(0, 3) as WeekdayKeyStrict;
+
+    const officeHours =
+      scheduleSettings.business_hours?.[office as OfficeKeyStrict]?.[weekday];
+
+    if (!officeHours || !officeHours.open) {
+      return { startHour: 8, endHour: 17 }; // fallback
+    }
+
+    const [sh, sm] = officeHours.start.split(":").map(Number);
+    const [eh, em] = officeHours.end.split(":").map(Number);
+    return { startHour: sh + sm / 60, endHour: eh + em / 60 };
+  }, [scheduleSettings, office, cursorDate]);
 
   /* ----------------------------- Render ----------------------------- */
   return (
-    <div className='space-y-4'>
+    <div className="space-y-4">
       {/* Header */}
-      <div className='flex items-baseline justify-between'>
-        <div className='flex items-baseline gap-3'>
-          <h1 className='text-2xl font-semibold'>Schedule</h1>
-          <span className='text-sm text-gray-500'>
+      <div className="flex items-baseline justify-between">
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-2xl font-semibold">Schedule</h1>
+          <span className="text-sm text-gray-500">
             {appointments.length} appointments
           </span>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className='flex gap-2 border-b'>
+      <div className="flex gap-2 border-b">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => changeTab(t.key)}
             className={`px-4 py-2 -mb-px border-b-2 ${
               activeTab === t.key
-                ? 'border-blue-600 text-blue-600 font-medium'
-                : 'border-transparent text-gray-600 hover:text-black'
+                ? "border-blue-600 text-blue-600 font-medium"
+                : "border-transparent text-gray-600 hover:text-black"
             }`}
           >
             {t.label}
@@ -228,64 +294,64 @@ const SchedulePage: React.FC = () => {
       </div>
 
       {/* Toolbar */}
-      {(activeTab === 'appointments' ||
-        activeTab === 'day' ||
-        activeTab === 'week') && (
+      {(activeTab === "appointments" ||
+        activeTab === "day" ||
+        activeTab === "week") && (
         <>
-          <div className='flex items-center justify-between gap-2'>
-            <div className='flex items-center gap-2'>
-              <button className='px-3 py-1.5 border rounded hover:bg-gray-50'>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <button className="px-3 py-1.5 border rounded hover:bg-gray-50">
                 Filter
               </button>
               <button
-                className='px-3 py-1.5 border rounded hover:bg-gray-50'
+                className="px-3 py-1.5 border rounded hover:bg-gray-50"
                 onClick={loadAppointments}
               >
                 Refresh
               </button>
               <select
-                className='px-3 py-1.5 border rounded'
+                className="px-3 py-1.5 border rounded"
                 value={office}
                 onChange={(e) => setOffice(e.target.value as OfficeKey)}
               >
-                <option value='north'>North Office</option>
-                <option value='south'>South Office</option>
+                <option value="north">North Office</option>
+                <option value="south">South Office</option>
               </select>
             </div>
 
             <button
-              className='px-3 py-1.5 border rounded bg-green-600 text-white hover:bg-green-700'
+              className="px-3 py-1.5 border rounded bg-green-600 text-white hover:bg-green-700"
               onClick={() => setShowNewAppointment(true)}
             >
               + Add appointment
             </button>
           </div>
 
-          <hr className='border-gray-200' />
+          <hr className="border-gray-200" />
 
           {/* Date Navigation */}
-          <div className='flex items-center justify-between gap-2'>
-            <div className='text-sm text-gray-700'>{leftLabel}</div>
-            <div className='flex items-center gap-2'>
-              <div className='flex'>
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-sm text-gray-700">{leftLabel}</div>
+            <div className="flex items-center gap-2">
+              <div className="flex">
                 <button
-                  className='px-3 py-1.5 border rounded-l hover:bg-gray-50'
+                  className="px-3 py-1.5 border rounded-l hover:bg-gray-50"
                   onClick={goPrev}
                 >
                   ←
                 </button>
-                <div className='px-3 py-1.5 border-t border-b'>
+                <div className="px-3 py-1.5 border-t border-b">
                   {cursorDate.toLocaleDateString()}
                 </div>
                 <button
-                  className='px-3 py-1.5 border rounded-r hover:bg-gray-50'
+                  className="px-3 py-1.5 border rounded-r hover:bg-gray-50"
                   onClick={goNext}
                 >
                   →
                 </button>
               </div>
               <select
-                className='px-3 py-1.5 border rounded'
+                className="px-3 py-1.5 border rounded"
                 value={slotSize}
                 onChange={(e) =>
                   setSlotSize(Number(e.target.value) as SlotSize)
@@ -300,22 +366,23 @@ const SchedulePage: React.FC = () => {
             </div>
           </div>
 
-          <hr className='border-gray-200' />
+          <hr className="border-gray-200" />
         </>
       )}
 
       {/* Content */}
-      <div className='min-h-[400px] bg-white border rounded p-4'>
-        {activeTab === 'day' && (
+      <div className="min-h-[400px] bg-white border rounded p-4">
+        {activeTab === "day" && (
           <DayViewGrid
             office={office}
             providerName={
               provider
                 ? `${provider.first_name} ${provider.last_name}`
-                : 'Loading...'
+                : "Loading..."
             }
-            startHour={8}
-            endHour={17}
+            scheduleSettings={scheduleSettings}
+            startHour={startHour}
+            endHour={endHour}
             slotMinutes={slotSize}
             appointments={appointments}
             loading={loadingAppts}
@@ -323,40 +390,41 @@ const SchedulePage: React.FC = () => {
             onEditAppointment={(appt) => setEditingAppt(appt)}
             onSelectEmptySlot={(start, end) => {
               const prefill = {
-                date: start.toISOString().split('T')[0],
+                date: start.toISOString().split("T")[0],
                 start_time: start.toTimeString().slice(0, 5),
                 end_time: end.toTimeString().slice(0, 5),
               };
-              sessionStorage.setItem('pendingSlot', JSON.stringify(prefill));
+              sessionStorage.setItem("pendingSlot", JSON.stringify(prefill));
               setPrefill(prefill);
               setShowNewAppointment(true);
             }}
           />
         )}
 
-        {activeTab === 'week' && (
+        {activeTab === "week" && (
           <WeekViewGrid
             baseDate={cursorDate}
             office={office}
             providerName={
               provider
                 ? `${provider.first_name} ${provider.last_name}`
-                : 'Loading...'
+                : "Loading..."
             }
-            startHour={8}
-            endHour={17}
+            scheduleSettings={scheduleSettings}
+            startHour={startHour}
+            endHour={endHour}
             slotMinutes={slotSize}
             appointments={appointments}
             loading={loadingAppts}
             onEditAppointment={(appt) => setEditingAppt(appt)}
             onSelectEmptySlot={(start, end) => {
               const prefillData = {
-                date: start.toISOString().split('T')[0],
+                date: start.toISOString().split("T")[0],
                 start_time: start.toTimeString().slice(0, 5),
                 end_time: end.toTimeString().slice(0, 5),
               };
               sessionStorage.setItem(
-                'prefillSlot',
+                "prefillSlot",
                 JSON.stringify(prefillData)
               );
               setPrefill(prefillData);
@@ -364,6 +432,8 @@ const SchedulePage: React.FC = () => {
             }}
           />
         )}
+
+        {activeTab === "settings" && <SettingsPanel />}
       </div>
 
       {/* Modals */}
@@ -393,6 +463,7 @@ const SchedulePage: React.FC = () => {
               : undefined
           }
           initialPatient={initialPatient}
+          appointmentTypes={appointmentTypes}
         />
       )}
 

@@ -1,247 +1,318 @@
 // frontend/src/features/schedule/components/WeekViewGrid.tsx
-import React, { useMemo, useState } from 'react';
-import { startOfWeek, addDays, format, isSameDay, parseISO } from 'date-fns';
-import { Appointment } from '../types/appointment';
+import React, { useMemo, useState } from "react";
+import { startOfWeek, addDays, format, isSameDay, parseISO } from "date-fns";
+import { Appointment } from "../types/appointment";
+import { ScheduleSettings, Weekday } from "../types/scheduleSettings";
 
 interface WeekViewGridProps {
   providerName: string;
   office: string;
-  startHour: number;
-  endHour: number;
   slotMinutes: number;
   appointments?: Appointment[];
   loading?: boolean;
   onEditAppointment?: (appt: Appointment) => void;
   onSelectEmptySlot?: (start: Date, end: Date) => void;
   baseDate: Date;
+  scheduleSettings?: ScheduleSettings | null;
+  startHour: number;
+  endHour: number;
 }
 
-const WeekViewGrid: React.FC<WeekViewGridProps> = ({
+const SLOT_ROW_PX = 48;
+
+function weekdayKey(d: Date): Weekday {
+  return format(d, "EEE").toLowerCase().slice(0, 3) as Weekday;
+}
+
+export default function WeekViewGrid({
   providerName,
   office,
-  startHour,
-  endHour,
   slotMinutes,
   appointments = [],
   loading = false,
   onEditAppointment,
-  baseDate,
   onSelectEmptySlot,
-}) => {
-  const [hoveredId, setHoveredId] = useState<number | null>(null);
-  const [isSelecting, setIsSelecting] = useState(false);
-  const [selectionStart, setSelectionStart] = useState<{
-    dayIndex: number;
-    slotIndex: number;
-  } | null>(null);
-  const [selectionEnd, setSelectionEnd] = useState<{
-    dayIndex: number;
-    slotIndex: number;
-  } | null>(null);
-  const [showSelection, setShowSelection] = useState(false); // 🆕
-
-  const weekDays = useMemo(
+  baseDate,
+  scheduleSettings,
+}: WeekViewGridProps) {
+  const allDays = useMemo(
     () =>
       Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(baseDate), i)),
     [baseDate]
   );
 
+  // Filter out closed days entirely
+  const openDays = useMemo(() => {
+    return allDays.filter((d) => {
+      const key = weekdayKey(d);
+      const h =
+        scheduleSettings?.business_hours?.[
+          office as keyof ScheduleSettings["business_hours"]
+        ]?.[key];
+      return !h || h.open; // default to open if missing
+    });
+  }, [allDays, office, scheduleSettings]);
+
+  // Compute global earliest start and latest end among open days
+  const ranges = openDays.map((d) => {
+    const k = weekdayKey(d);
+    const h = scheduleSettings?.business_hours?.[
+      office as keyof ScheduleSettings["business_hours"]
+    ]?.[k] ?? { open: true, start: "08:00", end: "17:00" };
+    return {
+      startHour: parseInt(h.start.split(":")[0], 10),
+      endHour: parseInt(h.end.split(":")[0], 10),
+    };
+  });
+
+  const minStartHour =
+    ranges.length > 0 ? Math.min(...ranges.map((r) => r.startHour)) : 8;
+  const maxEndHour =
+    ranges.length > 0 ? Math.max(...ranges.map((r) => r.endHour)) : 17;
+
+  // Build the global slot labels (for left time ruler + row count)
   const slots = useMemo(() => {
     const times: string[] = [];
-    for (let h = startHour; h < endHour; h++) {
+    for (let h = minStartHour; h < maxEndHour; h++) {
       for (let m = 0; m < 60; m += slotMinutes) {
         times.push(
-          `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+          `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`
         );
       }
     }
     return times;
-  }, [startHour, endHour, slotMinutes]);
+  }, [minStartHour, maxEndHour, slotMinutes]);
 
-  const slotHeightPx = 48;
-  const minuteHeight = slotHeightPx / slotMinutes;
+  const minuteHeight = SLOT_ROW_PX / slotMinutes;
 
   const timeToMinutes = (t: string) => {
-    const [h, m] = t.split(':').map(Number);
+    const [h, m] = t.split(":").map(Number);
     return h * 60 + m;
   };
 
-  const renderAppointmentsForDay = (day: Date) => {
-    const apptsForDay = appointments.filter((a) => {
-      const date = a.date ? parseISO(a.date) : null;
-      return date && isSameDay(date, day);
-    });
+  // Selection state (drag to create)
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selStart, setSelStart] = useState<{
+    dayIdx: number;
+    slotIdx: number;
+  } | null>(null);
+  const [selEnd, setSelEnd] = useState<{
+    dayIdx: number;
+    slotIdx: number;
+  } | null>(null);
 
-    apptsForDay.sort(
-      (a, b) => timeToMinutes(a.start_time) - timeToMinutes(b.start_time)
-    );
+  const handleMouseDown = (dayIdx: number, slotIdx: number) => {
+    setIsSelecting(true);
+    setSelStart({ dayIdx, slotIdx });
+    setSelEnd({ dayIdx, slotIdx });
+  };
+  const handleMouseEnter = (dayIdx: number, slotIdx: number) => {
+    if (!isSelecting || !selStart) return;
+    setSelEnd({ dayIdx, slotIdx });
+  };
+  const handleMouseUp = () => {
+    if (!isSelecting || !selStart || !selEnd) return;
 
-    return apptsForDay.map((appt) => {
-      const startMins = timeToMinutes(appt.start_time);
-      const endMins = timeToMinutes(appt.end_time);
-      const top = (startMins - startHour * 60) * minuteHeight;
-      const height = (endMins - startMins) * minuteHeight;
-      const bgColor =
-        appt.appointment_type === 'Block Time'
-          ? '#9CA3AF'
-          : appt.color_code || '#3B82F6';
-      const isHovered = hoveredId === appt.id;
+    // Only allow within the same day for creation
+    if (selStart.dayIdx !== selEnd.dayIdx) {
+      setIsSelecting(false);
+      setSelStart(null);
+      setSelEnd(null);
+      return;
+    }
+
+    const day = openDays[selStart.dayIdx];
+    const { startHour } = ranges[selStart.dayIdx];
+
+    const a = Math.min(selStart.slotIdx, selEnd.slotIdx);
+    const b = Math.max(selStart.slotIdx, selEnd.slotIdx);
+
+    const startMinutes = startHour * 60 + a * slotMinutes;
+    const endMinutes = startHour * 60 + (b + 1) * slotMinutes;
+
+    const start = new Date(day);
+    start.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
+    const end = new Date(day);
+    end.setHours(Math.floor(endMinutes / 60), endMinutes % 60, 0, 0);
+
+    onSelectEmptySlot?.(start, end);
+
+    setIsSelecting(false);
+    setSelStart(null);
+    setSelEnd(null);
+  };
+
+  const renderAppointmentsForDay = (
+    dayIdx: number,
+    day: Date,
+    startHour: number,
+    endHour: number
+  ) => {
+    const appts = appointments
+      .filter((a) => {
+        const d = a.date ? parseISO(a.date) : null;
+        return d && isSameDay(d, day);
+      })
+      .sort(
+        (a, b) => timeToMinutes(a.start_time) - timeToMinutes(b.start_time)
+      );
+
+    return appts.map((a) => {
+      const startM = timeToMinutes(a.start_time);
+      const endM = timeToMinutes(a.end_time);
+      const top = (startM - startHour * 60) * minuteHeight;
+      const height = (endM - startM) * minuteHeight;
+      const bg =
+        a.appointment_type === "Block Time"
+          ? "#9CA3AF"
+          : a.color_code || "#3B82F6";
 
       return (
         <div
-          key={appt.id}
-          onMouseEnter={() => setHoveredId(appt.id!)}
-          onMouseLeave={() => setHoveredId(null)}
-          onClick={() => onEditAppointment?.(appt)}
-          className='absolute left-1 right-1 rounded text-white text-xs p-1.5 shadow-sm cursor-pointer transition-opacity duration-150 ease-out hover:brightness-105'
-          style={{
-            top: `${top}px`,
-            height: `${height}px`,
-            backgroundColor: bgColor,
-          }}
-          title={`${appt.appointment_type} - ${appt.patient_name || 'N/A'}`}
+          key={a.id}
+          className="absolute left-1 right-1 rounded text-white text-xs p-1.5 shadow-sm cursor-pointer hover:brightness-105 pointer-events-auto"
+          style={{ top, height, backgroundColor: bg }}
+          onClick={() => onEditAppointment?.(a)}
         >
-          <div className='font-semibold truncate'>
-            {appt.appointment_type === 'Block Time'
-              ? '— Blocked —'
-              : appt.patient_name || '(No Patient)'}
+          <div className="font-semibold truncate">
+            {a.appointment_type === "Block Time"
+              ? "— Blocked —"
+              : a.patient_name || "(No Patient)"}
           </div>
-          {appt.appointment_type !== 'Block Time' && (
-            <div className='truncate opacity-90'>{appt.appointment_type}</div>
-          )}
-          {isHovered && (
-            <div className='absolute z-50 left-1/2 -translate-x-1/2 -translate-y-full mb-1 w-max max-w-xs bg-gray-900 text-white text-xs rounded-md px-3 py-2 shadow-lg opacity-90'>
-              <div className='font-semibold'>
-                {appt.appointment_type || 'Appointment'}
-              </div>
-              {appt.patient_name && <div>Patient: {appt.patient_name}</div>}
-              {appt.chief_complaint && (
-                <div>Reason: {appt.chief_complaint}</div>
-              )}
-              <div>
-                {appt.start_time.slice(0, 5)} – {appt.end_time.slice(0, 5)}
-              </div>
-            </div>
+          {a.appointment_type !== "Block Time" && (
+            <div className="truncate opacity-90">{a.appointment_type}</div>
           )}
         </div>
       );
     });
   };
 
-  const handleMouseDown = (dayIndex: number, slotIndex: number) => {
-    setIsSelecting(true);
-    setSelectionStart({ dayIndex, slotIndex });
-    setSelectionEnd({ dayIndex, slotIndex });
-    setShowSelection(true);
-  };
-
-  const handleMouseEnter = (dayIndex: number, slotIndex: number) => {
-    if (!isSelecting || !selectionStart) return;
-    setSelectionEnd({ dayIndex, slotIndex });
-  };
-
-  const handleMouseUp = () => {
-    if (!isSelecting || !selectionStart || !selectionEnd) return;
-
-    const startDay = weekDays[selectionStart.dayIndex];
-    const startSlot = Math.min(
-      selectionStart.slotIndex,
-      selectionEnd.slotIndex
+  if (loading) {
+    return (
+      <div className="p-6 text-center text-gray-500 italic">
+        Loading appointments…
+      </div>
     );
-    const endSlot = Math.max(selectionStart.slotIndex, selectionEnd.slotIndex);
+  }
 
-    const startMinutes = startHour * 60 + startSlot * slotMinutes;
-    const endMinutes = startHour * 60 + (endSlot + 1) * slotMinutes;
-
-    const start = new Date(startDay);
-    start.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
-    const end = new Date(startDay);
-    end.setHours(Math.floor(endMinutes / 60), endMinutes % 60, 0, 0);
-
-    onSelectEmptySlot?.(start, end);
-
-    setTimeout(() => setShowSelection(false), 400); // 🆕 smooth fade
-    setIsSelecting(false);
-    setSelectionStart(null);
-    setSelectionEnd(null);
-  };
+  if (openDays.length === 0) {
+    return (
+      <div className="p-6 text-center text-gray-500 italic border rounded bg-gray-50">
+        All days are closed for the selected week.
+      </div>
+    );
+  }
 
   return (
-    <div className='border rounded overflow-hidden relative bg-white select-none'>
+    <div className="border rounded overflow-hidden bg-white select-none">
       {/* Header */}
-      <div className='grid grid-cols-8 bg-gray-100 border-b text-sm font-semibold'>
-        <div className='p-2 border-r text-gray-700'>Time</div>
-        {weekDays.map((day) => (
-          <div key={day.toISOString()} className='p-2 text-center border-r'>
-            {format(day, 'EEE dd')}
+      <div
+        className="grid bg-gray-100 border-b text-sm font-semibold"
+        style={{ gridTemplateColumns: `120px repeat(${openDays.length}, 1fr)` }}
+      >
+        <div className="p-2 border-r text-gray-700">Time</div>
+        {openDays.map((d) => (
+          <div key={d.toISOString()} className="p-2 text-center border-r">
+            {format(d, "EEE dd")}
           </div>
         ))}
       </div>
 
-      {loading ? (
-        <div className='p-6 text-center text-gray-500 italic'>
-          Loading appointments…
-        </div>
-      ) : (
-        <div className='grid grid-cols-8 text-sm relative'>
-          {/* Time Column */}
-          <div>
-            {slots.map((time) => (
-              <div
-                key={time}
-                className='border-r border-b p-2 text-gray-700 h-12 bg-gray-50'
-              >
-                {time}
-              </div>
-            ))}
-          </div>
-
-          {/* Day Columns */}
-          {weekDays.map((day, dayIndex) => (
+      {/* Body */}
+      <div
+        className="grid text-sm relative"
+        style={{ gridTemplateColumns: `120px repeat(${openDays.length}, 1fr)` }}
+      >
+        {/* Time ruler */}
+        <div>
+          {slots.map((t) => (
             <div
-              key={day.toISOString()}
-              className='relative border-l'
-              onMouseUp={handleMouseUp}
+              key={t}
+              className="border-r border-b p-2 text-gray-700 h-12 bg-gray-50"
             >
-              {slots.map((_, slotIndex) => {
-                const isSelected =
-                  showSelection &&
-                  isSelecting &&
-                  selectionStart &&
-                  selectionEnd &&
-                  selectionStart.dayIndex === dayIndex &&
-                  slotIndex >=
-                    Math.min(
-                      selectionStart.slotIndex,
-                      selectionEnd.slotIndex
-                    ) &&
-                  slotIndex <=
-                    Math.max(selectionStart.slotIndex, selectionEnd.slotIndex);
-
-                return (
-                  <div
-                    key={slotIndex}
-                    className={`border-b h-12 transition-colors ${
-                      isSelected
-                        ? 'bg-blue-200'
-                        : 'hover:bg-blue-50 cursor-crosshair'
-                    }`}
-                    onMouseDown={() => handleMouseDown(dayIndex, slotIndex)}
-                    onMouseEnter={() => handleMouseEnter(dayIndex, slotIndex)}
-                  />
-                );
-              })}
-
-              {/* Appointments overlay */}
-              <div className='absolute inset-0 pointer-events-none'>
-                {renderAppointmentsForDay(day)}
-              </div>
+              {t}
             </div>
           ))}
         </div>
-      )}
+
+        {/* Day columns */}
+        {openDays.map((day, idx) => {
+          const { startHour, endHour } = ranges[idx];
+          const topOffset =
+            (startHour - minStartHour) * 60 * (SLOT_ROW_PX / slotMinutes);
+          const bandHeight =
+            (endHour - startHour) * 60 * (SLOT_ROW_PX / slotMinutes);
+
+          return (
+            <div
+              key={day.toISOString()}
+              className="relative border-l"
+              onMouseUp={handleMouseUp}
+            >
+              {/* Grid rows for alignment */}
+              {slots.map((_, slotIdx) => (
+                <div key={slotIdx} className="border-b h-12" />
+              ))}
+
+              {/* Shaded closed bands (top/bottom) to visualize differing hours */}
+              {topOffset > 0 && (
+                <div
+                  className="absolute inset-x-0 bg-gray-100/70 pointer-events-none"
+                  style={{ top: 0, height: topOffset }}
+                />
+              )}
+              {bandHeight < slots.length * SLOT_ROW_PX && (
+                <div
+                  className="absolute inset-x-0 bg-gray-100/70 pointer-events-none"
+                  style={{
+                    top: topOffset + bandHeight,
+                    height:
+                      slots.length * SLOT_ROW_PX - (topOffset + bandHeight),
+                  }}
+                />
+              )}
+
+              {/* Interactive band (only open hours are interactive) */}
+              <div
+                className="absolute inset-x-0"
+                style={{ top: topOffset, height: bandHeight }}
+              >
+                {/* drag-to-create layer */}
+                {Array.from(
+                  { length: Math.ceil((bandHeight || 1) / SLOT_ROW_PX) },
+                  (_, i) => i
+                ).map((i) => {
+                  const slotIdx = i;
+                  const selected =
+                    isSelecting &&
+                    selStart &&
+                    selEnd &&
+                    selStart.dayIdx === idx &&
+                    idx === selEnd.dayIdx &&
+                    slotIdx >= Math.min(selStart.slotIdx, selEnd.slotIdx) &&
+                    slotIdx <= Math.max(selStart.slotIdx, selEnd.slotIdx);
+
+                  return (
+                    <div
+                      key={i}
+                      className={`h-12 border-b transition-colors ${
+                        selected ? "bg-gray-300" : "hover:bg-blue-50"
+                      } cursor-crosshair`}
+                      onMouseDown={() => handleMouseDown(idx, slotIdx)}
+                      onMouseEnter={() => handleMouseEnter(idx, slotIdx)}
+                    />
+                  );
+                })}
+
+                {/* appointments overlay */}
+                <div className="absolute inset-0 pointer-events-none">
+                  {renderAppointmentsForDay(idx, day, startHour, endHour)}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
-};
-
-export default WeekViewGrid;
+}

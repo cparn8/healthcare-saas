@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
-import X from 'lucide-react/dist/esm/icons/x';
-import WithPatientForm from './WithPatientForm';
+import React, { useState } from "react";
+import X from "lucide-react/dist/esm/icons/x";
+import WithPatientForm from "./WithPatientForm";
 import {
   appointmentsApi,
   AppointmentPayload,
-} from '../../appointments/services/appointmentsApi';
+} from "../../appointments/services/appointmentsApi";
 import {
   toastError,
   toastSuccess,
   toastPromise,
-} from '../../../utils/toastUtils';
+} from "../../../utils/toastUtils";
 
 interface NewAppointmentModalProps {
   onClose: () => void;
@@ -19,6 +19,12 @@ interface NewAppointmentModalProps {
   initialStartTime?: Date;
   initialEndTime?: Date;
   initialPatient?: any;
+  appointmentTypes?: {
+    id?: number;
+    name: string;
+    default_duration: number;
+    color_code: string;
+  }[];
 }
 
 const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
@@ -29,24 +35,25 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
   initialStartTime,
   initialEndTime,
   initialPatient,
+  appointmentTypes,
 }) => {
-  const [activeTab, setActiveTab] = useState<'withPatient' | 'blockTime'>(
-    'withPatient'
+  const [activeTab, setActiveTab] = useState<"withPatient" | "blockTime">(
+    "withPatient"
   );
   const [formData, setFormData] = useState<AppointmentPayload | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSave() {
     if (!formData) {
-      toastError('Please complete the appointment form before saving.');
+      toastError("Please complete the appointment form before saving.");
       return;
     }
     if (!providerId) {
-      toastError('Provider ID missing — please log in as a provider.');
+      toastError("Provider ID missing — please log in as a provider.");
       return;
     }
     if (!formData.start_time || !formData.end_time) {
-      toastError('Please provide valid start and end times.');
+      toastError("Please provide valid start and end times.");
       return;
     }
 
@@ -55,84 +62,95 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
       const payload: AppointmentPayload = {
         ...formData,
         provider: providerId,
-        office: formData.office || 'north',
+        office: formData.office || "north",
         repeat_end_date: formData.repeat_end_date || null,
       };
 
+      if (formData.appointment_type && Array.isArray(appointmentTypes)) {
+        const selected = appointmentTypes.find(
+          (t) => t.name === formData.appointment_type
+        );
+        if (selected) {
+          payload.color_code = selected.color_code;
+          payload.duration = selected.default_duration;
+        }
+      }
+
       await toastPromise(appointmentsApi.create(payload), {
-        loading: 'Saving appointment...',
-        success: '✅ Appointment saved successfully!',
-        error: '❌ Failed to save appointment.',
+        loading: "Saving appointment...",
+        success: "✅ Appointment saved successfully!",
+        error: "❌ Failed to save appointment.",
       });
 
-      toastSuccess('Appointment created!');
+      toastSuccess("Appointment created!");
       onSaved();
       onClose();
     } catch (error: any) {
       console.error(
-        '❌ Appointment creation failed:',
+        "❌ Appointment creation failed:",
         error.response?.data || error
       );
-      toastError('Server error — check console for details.');
+      toastError("Server error — check console for details.");
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/40'>
-      <div className='bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col'>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className='flex items-center justify-between px-6 py-4 border-b'>
-          <h2 className='text-xl font-semibold'>New Appointment</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b">
+          <h2 className="text-xl font-semibold">New Appointment</h2>
           <button
             onClick={onClose}
-            className='text-gray-500 hover:text-gray-700'
+            className="text-gray-500 hover:text-gray-700"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className='flex border-b text-sm font-medium'>
+        <div className="flex border-b text-sm font-medium">
           <button
             className={`px-6 py-2 ${
-              activeTab === 'withPatient'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:text-blue-600'
+              activeTab === "withPatient"
+                ? "border-b-2 border-blue-600 text-blue-600"
+                : "text-gray-600 hover:text-blue-600"
             }`}
-            onClick={() => setActiveTab('withPatient')}
+            onClick={() => setActiveTab("withPatient")}
           >
             With Patient
           </button>
           <button
             className={`px-6 py-2 ${
-              activeTab === 'blockTime'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:text-blue-600'
+              activeTab === "blockTime"
+                ? "border-b-2 border-blue-600 text-blue-600"
+                : "text-gray-600 hover:text-blue-600"
             }`}
-            onClick={() => setActiveTab('blockTime')}
+            onClick={() => setActiveTab("blockTime")}
           >
             Block Time
           </button>
         </div>
 
         {/* Body */}
-        <div className='flex-1 overflow-y-auto p-6'>
-          {activeTab === 'withPatient' ? (
+        <div className="flex-1 overflow-y-auto p-6">
+          {activeTab === "withPatient" ? (
             <WithPatientForm
               providerId={providerId}
               onCancel={onClose}
               onGetFormData={(data: AppointmentPayload) => setFormData(data)}
-              initialDate={initialDate?.toISOString().split('T')[0]}
+              initialDate={initialDate?.toISOString().split("T")[0]}
               initialStartTime={initialStartTime?.toTimeString().slice(0, 5)}
               initialEndTime={initialEndTime?.toTimeString().slice(0, 5)}
               initialPatient={initialPatient}
+              appointmentTypes={appointmentTypes}
             />
           ) : (
-            <div className='space-y-4'>
-              <h3 className='text-lg font-semibold'>Block Time</h3>
-              <p className='text-sm text-gray-600'>
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Block Time</h3>
+              <p className="text-sm text-gray-600">
                 Reserve time for lunch, meetings, or administrative work.
               </p>
             </div>
@@ -140,10 +158,10 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className='flex justify-between px-6 py-4 border-t bg-gray-50'>
+        <div className="flex justify-between px-6 py-4 border-t bg-gray-50">
           <button
             onClick={onClose}
-            className='px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400'
+            className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
           >
             Cancel
           </button>
@@ -152,11 +170,11 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
             disabled={isSubmitting}
             className={`px-4 py-2 rounded text-white transition ${
               isSubmitting
-                ? 'bg-gray-400 cursor-wait'
-                : 'bg-green-600 hover:bg-green-700'
+                ? "bg-gray-400 cursor-wait"
+                : "bg-green-600 hover:bg-green-700"
             }`}
           >
-            {isSubmitting ? 'Saving...' : 'Save Appointment'}
+            {isSubmitting ? "Saving..." : "Save Appointment"}
           </button>
         </div>
       </div>
