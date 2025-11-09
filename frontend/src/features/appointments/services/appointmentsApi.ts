@@ -1,5 +1,5 @@
 // frontend/src/features/appointments/services/appointmentsApi.ts
-import API from '../../../services/api';
+import API from "../../../services/api";
 
 export interface AppointmentPayload {
   id?: number;
@@ -19,11 +19,12 @@ export interface AppointmentPayload {
   repeat_end_date?: string | null;
   repeat_occurrences?: number | null;
   send_intake_form?: boolean;
+  allow_overlap?: boolean;
 }
 
 export const appointmentsApi = {
   async list(params: Record<string, any> = {}) {
-    const res = await API.get('/appointments/', { params });
+    const res = await API.get("/appointments/", { params });
     return res.data;
   },
 
@@ -33,7 +34,7 @@ export const appointmentsApi = {
   },
 
   async create(data: AppointmentPayload) {
-    const res = await API.post('/appointments/', data);
+    const res = await API.post("/appointments/", data);
     return res.data;
   },
 

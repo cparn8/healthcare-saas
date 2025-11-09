@@ -11,17 +11,21 @@ interface WeekViewGridProps {
   appointments?: Appointment[];
   loading?: boolean;
   onEditAppointment?: (appt: Appointment) => void;
-  onSelectEmptySlot?: (start: Date, end: Date) => void;
+  onSelectEmptySlot?: (start: Date, end: Date, allowOverlap?: boolean) => void;
   baseDate: Date;
   scheduleSettings?: ScheduleSettings | null;
-  startHour: number;
-  endHour: number;
+  providerId?: number | null;
+  requestConfirm?: (message: string, onConfirm: () => void) => void;
 }
 
 const SLOT_ROW_PX = 48;
+const SLIVER_PERCENT = 12;
 
-function weekdayKey(d: Date): Weekday {
-  return format(d, "EEE").toLowerCase().slice(0, 3) as Weekday;
+function wkKey(d: Date): Weekday {
+  return d
+    .toLocaleDateString("en-US", { weekday: "short" })
+    .toLowerCase()
+    .slice(0, 3) as Weekday;
 }
 
 export default function WeekViewGrid({
@@ -34,54 +38,14 @@ export default function WeekViewGrid({
   onSelectEmptySlot,
   baseDate,
   scheduleSettings,
+  providerId,
+  requestConfirm,
 }: WeekViewGridProps) {
-  const allDays = useMemo(
+  const weekDays = useMemo(
     () =>
       Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(baseDate), i)),
     [baseDate]
   );
-
-  // Filter out closed days entirely
-  const openDays = useMemo(() => {
-    return allDays.filter((d) => {
-      const key = weekdayKey(d);
-      const h =
-        scheduleSettings?.business_hours?.[
-          office as keyof ScheduleSettings["business_hours"]
-        ]?.[key];
-      return !h || h.open; // default to open if missing
-    });
-  }, [allDays, office, scheduleSettings]);
-
-  // Compute global earliest start and latest end among open days
-  const ranges = openDays.map((d) => {
-    const k = weekdayKey(d);
-    const h = scheduleSettings?.business_hours?.[
-      office as keyof ScheduleSettings["business_hours"]
-    ]?.[k] ?? { open: true, start: "08:00", end: "17:00" };
-    return {
-      startHour: parseInt(h.start.split(":")[0], 10),
-      endHour: parseInt(h.end.split(":")[0], 10),
-    };
-  });
-
-  const minStartHour =
-    ranges.length > 0 ? Math.min(...ranges.map((r) => r.startHour)) : 8;
-  const maxEndHour =
-    ranges.length > 0 ? Math.max(...ranges.map((r) => r.endHour)) : 17;
-
-  // Build the global slot labels (for left time ruler + row count)
-  const slots = useMemo(() => {
-    const times: string[] = [];
-    for (let h = minStartHour; h < maxEndHour; h++) {
-      for (let m = 0; m < 60; m += slotMinutes) {
-        times.push(
-          `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`
-        );
-      }
-    }
-    return times;
-  }, [minStartHour, maxEndHour, slotMinutes]);
 
   const minuteHeight = SLOT_ROW_PX / slotMinutes;
 
@@ -90,229 +54,271 @@ export default function WeekViewGrid({
     return h * 60 + m;
   };
 
-  // Selection state (drag to create)
-  const [isSelecting, setIsSelecting] = useState(false);
-  const [selStart, setSelStart] = useState<{
-    dayIdx: number;
-    slotIdx: number;
-  } | null>(null);
-  const [selEnd, setSelEnd] = useState<{
-    dayIdx: number;
-    slotIdx: number;
-  } | null>(null);
+  const overlaps = (
+    aStart: number,
+    aEnd: number,
+    bStart: number,
+    bEnd: number
+  ): boolean => aStart < bEnd && aEnd > bStart;
 
-  const handleMouseDown = (dayIdx: number, slotIdx: number) => {
-    setIsSelecting(true);
-    setSelStart({ dayIdx, slotIdx });
-    setSelEnd({ dayIdx, slotIdx });
-  };
-  const handleMouseEnter = (dayIdx: number, slotIdx: number) => {
-    if (!isSelecting || !selStart) return;
-    setSelEnd({ dayIdx, slotIdx });
-  };
-  const handleMouseUp = () => {
-    if (!isSelecting || !selStart || !selEnd) return;
+  // filter visible days based on business_hours
+  const openDays = weekDays.filter((day) => {
+    const weekday = wkKey(day);
+    const hours =
+      scheduleSettings?.business_hours?.[
+        office as keyof ScheduleSettings["business_hours"]
+      ]?.[weekday];
+    return hours && hours.open;
+  });
 
-    // Only allow within the same day for creation
-    if (selStart.dayIdx !== selEnd.dayIdx) {
-      setIsSelecting(false);
-      setSelStart(null);
-      setSelEnd(null);
-      return;
+  const renderAppointmentsForDay = (day: Date) => {
+    const weekday = wkKey(day);
+    const hours =
+      scheduleSettings?.business_hours?.[
+        office as keyof ScheduleSettings["business_hours"]
+      ]?.[weekday];
+    if (!hours) return null;
+
+    const startHour = parseInt(hours.start.split(":")[0], 10);
+    const endHour = parseInt(hours.end.split(":")[0], 10);
+
+    const apptsForDay = appointments
+      .filter((a) => a.date && isSameDay(parseISO(a.date), day))
+      .filter((a) => a.start_time && a.end_time)
+      .map((a) => ({
+        ...a,
+        start: timeToMinutes(a.start_time),
+        end: timeToMinutes(a.end_time),
+      }))
+      .sort((a, b) => a.start - b.start);
+
+    const clusters: (typeof apptsForDay)[] = [];
+    let currentCluster: typeof apptsForDay = [];
+    for (const appt of apptsForDay) {
+      const last = currentCluster[currentCluster.length - 1];
+      if (!last) {
+        currentCluster.push(appt);
+        continue;
+      }
+
+      // only cluster if there is actual time overlap, not back-to-back
+      if (appt.start < last.end) {
+        currentCluster.push(appt);
+      } else {
+        clusters.push(currentCluster);
+        currentCluster = [appt];
+      }
     }
+    if (currentCluster.length) clusters.push(currentCluster);
 
-    const day = openDays[selStart.dayIdx];
-    const { startHour } = ranges[selStart.dayIdx];
+    return clusters.flatMap((cluster) => {
+      const n = cluster.length;
+      const usableWidth = 100 - SLIVER_PERCENT;
+      const widthPercent = usableWidth / n;
 
-    const a = Math.min(selStart.slotIdx, selEnd.slotIdx);
-    const b = Math.max(selStart.slotIdx, selEnd.slotIdx);
+      return cluster.map((appt, i) => {
+        const top = (appt.start - startHour * 60) * minuteHeight;
+        const height = (appt.end - appt.start) * minuteHeight;
+        const left = i * widthPercent;
+        const bg =
+          appt.appointment_type === "Block Time"
+            ? "#9CA3AF"
+            : appt.color_code || "#3B82F6";
+
+        return (
+          <div
+            key={appt.id}
+            onClick={() => onEditAppointment?.(appt)}
+            className="absolute rounded text-white text-xs p-1.5 shadow-sm cursor-pointer hover:brightness-105 transition-all"
+            style={{
+              top,
+              height,
+              left: `${left}%`,
+              width: `${widthPercent}%`,
+              backgroundColor: bg,
+            }}
+          >
+            <div className="font-semibold truncate">
+              {appt.appointment_type === "Block Time"
+                ? "— Blocked —"
+                : appt.patient_name || "(No Patient)"}
+            </div>
+            {appt.appointment_type !== "Block Time" && (
+              <div className="truncate opacity-90">{appt.appointment_type}</div>
+            )}
+          </div>
+        );
+      });
+    });
+  };
+
+  // --- Selection (drag-to-create) ---
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selDay, setSelDay] = useState<Date | null>(null);
+  const [selStartIdx, setSelStartIdx] = useState<number | null>(null);
+  const [selEndIdx, setSelEndIdx] = useState<number | null>(null);
+
+  const handleMouseDown = (day: Date, idx: number) => {
+    setIsSelecting(true);
+    setSelDay(day);
+    setSelStartIdx(idx);
+    setSelEndIdx(idx);
+  };
+
+  const handleMouseEnter = (idx: number) => {
+    if (!isSelecting || selStartIdx === null) return;
+    setSelEndIdx(idx);
+  };
+
+  const handleMouseUp = () => {
+    if (!isSelecting || !selDay || selStartIdx === null || selEndIdx === null)
+      return;
+
+    const weekday = wkKey(selDay);
+    const hours =
+      scheduleSettings?.business_hours?.[
+        office as keyof ScheduleSettings["business_hours"]
+      ]?.[weekday];
+    if (!hours) return;
+
+    const startHour = parseInt(hours.start.split(":")[0], 10);
+    const a = Math.min(selStartIdx, selEndIdx);
+    const b = Math.max(selStartIdx, selEndIdx);
 
     const startMinutes = startHour * 60 + a * slotMinutes;
     const endMinutes = startHour * 60 + (b + 1) * slotMinutes;
 
-    const start = new Date(day);
+    const start = new Date(selDay);
     start.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
-    const end = new Date(day);
+    const end = new Date(selDay);
     end.setHours(Math.floor(endMinutes / 60), endMinutes % 60, 0, 0);
 
-    onSelectEmptySlot?.(start, end);
+    const s = (h: string) => {
+      const [H, M] = h.split(":").map(Number);
+      return H * 60 + M;
+    };
 
-    setIsSelecting(false);
-    setSelStart(null);
-    setSelEnd(null);
-  };
-
-  const renderAppointmentsForDay = (
-    dayIdx: number,
-    day: Date,
-    startHour: number,
-    endHour: number
-  ) => {
-    const appts = appointments
-      .filter((a) => {
-        const d = a.date ? parseISO(a.date) : null;
-        return d && isSameDay(d, day);
-      })
-      .sort(
-        (a, b) => timeToMinutes(a.start_time) - timeToMinutes(b.start_time)
-      );
-
-    return appts.map((a) => {
-      const startM = timeToMinutes(a.start_time);
-      const endM = timeToMinutes(a.end_time);
-      const top = (startM - startHour * 60) * minuteHeight;
-      const height = (endM - startM) * minuteHeight;
-      const bg =
-        a.appointment_type === "Block Time"
-          ? "#9CA3AF"
-          : a.color_code || "#3B82F6";
-
-      return (
-        <div
-          key={a.id}
-          className="absolute left-1 right-1 rounded text-white text-xs p-1.5 shadow-sm cursor-pointer hover:brightness-105 pointer-events-auto"
-          style={{ top, height, backgroundColor: bg }}
-          onClick={() => onEditAppointment?.(a)}
-        >
-          <div className="font-semibold truncate">
-            {a.appointment_type === "Block Time"
-              ? "— Blocked —"
-              : a.patient_name || "(No Patient)"}
-          </div>
-          {a.appointment_type !== "Block Time" && (
-            <div className="truncate opacity-90">{a.appointment_type}</div>
-          )}
-        </div>
-      );
-    });
-  };
-
-  if (loading) {
-    return (
-      <div className="p-6 text-center text-gray-500 italic">
-        Loading appointments…
-      </div>
+    const overlap = appointments.some(
+      (x) =>
+        x.provider === providerId &&
+        x.date === start.toISOString().split("T")[0] &&
+        s(x.start_time) < endMinutes &&
+        s(x.end_time) > startMinutes
     );
-  }
 
-  if (openDays.length === 0) {
-    return (
-      <div className="p-6 text-center text-gray-500 italic border rounded bg-gray-50">
-        All days are closed for the selected week.
-      </div>
-    );
-  }
+    const proceed = (allow = false) => {
+      onSelectEmptySlot?.(start, end, allow);
+      setIsSelecting(false);
+      setSelDay(null);
+      setSelStartIdx(null);
+      setSelEndIdx(null);
+    };
+
+    if (overlap && requestConfirm) {
+      requestConfirm(
+        "This time overlaps with another appointment for the same provider. Continue?",
+        () => proceed(true) // allowOverlap = true when user confirms
+      );
+    } else {
+      proceed(false);
+    }
+  };
 
   return (
-    <div className="border rounded overflow-hidden bg-white select-none">
+    <div className="border rounded overflow-hidden bg-white select-none relative">
       {/* Header */}
       <div
-        className="grid bg-gray-100 border-b text-sm font-semibold"
+        className="grid border-b text-sm font-semibold bg-gray-100"
         style={{ gridTemplateColumns: `120px repeat(${openDays.length}, 1fr)` }}
       >
         <div className="p-2 border-r text-gray-700">Time</div>
-        {openDays.map((d) => (
-          <div key={d.toISOString()} className="p-2 text-center border-r">
-            {format(d, "EEE dd")}
+        {openDays.map((day) => (
+          <div key={day.toISOString()} className="p-2 text-center border-r">
+            {format(day, "EEE dd")}
           </div>
         ))}
       </div>
 
       {/* Body */}
-      <div
-        className="grid text-sm relative"
-        style={{ gridTemplateColumns: `120px repeat(${openDays.length}, 1fr)` }}
-      >
-        {/* Time ruler */}
-        <div>
-          {slots.map((t) => (
-            <div
-              key={t}
-              className="border-r border-b p-2 text-gray-700 h-12 bg-gray-50"
-            >
-              {t}
-            </div>
-          ))}
+      {loading ? (
+        <div className="p-6 text-center text-gray-500 italic">
+          Loading appointments…
         </div>
-
-        {/* Day columns */}
-        {openDays.map((day, idx) => {
-          const { startHour, endHour } = ranges[idx];
-          const topOffset =
-            (startHour - minStartHour) * 60 * (SLOT_ROW_PX / slotMinutes);
-          const bandHeight =
-            (endHour - startHour) * 60 * (SLOT_ROW_PX / slotMinutes);
-
-          return (
-            <div
-              key={day.toISOString()}
-              className="relative border-l"
-              onMouseUp={handleMouseUp}
-            >
-              {/* Grid rows for alignment */}
-              {slots.map((_, slotIdx) => (
-                <div key={slotIdx} className="border-b h-12" />
-              ))}
-
-              {/* Shaded closed bands (top/bottom) to visualize differing hours */}
-              {topOffset > 0 && (
+      ) : (
+        <div
+          className="grid text-sm relative"
+          style={{
+            gridTemplateColumns: `120px repeat(${openDays.length}, 1fr)`,
+          }}
+        >
+          {/* Time column */}
+          <div>
+            {Array.from({ length: (17 - 8) * (60 / slotMinutes) }).map(
+              (_, i) => (
                 <div
-                  className="absolute inset-x-0 bg-gray-100/70 pointer-events-none"
-                  style={{ top: 0, height: topOffset }}
-                />
-              )}
-              {bandHeight < slots.length * SLOT_ROW_PX && (
-                <div
-                  className="absolute inset-x-0 bg-gray-100/70 pointer-events-none"
-                  style={{
-                    top: topOffset + bandHeight,
-                    height:
-                      slots.length * SLOT_ROW_PX - (topOffset + bandHeight),
-                  }}
-                />
-              )}
+                  key={i}
+                  className="border-r border-b p-2 text-gray-700 h-12 bg-gray-50"
+                >
+                  {`${String(8 + Math.floor((i * slotMinutes) / 60)).padStart(
+                    2,
+                    "0"
+                  )}:${String((i * slotMinutes) % 60).padStart(2, "0")}`}
+                </div>
+              )
+            )}
+          </div>
 
-              {/* Interactive band (only open hours are interactive) */}
+          {/* Day columns */}
+          {openDays.map((day) => {
+            const weekday = wkKey(day);
+            const hours =
+              scheduleSettings?.business_hours?.[
+                office as keyof ScheduleSettings["business_hours"]
+              ]?.[weekday];
+            if (!hours) return null;
+
+            const startHour = parseInt(hours.start.split(":")[0], 10);
+            const endHour = parseInt(hours.end.split(":")[0], 10);
+            const slotsPerDay = ((endHour - startHour) * 60) / slotMinutes;
+
+            return (
               <div
-                className="absolute inset-x-0"
-                style={{ top: topOffset, height: bandHeight }}
+                key={day.toISOString()}
+                className="relative border-l"
+                onMouseUp={handleMouseUp}
               >
-                {/* drag-to-create layer */}
-                {Array.from(
-                  { length: Math.ceil((bandHeight || 1) / SLOT_ROW_PX) },
-                  (_, i) => i
-                ).map((i) => {
-                  const slotIdx = i;
+                {Array.from({ length: slotsPerDay }).map((_, idx) => {
                   const selected =
                     isSelecting &&
-                    selStart &&
-                    selEnd &&
-                    selStart.dayIdx === idx &&
-                    idx === selEnd.dayIdx &&
-                    slotIdx >= Math.min(selStart.slotIdx, selEnd.slotIdx) &&
-                    slotIdx <= Math.max(selStart.slotIdx, selEnd.slotIdx);
+                    selDay &&
+                    isSameDay(selDay, day) &&
+                    selStartIdx !== null &&
+                    selEndIdx !== null &&
+                    idx >= Math.min(selStartIdx, selEndIdx) &&
+                    idx <= Math.max(selStartIdx, selEndIdx);
 
                   return (
                     <div
-                      key={i}
-                      className={`h-12 border-b transition-colors ${
-                        selected ? "bg-gray-300" : "hover:bg-blue-50"
+                      key={idx}
+                      className={`border-b h-12 ${
+                        selected ? "bg-gray-300" : "hover:bg-gray-50"
                       } cursor-crosshair`}
-                      onMouseDown={() => handleMouseDown(idx, slotIdx)}
-                      onMouseEnter={() => handleMouseEnter(idx, slotIdx)}
+                      onMouseDown={() => handleMouseDown(day, idx)}
+                      onMouseEnter={() => handleMouseEnter(idx)}
                     />
                   );
                 })}
 
-                {/* appointments overlay */}
                 <div className="absolute inset-0 pointer-events-none">
-                  {renderAppointmentsForDay(idx, day, startHour, endHour)}
+                  <div className="pointer-events-auto">
+                    {renderAppointmentsForDay(day)}
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

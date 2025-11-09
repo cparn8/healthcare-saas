@@ -59,11 +59,20 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
 
     try {
       setIsSubmitting(true);
+
+      // Read pending slot data (including allow_overlap)
+      const slotRaw = sessionStorage.getItem("pendingSlot");
+      const slot = slotRaw ? JSON.parse(slotRaw) : null;
+
       const payload: AppointmentPayload = {
         ...formData,
         provider: providerId,
         office: formData.office || "north",
         repeat_end_date: formData.repeat_end_date || null,
+        date: slot?.date || formData.date,
+        start_time: slot?.start_time || formData.start_time,
+        end_time: slot?.end_time || formData.end_time,
+        allow_overlap: !!slot?.allow_overlap,
       };
 
       if (formData.appointment_type && Array.isArray(appointmentTypes)) {

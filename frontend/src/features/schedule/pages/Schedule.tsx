@@ -8,6 +8,7 @@ import WeekViewGrid from "../components/WeekViewGrid";
 import NewAppointmentModal from "../components/NewAppointmentModal";
 import EditAppointmentModal from "../components/EditAppointmentModal";
 import SettingsPanel from "../components/SettingsPanel";
+import ConfirmDialog from "../../../components/common/ConfirmDialog";
 
 import { Appointment } from "../types/appointment";
 import { appointmentsApi } from "../../appointments/services/appointmentsApi";
@@ -93,6 +94,11 @@ const SchedulePage: React.FC = () => {
     end_time?: string;
   } | null>(null);
   const [initialPatient, setInitialPatient] = useState<any>(null);
+  const [confirmData, setConfirmData] = useState<{
+    open: boolean;
+    message: string;
+    onConfirm: () => void;
+  }>({ open: false, message: "", onConfirm: () => {} });
 
   /* ----------------------------- Navigation ----------------------------- */
   const changeTab = (tab: TabKey) => {
@@ -105,7 +111,6 @@ const SchedulePage: React.FC = () => {
   // Smart skip to next/previous *open* day based on ScheduleSettings
   function findNextOpenDay(current: Date, direction: 1 | -1): Date {
     if (!scheduleSettings || !office) return current;
-
     const maxAttempts = 7;
     let next = new Date(current);
 
@@ -118,29 +123,19 @@ const SchedulePage: React.FC = () => {
 
       const officeHours =
         scheduleSettings.business_hours?.[office as OfficeKeyStrict]?.[weekday];
-
-      if (!officeHours || officeHours.open) {
-        return next;
-      }
+      if (!officeHours || officeHours.open) return next;
     }
-
-    return current; // fallback if all days are closed
+    return current;
   }
 
   const goPrev = () => {
-    if (activeTab === "week") {
-      setCursorDate((prev) => addDays(prev, -7));
-    } else {
-      setCursorDate((prev) => findNextOpenDay(prev, -1));
-    }
+    if (activeTab === "week") setCursorDate((prev) => addDays(prev, -7));
+    else setCursorDate((prev) => findNextOpenDay(prev, -1));
   };
 
   const goNext = () => {
-    if (activeTab === "week") {
-      setCursorDate((prev) => addDays(prev, 7));
-    } else {
-      setCursorDate((prev) => findNextOpenDay(prev, 1));
-    }
+    if (activeTab === "week") setCursorDate((prev) => addDays(prev, 7));
+    else setCursorDate((prev) => findNextOpenDay(prev, 1));
   };
 
   const leftLabel = useMemo(
@@ -232,7 +227,6 @@ const SchedulePage: React.FC = () => {
 
     if (parsedPatient) setInitialPatient(parsedPatient);
     if (parsedSlot) setPrefill(parsedSlot);
-
     setShowNewAppointment(true);
 
     sessionStorage.removeItem("newPatient");
@@ -242,26 +236,17 @@ const SchedulePage: React.FC = () => {
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
 
-  /* ----------------------------- Compute Hours ----------------------------- */
-  const { startHour, endHour } = useMemo(() => {
-    if (!scheduleSettings || !office) return { startHour: 8, endHour: 17 };
-
-    const weekday = cursorDate
-      .toLocaleDateString("en-US", { weekday: "short" })
-      .toLowerCase()
-      .slice(0, 3) as WeekdayKeyStrict;
-
-    const officeHours =
-      scheduleSettings.business_hours?.[office as OfficeKeyStrict]?.[weekday];
-
-    if (!officeHours || !officeHours.open) {
-      return { startHour: 8, endHour: 17 }; // fallback
-    }
-
-    const [sh, sm] = officeHours.start.split(":").map(Number);
-    const [eh, em] = officeHours.end.split(":").map(Number);
-    return { startHour: sh + sm / 60, endHour: eh + em / 60 };
-  }, [scheduleSettings, office, cursorDate]);
+  const handleSlotSelect = (start: Date, end: Date, allowOverlap = false) => {
+    const prefill = {
+      date: start.toISOString().split("T")[0],
+      start_time: start.toTimeString().slice(0, 5),
+      end_time: end.toTimeString().slice(0, 5),
+      allow_overlap: allowOverlap,
+    };
+    sessionStorage.setItem("pendingSlot", JSON.stringify(prefill));
+    setPrefill(prefill);
+    setShowNewAppointment(true);
+  };
 
   /* ----------------------------- Render ----------------------------- */
   return (
@@ -381,23 +366,19 @@ const SchedulePage: React.FC = () => {
                 : "Loading..."
             }
             scheduleSettings={scheduleSettings}
-            startHour={startHour}
-            endHour={endHour}
             slotMinutes={slotSize}
             appointments={appointments}
             loading={loadingAppts}
             date={cursorDate}
+            providerId={providerId}
             onEditAppointment={(appt) => setEditingAppt(appt)}
-            onSelectEmptySlot={(start, end) => {
-              const prefill = {
-                date: start.toISOString().split("T")[0],
-                start_time: start.toTimeString().slice(0, 5),
-                end_time: end.toTimeString().slice(0, 5),
-              };
-              sessionStorage.setItem("pendingSlot", JSON.stringify(prefill));
-              setPrefill(prefill);
-              setShowNewAppointment(true);
-            }}
+            onSelectEmptySlot={(start, end, allow) =>
+              handleSlotSelect(start, end, !!allow)
+            }
+            onChangeDate={(newDate) => setCursorDate(newDate)}
+            requestConfirm={(message, onConfirm) =>
+              setConfirmData({ open: true, message, onConfirm })
+            }
           />
         )}
 
@@ -411,25 +392,17 @@ const SchedulePage: React.FC = () => {
                 : "Loading..."
             }
             scheduleSettings={scheduleSettings}
-            startHour={startHour}
-            endHour={endHour}
             slotMinutes={slotSize}
             appointments={appointments}
             loading={loadingAppts}
+            providerId={providerId}
             onEditAppointment={(appt) => setEditingAppt(appt)}
-            onSelectEmptySlot={(start, end) => {
-              const prefillData = {
-                date: start.toISOString().split("T")[0],
-                start_time: start.toTimeString().slice(0, 5),
-                end_time: end.toTimeString().slice(0, 5),
-              };
-              sessionStorage.setItem(
-                "prefillSlot",
-                JSON.stringify(prefillData)
-              );
-              setPrefill(prefillData);
-              setShowNewAppointment(true);
-            }}
+            onSelectEmptySlot={(start, end, allow) =>
+              handleSlotSelect(start, end, !!allow)
+            }
+            requestConfirm={(message, onConfirm) =>
+              setConfirmData({ open: true, message, onConfirm })
+            }
           />
         )}
 
@@ -477,6 +450,22 @@ const SchedulePage: React.FC = () => {
           onUpdated={loadAppointments}
         />
       )}
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        open={confirmData.open}
+        title="Double Booking"
+        message={confirmData.message}
+        confirmLabel="Proceed Anyway"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          confirmData.onConfirm();
+          setConfirmData({ open: false, message: "", onConfirm: () => {} });
+        }}
+        onCancel={() =>
+          setConfirmData({ open: false, message: "", onConfirm: () => {} })
+        }
+      />
     </div>
   );
 };

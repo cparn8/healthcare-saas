@@ -1,5 +1,5 @@
 // frontend/src/utils/toastUtils.ts
-import toast from 'react-hot-toast';
+import toast from "react-hot-toast";
 
 /* ------------------------------
  * Simple, consistent toasts
@@ -9,39 +9,39 @@ export const toastSuccess = (message: string) =>
   toast.success(message, {
     duration: 3000,
     style: {
-      background: '#10B981',
-      color: '#fff',
+      background: "#10B981",
+      color: "#fff",
       fontWeight: 500,
-      borderRadius: '8px',
-      padding: '10px 14px',
+      borderRadius: "8px",
+      padding: "10px 14px",
     },
-    iconTheme: { primary: '#fff', secondary: '#10B981' },
+    iconTheme: { primary: "#fff", secondary: "#10B981" },
   });
 
 export const toastError = (message: string) =>
   toast.error(message, {
     duration: 4000,
     style: {
-      background: '#EF4444',
-      color: '#fff',
+      background: "#EF4444",
+      color: "#fff",
       fontWeight: 500,
-      borderRadius: '8px',
-      padding: '10px 14px',
+      borderRadius: "8px",
+      padding: "10px 14px",
     },
-    iconTheme: { primary: '#fff', secondary: '#EF4444' },
+    iconTheme: { primary: "#fff", secondary: "#EF4444" },
   });
 
 export const toastInfo = (message: string) =>
   toast(message, {
     duration: 3000,
     style: {
-      background: '#3B82F6',
-      color: '#fff',
+      background: "#3B82F6",
+      color: "#fff",
       fontWeight: 500,
-      borderRadius: '8px',
-      padding: '10px 14px',
+      borderRadius: "8px",
+      padding: "10px 14px",
     },
-    iconTheme: { primary: '#fff', secondary: '#3B82F6' },
+    iconTheme: { primary: "#fff", secondary: "#3B82F6" },
   });
 
 /* ---------------------------------------------
@@ -66,22 +66,22 @@ export const toastPromise = async <T>(
       },
       {
         style: {
-          background: '#111827',
-          color: '#fff',
+          background: "#111827",
+          color: "#fff",
           fontWeight: 500,
-          borderRadius: '8px',
-          padding: '10px 14px',
+          borderRadius: "8px",
+          padding: "10px 14px",
         },
         success: {
-          style: { background: '#10B981' },
+          style: { background: "#10B981" },
         },
         error: {
-          style: { background: '#EF4444' },
+          style: { background: "#EF4444" },
         },
       }
     );
     return result;
   } catch (err) {
-    console.error('❌ toastPromise error:', err);
+    console.error("❌ toastPromise error:", err);
   }
 };
