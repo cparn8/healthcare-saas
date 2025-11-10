@@ -94,6 +94,29 @@ class AppointmentSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {"non_field_errors": ["This time overlaps with another appointment or block time."]}
                 )
+            
+            # --- Repeat logic validation ---
+            if data.get("is_recurring"):
+                start_date = data.get("date")
+                end_date = data.get("repeat_end_date")
+                occurrences = data.get("repeat_occurrences")
+                repeat_days = data.get("repeat_days", [])
+
+                if end_date and start_date and end_date < start_date:
+                    raise serializers.ValidationError({
+                        "repeat_end_date": "Repeat end date cannot be before the initial appointment date."
+                    })
+
+                if occurrences is not None and occurrences < 1:
+                    raise serializers.ValidationError({
+                        "repeat_occurrences": "Must have at least one repeat occurrence."
+                    })
+
+                if not repeat_days:
+                    raise serializers.ValidationError({
+                        "repeat_days": "At least one day must be selected for recurring appointments."
+                    })
+
 
         return data
     

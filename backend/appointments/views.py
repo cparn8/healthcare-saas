@@ -18,19 +18,31 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """
-        Ensure every appointment gets a valid provider.
-        Use the logged-in user's linked provider if not explicitly set in the payload.
+        Ensure every appointment gets a valid provider, respecting the ID sent from frontend.
         """
+        from providers.models import Provider
+        from schedule.models import ScheduleSettings
+
+        # Try normal serializer behavior first
         provider = serializer.validated_data.get("provider")
 
-        # Fallback to authenticated provider if missing
+        # Fallback to raw ID in request data if DRF stripped it
+        if not provider:
+            provider_id = self.request.data.get("provider")
+            if provider_id:
+                try:
+                    provider = Provider.objects.get(pk=int(provider_id))
+                except (Provider.DoesNotExist, ValueError):
+                    raise ValidationError({"provider": f"Invalid provider ID: {provider_id}"})
+
+        # Still no provider? fallback to logged-in provider
         if not provider and hasattr(self.request.user, "provider"):
             provider = self.request.user.provider
 
         if not provider:
             raise ValidationError({"provider": "No provider found for this user."})
-        
-        # Pull color/duration from ScheduleSettings
+
+        # Apply appointment type defaults
         appt_type = serializer.validated_data.get("appointment_type", "")
         color = serializer.validated_data.get("color_code") or "#3B82F6"
         duration = serializer.validated_data.get("duration") or 30
@@ -43,3 +55,5 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                 duration = match.get("default_duration", duration)
 
         serializer.save(provider=provider, color_code=color, duration=duration)
+
+

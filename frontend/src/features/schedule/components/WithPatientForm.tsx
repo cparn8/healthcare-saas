@@ -3,7 +3,8 @@ import React, { useState, useEffect } from "react";
 import Search from "lucide-react/dist/esm/icons/search";
 import UserPlus from "lucide-react/dist/esm/icons/user-plus";
 import API from "../../../services/api";
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { providersApi, Provider } from "../../providers/services/providersApi";
 
 interface Patient {
   id: number;
@@ -19,9 +20,9 @@ interface WithPatientFormProps {
   onCancel: () => void;
   onGetFormData?: (data: any) => void;
   providerId?: number | null;
-  initialDate?: string; // "YYYY-MM-DD"
-  initialStartTime?: string; // "HH:MM"
-  initialEndTime?: string; // "HH:MM"
+  initialDate?: string;
+  initialStartTime?: string;
+  initialEndTime?: string;
   initialPatient?: any;
   appointmentTypes?: {
     id?: number;
@@ -42,7 +43,6 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
   appointmentTypes,
 }) => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams] = useSearchParams();
 
   // --- Patient selection & search ---
@@ -53,13 +53,18 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
   const [results, setResults] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // --- Repeat toggle (UI helper) ---
+  // --- Providers (for dropdown) ---
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [providersLoading, setProvidersLoading] = useState(false);
+  const [providersError, setProvidersError] = useState<string | null>(null);
+
+  // --- Repeat toggle ---
   const [repeatEnabled, setRepeatEnabled] = useState(false);
 
   // --- Form state ---
   const [formData, setFormData] = useState<{
     patient: number | null;
-    provider: number;
+    provider: number | null;
     office: string;
     appointment_type: string;
     color_code: string;
@@ -76,7 +81,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     send_intake_form: boolean;
   }>({
     patient: null,
-    provider: providerId || 1,
+    provider: providerId ?? null,
     office: "north",
     appointment_type: appointmentTypes?.[0]?.name || "",
     color_code: appointmentTypes?.[0]?.color_code || "#FF6B6B",
@@ -85,7 +90,6 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     date: initialDate || "",
     start_time: initialStartTime || "",
     end_time: initialEndTime || "",
-
     is_recurring: false,
     repeat_days: [],
     repeat_interval_weeks: 1,
@@ -94,6 +98,45 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     send_intake_form: false,
   });
 
+  // -------------------------------
+  // Fetch provider list
+  // -------------------------------
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        setProvidersLoading(true);
+        const list = await providersApi.list();
+        if (!active) return;
+        setProviders(list);
+
+        // If none selected yet, use prop if available
+        if (formData.provider == null && providerId) {
+          setFormData((prev) => ({ ...prev, provider: providerId }));
+        }
+      } catch (err) {
+        if (active) {
+          console.error("❌ Provider fetch error:", err);
+          setProvidersError("Failed to load providers.");
+        }
+      } finally {
+        if (active) setProvidersLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync provider if parent prop changes later
+  useEffect(() => {
+    if (providerId && formData.provider == null) {
+      setFormData((p) => ({ ...p, provider: providerId }));
+    }
+  }, [providerId, formData.provider]);
+
+  // Bring back newly added patient from session storage
   useEffect(() => {
     const stored = sessionStorage.getItem("newPatient");
     if (stored) {
@@ -103,24 +146,19 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     }
   }, []);
 
-  // Keep provider in sync if it loads later
-  useEffect(() => {
-    if (providerId) setFormData((p) => ({ ...p, provider: providerId }));
-  }, [providerId]);
-
-  // When a patient is chosen, store their id in the payload
+  // Track patient selection
   useEffect(() => {
     if (selectedPatient)
       setFormData((p) => ({ ...p, patient: selectedPatient.id }));
   }, [selectedPatient]);
 
-  // Bubble up form data to parent (modal)
+  // Bubble up form data to parent (NewAppointmentModal)
   useEffect(() => {
     onGetFormData?.(formData);
   }, [formData, onGetFormData]);
 
   // -------------------------------
-  // Predictive Search (debounced)
+  // Patient search (debounced)
   // -------------------------------
   useEffect(() => {
     const delay = setTimeout(async () => {
@@ -133,63 +171,39 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
         const res = await API.get(
           `/patients/?search=${encodeURIComponent(query)}`
         );
-        // DRF pagination: results under .results; bare list otherwise
         const list = res.data?.results ?? res.data ?? [];
         setResults(Array.isArray(list) ? list : []);
       } catch (err) {
-        console.error("❌ Patient search failed", err);
+        console.error("❌ Patient search failed:", err);
       } finally {
         setLoading(false);
       }
     }, 350);
-
     return () => clearTimeout(delay);
   }, [query]);
 
+  // If redirected back with newPatientId param
   useEffect(() => {
     const newPatientId = searchParams.get("newPatientId");
     if (!newPatientId) return;
-
-    const fetchNewPatient = async () => {
+    (async () => {
       try {
         const res = await API.get(`/patients/${newPatientId}/`);
         setSelectedPatient(res.data);
       } catch (err) {
         console.error("❌ Failed to load new patient", err);
       }
-    };
-
-    fetchNewPatient();
+    })();
   }, [searchParams]);
 
   // -------------------------------
-  // Handlers
+  // Helpers
   // -------------------------------
-  const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
-  ) => {
-    const { name, value, type } = e.target;
-    let next: string | number | boolean = value;
-
-    // Narrow for checkboxes to avoid TS "checked" errors
-    if (type === "checkbox" && e.target instanceof HTMLInputElement) {
-      next = e.target.checked;
-    }
-    // Duration should be a number
-    if (name === "duration") {
-      next = Number(next);
-    }
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]: next,
-    }));
-  };
+  const providerFullName = (p: Provider) =>
+    `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || `Provider #${p.id}`;
 
   // -------------------------------
-  // UI
+  // Render
   // -------------------------------
   return (
     <div className="max-h-[70vh] overflow-y-auto space-y-6 p-4">
@@ -217,7 +231,6 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
             <div className="text-xs text-gray-500 mt-1">Searching...</div>
           )}
 
-          {/* Results dropdown */}
           {results.length > 0 && (
             <div className="absolute z-20 bg-white border rounded w-full shadow-md mt-1 max-h-56 overflow-y-auto">
               {results.map((p) => (
@@ -241,12 +254,9 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
             </div>
           )}
 
-          {/* Add new patient button (hidden when a patient is selected) */}
           <button
             onClick={() => {
-              // Tell PatientsList that we came from Schedule
               localStorage.setItem("afterAddPatient", "/doctor/schedule");
-              // Also preserve the current modal state (timeslot, provider)
               sessionStorage.setItem("prefillSlot", JSON.stringify(formData));
               navigate("/doctor/manage-users/patients");
             }}
@@ -282,18 +292,35 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
         <h3 className="text-lg font-semibold mb-2">Appointment details</h3>
 
         <div className="grid grid-cols-2 gap-4 mb-4">
+          {/* Provider Dropdown */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Provider
             </label>
-            <input
-              type="text"
-              readOnly
-              value={providerId ? `Provider #${providerId}` : "Loading..."}
-              className="w-full border rounded p-2 bg-gray-50 text-gray-600"
-            />
+            <select
+              name="provider"
+              value={formData.provider ?? ""}
+              onChange={(e) => {
+                const newProviderId = Number(e.target.value) || null;
+                setFormData((p) => ({ ...p, provider: newProviderId }));
+                onGetFormData?.({ ...formData, provider: newProviderId });
+              }}
+              className="w-full border rounded p-2"
+              disabled={providersLoading}
+            >
+              <option value="">
+                {providersLoading ? "Loading providers…" : "Select a provider"}
+              </option>
+              {providersError && <option disabled>{providersError}</option>}
+              {providers.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {providerFullName(p)}
+                </option>
+              ))}
+            </select>
           </div>
 
+          {/* Office */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Office
@@ -301,7 +328,9 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
             <select
               name="office"
               value={formData.office}
-              onChange={handleChange}
+              onChange={(e) =>
+                setFormData((p) => ({ ...p, office: e.target.value }))
+              }
               className="w-full border rounded p-2"
             >
               <option value="north">North Office</option>
@@ -318,7 +347,9 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
           <textarea
             name="chief_complaint"
             value={formData.chief_complaint}
-            onChange={handleChange}
+            onChange={(e) =>
+              setFormData((p) => ({ ...p, chief_complaint: e.target.value }))
+            }
             className="w-full border rounded p-2"
             placeholder="Brief description of symptoms or reason for visit"
             rows={2}
@@ -333,7 +364,16 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
           <select
             name="appointment_type"
             value={formData.appointment_type}
-            onChange={handleChange}
+            onChange={(e) => {
+              const val = e.target.value;
+              const selected = appointmentTypes?.find((t) => t.name === val);
+              setFormData((prev) => ({
+                ...prev,
+                appointment_type: val,
+                duration: selected?.default_duration ?? prev.duration,
+                color_code: selected?.color_code ?? prev.color_code,
+              }));
+            }}
             className="w-full border rounded p-2"
           >
             <option value="">Select type</option>
@@ -359,10 +399,13 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
               type="date"
               name="date"
               value={formData.date}
-              onChange={handleChange}
+              onChange={(e) =>
+                setFormData((p) => ({ ...p, date: e.target.value }))
+              }
               className="w-full border rounded p-2"
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Start Time
@@ -371,10 +414,13 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
               type="time"
               name="start_time"
               value={formData.start_time}
-              onChange={handleChange}
+              onChange={(e) =>
+                setFormData((p) => ({ ...p, start_time: e.target.value }))
+              }
               className="w-full border rounded p-2"
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               End Time
@@ -383,17 +429,19 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
               type="time"
               name="end_time"
               value={formData.end_time}
-              onChange={handleChange}
+              onChange={(e) =>
+                setFormData((p) => ({ ...p, end_time: e.target.value }))
+              }
               className="w-full border rounded p-2"
             />
           </div>
 
-          {/* Repeat toggle */}
+          {/* Repeat Toggle */}
           <label className="flex items-center gap-2 mb-2">
             <input
               type="checkbox"
               checked={repeatEnabled}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              onChange={(e) => {
                 setRepeatEnabled(e.target.checked);
                 setFormData((prev) => ({
                   ...prev,
@@ -405,6 +453,96 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
             <span className="text-sm font-medium text-gray-700">Repeat</span>
           </label>
         </div>
+
+        {/* Repeat section */}
+        {repeatEnabled && (
+          <div className="w-full mt-4 border-t border-gray-200 pt-4 text-[15px] space-y-4">
+            {/* Row 1 — Occurs On */}
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="font-semibold text-gray-800 whitespace-nowrap">
+                Occurs On:
+              </span>
+              <div className="flex flex-row items-center gap-4 flex-wrap w-full">
+                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
+                  (day) => (
+                    <label
+                      key={day}
+                      className="flex items-center gap-1 text-[15px] cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.repeat_days.includes(day)}
+                        onChange={(e) => {
+                          const updated = e.target.checked
+                            ? [...formData.repeat_days, day]
+                            : formData.repeat_days.filter((d) => d !== day);
+                          setFormData((prev) => ({
+                            ...prev,
+                            repeat_days: updated,
+                          }));
+                        }}
+                        className="h-4 w-4 accent-blue-600"
+                      />
+                      <span className="font-medium">{day}</span>
+                    </label>
+                  )
+                )}
+              </div>
+            </div>
+
+            {/* Row 2 — Every X week(s), Ends On, after N appointments */}
+            <div className="flex flex-row flex-wrap items-center gap-3">
+              <span className="font-semibold text-gray-800">Every</span>
+              <select
+                value={formData.repeat_interval_weeks}
+                onChange={(e) =>
+                  setFormData((p) => ({
+                    ...p,
+                    repeat_interval_weeks: Number(e.target.value),
+                  }))
+                }
+                className="border rounded px-2 py-1 text-sm w-20"
+              >
+                {Array.from({ length: 9 }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+              <span className="text-gray-800">week(s)</span>
+
+              <div className="h-5 border-l border-gray-300 mx-2" />
+
+              <span className="font-semibold text-gray-800">Ends On</span>
+              <input
+                type="date"
+                value={formData.repeat_end_date || ""}
+                onChange={(e) =>
+                  setFormData((p) => ({
+                    ...p,
+                    repeat_end_date: e.target.value,
+                  }))
+                }
+                className="border rounded px-2 py-1 text-sm"
+              />
+
+              <span className="font-semibold text-gray-800">after</span>
+              <input
+                type="number"
+                min={1}
+                value={formData.repeat_occurrences}
+                onChange={(e) =>
+                  setFormData((p) => ({
+                    ...p,
+                    repeat_occurrences: Number(e.target.value),
+                  }))
+                }
+                className="border rounded w-20 px-2 py-1 text-sm"
+              />
+              <span className="text-gray-800">appointment(s)</span>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

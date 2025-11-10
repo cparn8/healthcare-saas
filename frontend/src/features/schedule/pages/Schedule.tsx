@@ -165,7 +165,7 @@ const SchedulePage: React.FC = () => {
       try {
         const me = await providersApi.getCurrent();
         setProvider(me);
-        setProviderId(me.id);
+        setProviderId(me.id ?? null);
       } catch (err) {
         console.error("❌ Failed to load provider info:", err);
       }
@@ -437,6 +437,7 @@ const SchedulePage: React.FC = () => {
           }
           initialPatient={initialPatient}
           appointmentTypes={appointmentTypes}
+          scheduleSettings={scheduleSettings}
         />
       )}
 
