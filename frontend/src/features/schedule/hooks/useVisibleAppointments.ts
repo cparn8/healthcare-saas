@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { parseLocalDate } from "../../../utils/dateUtils";
-import { Appointment } from "../types/appointment";
+import { Appointment } from "../services/appointmentsApi";
 
 interface Options {
   allAppointments: Appointment[];

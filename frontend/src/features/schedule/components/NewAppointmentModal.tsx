@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import X from "lucide-react/dist/esm/icons/x";
 import WithPatientForm from "./WithPatientForm";
+import BlockTimeForm from "./BlockTimeForm";
 import {
   appointmentsApi,
   AppointmentPayload,
-} from "../../appointments/services/appointmentsApi";
+} from "../services/appointmentsApi";
 import {
   toastError,
   toastSuccess,
@@ -47,9 +48,11 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // --- Time sync (safe for TS) ---
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [startTime, setStartTime] = useState<string>(
     initialStartTime ? initialStartTime.toTimeString().slice(0, 5) : ""
   );
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [endTime, setEndTime] = useState<string>(
     initialEndTime ? initialEndTime.toTimeString().slice(0, 5) : ""
   );
@@ -107,6 +110,18 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
         end_time: slot?.end_time || formData.end_time,
         allow_overlap: !!slot?.allow_overlap,
       };
+
+      if (activeTab === "blockTime") {
+        payload.patient = null;
+        payload.appointment_type = formData.appointment_type || "Block Time";
+        (payload as any).is_block_time = true;
+
+        // If user chose “All Providers”
+        if ((formData as any).all_providers) {
+          payload.provider = null;
+          (payload as any).all_providers = true;
+        }
+      }
 
       // --- Create initial appointment ---
       const created = await toastPromise(appointmentsApi.create(payload), {
@@ -255,12 +270,18 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
               appointmentTypes={appointmentTypes}
             />
           ) : (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Block Time</h3>
-              <p className="text-sm text-gray-600">
-                Reserve time for lunch, meetings, or administrative work.
-              </p>
-            </div>
+            <BlockTimeForm
+              providerId={providerId}
+              appointmentTypes={appointmentTypes}
+              scheduleSettings={scheduleSettings}
+              onGetFormData={(data: AppointmentPayload) => setFormData(data)}
+              onCancel={onClose}
+              initialDate={
+                initialDate ? initialDate.toISOString().split("T")[0] : ""
+              }
+              initialStartTime={normalizeToTimeString(initialStartTime)}
+              initialEndTime={normalizeToTimeString(initialEndTime)}
+            />
           )}
         </div>
 

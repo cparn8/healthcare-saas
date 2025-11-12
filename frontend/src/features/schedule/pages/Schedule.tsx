@@ -11,8 +11,7 @@ import EditAppointmentModal from "../components/EditAppointmentModal";
 import SettingsPanel from "../components/SettingsPanel";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
 
-import { Appointment } from "../types/appointment";
-import { appointmentsApi } from "../../appointments/services/appointmentsApi";
+import { appointmentsApi, Appointment } from "../services/appointmentsApi";
 import { providersApi, Provider } from "../../providers/services/providersApi";
 import { scheduleSettingsApi } from "../services/scheduleSettingsApi";
 import {
@@ -220,16 +219,19 @@ const SchedulePage: React.FC = () => {
 
   const loadAppointments = useCallback(async () => {
     if (!providerId) return;
+
     try {
       setLoadingAppts(true);
       const { start_date, end_date } = getWeekRange(cursorDate);
-      const result = await appointmentsApi.list({
+
+      const appts = await appointmentsApi.list({
         provider: providerId,
         office,
         start_date,
         end_date,
       });
-      setAppointments(result.results || result || []);
+
+      setAppointments(appts);
     } catch (err) {
       console.error("❌ Failed to load appointments:", err);
     } finally {
@@ -240,6 +242,11 @@ const SchedulePage: React.FC = () => {
   useEffect(() => {
     if (providerId) loadAppointments();
   }, [providerId, office, cursorDate, loadAppointments]);
+
+  useEffect(() => {
+    if (scheduleSettings)
+      console.log("Schedule Settings JSON →", scheduleSettings.business_hours);
+  }, [scheduleSettings]);
 
   /* ----------------------------- Appointment Types ----------------------------- */
   useEffect(() => {

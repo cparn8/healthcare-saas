@@ -37,6 +37,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
             "repeat_days",
             "repeat_interval_weeks",
             "repeat_end_date",
+            "is_block",
             "repeat_occurrences",
             "created_at",
             "updated_at",
@@ -70,10 +71,14 @@ class AppointmentSerializer(serializers.ModelSerializer):
             )
 
         # --- Patient validation ---
-        if not patient and data.get("appointment_type") != "Block Time":
+        appointment_type = (data.get("appointment_type") or "").lower()
+        block_reasons = ["block time", "out of office", "meeting", "surgery", "lunch", "other"]
+
+        if not patient and appointment_type not in block_reasons:
             raise serializers.ValidationError(
                 {"patient": "Patient is required unless creating a block time."}
             )
+
 
         # --- Overlap validation ---
         allow_overlap = data.get("allow_overlap")
@@ -144,4 +149,8 @@ class AppointmentSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         # Remove 'allow_overlap' if present since it's not a DB field
         validated_data.pop("allow_overlap", None)
+        # Automatically assign gray color for block times
+        appt_type = (validated_data.get("appointment_type") or "").lower()
+        if appt_type in ["block time", "out of office", "meeting", "surgery", "lunch", "other"]:
+            validated_data["color_code"] = "#737373"
         return super().create(validated_data)

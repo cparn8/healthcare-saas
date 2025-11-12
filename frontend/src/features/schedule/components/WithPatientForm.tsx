@@ -5,6 +5,7 @@ import UserPlus from "lucide-react/dist/esm/icons/user-plus";
 import API from "../../../services/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { providersApi, Provider } from "../../providers/services/providersApi";
+import { usePrefilledAppointmentFields } from "../hooks/usePrefilledAppointmentFields";
 
 interface Patient {
   id: number;
@@ -44,6 +45,13 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
 }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const prefilled = usePrefilledAppointmentFields({
+    initialDate,
+    initialStartTime,
+    initialEndTime,
+    appointmentTypes,
+    initialTypeName: appointmentTypes?.[0]?.name,
+  });
 
   // --- Patient selection & search ---
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(
@@ -68,11 +76,11 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     office: "north",
     appointment_type: appointmentTypes?.[0]?.name || "",
     color_code: appointmentTypes?.[0]?.color_code || "#FF6B6B",
-    duration: appointmentTypes?.[0]?.default_duration || 30,
+    duration: prefilled.duration,
     chief_complaint: "",
-    date: initialDate || "",
-    start_time: initialStartTime || "",
-    end_time: initialEndTime || "",
+    date: prefilled.date,
+    start_time: prefilled.start_time,
+    end_time: prefilled.end_time,
     is_recurring: false,
     repeat_days: [] as string[],
     repeat_interval_weeks: 1,
@@ -139,11 +147,11 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
-      start_time: initialStartTime || prev.start_time,
-      end_time: initialEndTime || prev.end_time,
-      date: initialDate || prev.date,
+      date: prefilled.date,
+      start_time: prefilled.start_time,
+      end_time: prefilled.end_time,
     }));
-  }, [initialDate, initialStartTime, initialEndTime]);
+  }, [prefilled]);
 
   // -------------------------------
   // Sync provider if parent prop changes later
@@ -323,27 +331,51 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Provider
             </label>
-            <select
-              name="provider"
-              value={formData.provider ?? ""}
-              onChange={(e) => {
-                const newProviderId = Number(e.target.value) || null;
-                setFormData((p) => ({ ...p, provider: newProviderId }));
-                onGetFormData?.({ ...formData, provider: newProviderId });
-              }}
-              className="w-full border rounded p-2"
-              disabled={providersLoading}
-            >
-              <option value="">
-                {providersLoading ? "Loading providers…" : "Select a provider"}
-              </option>
-              {providersError && <option disabled>{providersError}</option>}
-              {providers.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {providerFullName(p)}
-                </option>
-              ))}
-            </select>
+
+            {providersLoading ? (
+              <div className="flex items-center gap-2 border rounded p-2 text-gray-500 bg-gray-50">
+                <svg
+                  className="animate-spin h-4 w-4 text-gray-400"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                  ></path>
+                </svg>
+                Loading providers…
+              </div>
+            ) : (
+              <select
+                name="provider"
+                value={formData.provider ?? ""}
+                onChange={(e) => {
+                  const newProviderId = Number(e.target.value) || null;
+                  setFormData((p) => ({ ...p, provider: newProviderId }));
+                  onGetFormData?.({ ...formData, provider: newProviderId });
+                }}
+                className="w-full border rounded p-2"
+              >
+                <option value="">Select a provider</option>
+                {providersError && <option disabled>{providersError}</option>}
+                {providers.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {providerFullName(p)}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Office */}

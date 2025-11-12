@@ -50,6 +50,11 @@ class Appointment(models.Model):
         help_text="Type of appointment (e.g., Wellness Exam, Follow-up, Consultation)."
     )
 
+    is_block = models.BooleanField(
+        default=False,
+        help_text="True if this record represents a provider block of time."
+    )
+
     color_code = models.CharField(
         max_length=20,
         default="#FF6B6B",  # placeholder color (red tone)
