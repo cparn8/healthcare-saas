@@ -1,13 +1,19 @@
 // frontend/src/features/schedule/components/DayViewGrid.tsx
 import React, { useMemo, useState } from "react";
-import { isSameDay, parseISO } from "date-fns";
 import { Appointment } from "../types/appointment";
 import { ScheduleSettings, Weekday } from "../types/scheduleSettings";
+import {
+  parseLocalDate,
+  DAY_INDEX_TO_KEY,
+  isSameLocalDay,
+} from "../../../utils/dateUtils";
 
 interface DayViewGridProps {
   office: string;
   providerName: string;
   slotMinutes: number;
+  // IMPORTANT: This should already be filtered to the currently visible day
+  // via the useVisibleAppointments hook in Schedule.tsx
   appointments?: Appointment[];
   loading?: boolean;
   onEditAppointment?: (appt: Appointment) => void;
@@ -22,11 +28,10 @@ interface DayViewGridProps {
 const SLOT_ROW_PX = 48;
 const SLIVER_PERCENT = 12; // keep a sliver for new bookings
 
-function wkKey(d: Date): Weekday {
-  return d
-    .toLocaleDateString("en-US", { weekday: "short" })
-    .toLowerCase()
-    .slice(0, 3) as Weekday;
+function wkKey(d: Date | string): Weekday {
+  const local = typeof d === "string" ? parseLocalDate(d) : d;
+  const jsIndex = local.getDay(); // 0–6, Sun–Sat
+  return DAY_INDEX_TO_KEY[jsIndex];
 }
 
 export default function DayViewGrid({
@@ -42,6 +47,7 @@ export default function DayViewGrid({
   providerId,
   requestConfirm,
 }: DayViewGridProps) {
+  // Business hours for the given office/day (fallback 08–17 if missing)
   const hours = scheduleSettings?.business_hours?.[
     office as keyof ScheduleSettings["business_hours"]
   ]?.[wkKey(date)] ?? { open: true, start: "08:00", end: "17:00" };
@@ -50,39 +56,42 @@ export default function DayViewGrid({
   const startHour = parseInt(hours.start.split(":")[0], 10);
   const endHour = parseInt(hours.end.split(":")[0], 10);
 
-  // ---- slots & helpers ----
-  const slots = useMemo(() => {
-    const t: string[] = [];
-    for (let h = startHour; h < endHour; h++) {
-      for (let m = 0; m < 60; m += slotMinutes) {
-        t.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
-      }
-    }
-    return t;
-  }, [startHour, endHour, slotMinutes]);
-
+  // --- helpers ---
   const minuteHeight = SLOT_ROW_PX / slotMinutes;
   const timeToMinutes = (t: string) => {
     const [h, m] = t.split(":").map(Number);
     return h * 60 + m;
   };
 
-  // ---- same-day appts with minute ranges ----
-  const apptsForDay = useMemo(
-    () =>
-      appointments
-        .filter((a) => a.date && isSameDay(parseISO(a.date), date))
-        .filter((a) => a.start_time && a.end_time)
-        .map((a) => ({
-          ...a,
-          start: timeToMinutes(a.start_time),
-          end: timeToMinutes(a.end_time),
-        }))
-        .sort((a, b) => a.start - b.start),
-    [appointments, date]
-  );
+  // Build slot labels from business hours (purely visual)
+  const slots = useMemo(() => {
+    const out: string[] = [];
+    for (let h = startHour; h < endHour; h++) {
+      for (let m = 0; m < 60; m += slotMinutes) {
+        out.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+      }
+    }
+    return out;
+  }, [startHour, endHour, slotMinutes]);
 
-  // ---- strict-overlap clustering (no grouping for back-to-back) ----
+  // Appointments are already filtered by parent (useVisibleAppointments).
+  // Map to numeric minute ranges and cluster overlaps for side-by-side layout.
+  const apptsForDay = useMemo(() => {
+    const filtered = (appointments ?? [])
+      .filter((a) => a.date && isSameLocalDay(a.date, date))
+      .filter((a) => a.start_time && a.end_time)
+      .map((a) => ({
+        ...a,
+        start: timeToMinutes(a.start_time),
+        end: timeToMinutes(a.end_time),
+      }))
+      .sort((a, b) => a.start - b.start);
+
+    // Optional visual check
+
+    return filtered;
+  }, [appointments, date]);
+
   const clusters: (typeof apptsForDay)[] = [];
   let current: typeof apptsForDay = [];
   let clusterEnd = -1;
@@ -121,8 +130,7 @@ export default function DayViewGrid({
 
         return (
           <div
-            key={appt.id}
-            // IMPORTANT: allow clicking blocks, but don't block drag on grid
+            key={`${appt.id ?? "ghost"}-${appt.date}-${appt.start_time}`}
             className="absolute rounded text-white text-xs p-1.5 shadow-sm hover:brightness-105 transition-all pointer-events-auto"
             style={{
               top,
@@ -136,10 +144,10 @@ export default function DayViewGrid({
               e.stopPropagation();
               onEditAppointment?.(appt);
             }}
-            title={`${appt.appointment_type} • ${appt.start_time.slice(
+            title={`${appt.appointment_type} • ${appt.start_time?.slice(
               0,
               5
-            )}–${appt.end_time.slice(0, 5)}`}
+            )}–${appt.end_time?.slice(0, 5)}`}
           >
             <div className="font-semibold truncate">
               {appt.appointment_type === "Block Time"
@@ -154,7 +162,7 @@ export default function DayViewGrid({
       });
     });
 
-  // ---- Drag-to-select (with visible highlight) ----
+  // ---- Drag-to-select (unchanged behavior) ----
   const [isSelecting, setIsSelecting] = useState(false);
   const [selStartIdx, setSelStartIdx] = useState<number | null>(null);
   const [selEndIdx, setSelEndIdx] = useState<number | null>(null);
@@ -183,9 +191,10 @@ export default function DayViewGrid({
     const startMinutes = startHour * 60 + a * slotMinutes;
     const endMinutes = startHour * 60 + (b + 1) * slotMinutes;
 
-    const start = new Date(date);
+    const start = parseLocalDate(date.toISOString().split("T")[0]);
     start.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
-    const end = new Date(date);
+
+    const end = parseLocalDate(date.toISOString().split("T")[0]);
     end.setHours(Math.floor(endMinutes / 60), endMinutes % 60, 0, 0);
 
     // strict overlap check (no false positives for back-to-back)
@@ -195,8 +204,8 @@ export default function DayViewGrid({
       (x) =>
         x.provider === providerId &&
         x.date === start.toISOString().split("T")[0] &&
-        sHHMM < x.end_time &&
-        eHHMM > x.start_time
+        sHHMM < (x.end_time ?? "") &&
+        eHHMM > (x.start_time ?? "")
     );
 
     const finalize = (allow = false) => onSelectEmptySlot?.(start, end, allow);
@@ -210,9 +219,7 @@ export default function DayViewGrid({
       finalize(false); // normal create
     }
 
-    setIsSelecting(false);
-    setSelStartIdx(null);
-    setSelEndIdx(null);
+    resetSelection();
   };
 
   if (!open) return null;
@@ -236,14 +243,21 @@ export default function DayViewGrid({
         <div className="grid grid-cols-[120px_1fr] text-sm relative">
           {/* Time column */}
           <div>
-            {slots.map((time) => (
-              <div
-                key={time}
-                className="border-r border-b p-2 text-gray-700 h-12 bg-gray-50"
-              >
-                {time}
-              </div>
-            ))}
+            {slots.map((time, i) => {
+              // Optional: subtle alternating shading by hour
+              const hourIndex = Math.floor((i * slotMinutes) / 60);
+              const shaded = hourIndex % 2 === 0;
+              return (
+                <div
+                  key={time}
+                  className={`border-r border-b p-2 text-gray-700 h-12 ${
+                    shaded ? "bg-gray-50" : "bg-gray-100/40"
+                  }`}
+                >
+                  {time}
+                </div>
+              );
+            })}
           </div>
 
           {/* Interactive grid column */}
@@ -272,9 +286,7 @@ export default function DayViewGrid({
               );
             })}
 
-            {/* Appointments overlay:
-                - pointer-events-none on the container lets drag events hit the grid
-                - each block uses pointer-events-auto to still be clickable */}
+            {/* Appointments overlay */}
             <div className="absolute inset-0 pointer-events-none">
               {renderAppointments()}
             </div>

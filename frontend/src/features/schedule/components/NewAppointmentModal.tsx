@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import X from "lucide-react/dist/esm/icons/x";
 import WithPatientForm from "./WithPatientForm";
 import {
@@ -10,6 +10,7 @@ import {
   toastSuccess,
   toastPromise,
 } from "../../../utils/toastUtils";
+import { parseLocalDate, formatYMDLocal } from "../../../utils/dateUtils";
 
 interface NewAppointmentModalProps {
   onClose: () => void;
@@ -45,20 +46,31 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
   const [formData, setFormData] = useState<AppointmentPayload | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Parse "YYYY-MM-DD" as a *local* date (midnight local time)
-  function parseLocalDate(ymd: string): Date {
-    const [y, m, d] = ymd.split("-").map(Number);
-    return new Date(y, (m ?? 1) - 1, d ?? 1);
+  // --- Time sync (safe for TS) ---
+  const [startTime, setStartTime] = useState<string>(
+    initialStartTime ? initialStartTime.toTimeString().slice(0, 5) : ""
+  );
+  const [endTime, setEndTime] = useState<string>(
+    initialEndTime ? initialEndTime.toTimeString().slice(0, 5) : ""
+  );
+
+  useEffect(() => {
+    if (initialStartTime)
+      setStartTime(initialStartTime.toTimeString().slice(0, 5));
+    if (initialEndTime) setEndTime(initialEndTime.toTimeString().slice(0, 5));
+  }, [initialStartTime, initialEndTime]);
+
+  function normalizeToTimeString(value?: Date | string | null): string {
+    if (!value) return "";
+    if (value instanceof Date) return value.toTimeString().slice(0, 5);
+    if (typeof value === "string" && /^\d{2}:\d{2}$/.test(value)) return value; // already "HH:mm"
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? "" : date.toTimeString().slice(0, 5);
   }
 
-  // Format a Date to "YYYY-MM-DD" in *local* time
-  function formatYMDLocal(date: Date): string {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-  }
-
+  // -------------------------------
+  // Handle Save
+  // -------------------------------
   async function handleSave() {
     if (!formData) {
       toastError("Please complete the appointment form before saving.");
@@ -76,130 +88,92 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
     try {
       setIsSubmitting(true);
 
-      // Read pending slot data (including allow_overlap)
       const slotRaw = sessionStorage.getItem("pendingSlot");
       const slot = slotRaw ? JSON.parse(slotRaw) : null;
+
+      const rawDate = slot?.date || formData.date;
+      const safeDate =
+        rawDate && typeof rawDate === "string" && rawDate.includes("T")
+          ? rawDate.split("T")[0]
+          : rawDate;
 
       const payload: AppointmentPayload = {
         ...formData,
         provider: formData.provider ?? providerId ?? 1,
         office: formData.office || "north",
         repeat_end_date: formData.repeat_end_date || null,
-        date: slot?.date || formData.date,
+        date: safeDate,
         start_time: slot?.start_time || formData.start_time,
         end_time: slot?.end_time || formData.end_time,
         allow_overlap: !!slot?.allow_overlap,
       };
 
-      // Match color/duration from appointment type
-      if (formData.appointment_type && Array.isArray(appointmentTypes)) {
-        const selected = appointmentTypes.find(
-          (t) => t.name === formData.appointment_type
-        );
-        if (selected) {
-          payload.color_code = selected.color_code;
-          payload.duration = selected.default_duration;
-        }
-      }
-
-      // Validation for recurrence
-      if (formData.is_recurring) {
-        const startDate = new Date(formData.date);
-        const endDate = formData.repeat_end_date
-          ? new Date(formData.repeat_end_date)
-          : null;
-
-        if (endDate && endDate < startDate) {
-          toastError(
-            "Repeat end date cannot be before the initial appointment date."
-          );
-          return;
-        }
-
-        if ((formData.repeat_occurrences ?? 1) < 1) {
-          toastError("Number of repeat appointments must be at least 1.");
-          return;
-        }
-
-        if (!formData.repeat_days || formData.repeat_days.length === 0) {
-          toastError(
-            "Please select at least one weekday for the recurring appointments."
-          );
-          return;
-        }
-      }
-
-      // --- Save initial appointment ---
+      // --- Create initial appointment ---
       const created = await toastPromise(appointmentsApi.create(payload), {
         loading: "Saving appointment...",
         success: "✅ Appointment saved successfully!",
         error: "❌ Failed to save appointment.",
       });
 
-      // --- Generate and save repeat appointments (LOCAL date math) ---
+      // --- Handle recurring logic ---
       if (formData.is_recurring && created?.id) {
         try {
-          const dayMap: Record<string, number> = {
-            Sun: 0,
-            Mon: 1,
-            Tue: 2,
-            Wed: 3,
-            Thu: 4,
-            Fri: 5,
-            Sat: 6,
-          };
-
           const repeatDays = formData.repeat_days ?? [];
-          const targetDays = repeatDays.map((d) => dayMap[d]);
           const intervalWeeks = formData.repeat_interval_weeks ?? 1;
           const maxOccurrences = formData.repeat_occurrences ?? 1;
-
-          // Parse as *local* dates
-          const startDate = parseLocalDate(formData.date);
+          const startDate = parseLocalDate(safeDate);
           const endDate = formData.repeat_end_date
             ? parseLocalDate(formData.repeat_end_date)
             : null;
 
-          // (Optional) guardrails you already had
-          if (endDate && endDate < startDate) {
-            toastError(
-              "Repeat end date cannot be before the initial appointment date."
-            );
-            return;
+          // Map "Mon" → 1, "Tue" → 2, etc. (aligns with JS getDay())
+          const targetDays = repeatDays.map((d) =>
+            ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].indexOf(
+              d.toLowerCase().slice(0, 3)
+            )
+          );
+
+          const generatedDates: string[] = [];
+          let current = new Date(startDate);
+
+          // Generate forward until we hit max occurrences or end date
+          while (generatedDates.length < maxOccurrences - 1) {
+            current = new Date(current);
+            current.setDate(current.getDate() + 1);
+
+            if (endDate && current > endDate) break;
+
+            const jsDay = current.getDay();
+            const weekDiff =
+              (current.getTime() - startDate.getTime()) /
+              (1000 * 60 * 60 * 24 * 7);
+
+            // Only add if matches target day AND week offset respects interval
+            if (
+              targetDays.includes(jsDay) &&
+              Math.floor(weekDiff) % intervalWeeks === 0
+            ) {
+              generatedDates.push(formatYMDLocal(current));
+            }
           }
 
-          // Build repeat dates (excluding the initial date)
-          const generatedDates: string[] = [];
-
-          targetDays.forEach((targetDow) => {
-            // Find the first target weekday strictly *after* startDate
-            const first = new Date(startDate);
-            const startDow = first.getDay(); // local
-            let diff = (targetDow - startDow + 7) % 7;
-            if (diff === 0) diff = 7; // skip the same day to avoid duplicating initial
-            first.setDate(first.getDate() + diff);
-
-            // Then jump in week intervals
-            for (let i = 0; i < maxOccurrences - 1; i++) {
-              const next = new Date(first);
-              next.setDate(first.getDate() + i * intervalWeeks * 7);
-
-              if (endDate && next > endDate) break;
-
-              generatedDates.push(formatYMDLocal(next));
-            }
-          });
-
-          // Dedup & sort
           const uniqueDates = Array.from(new Set(generatedDates)).sort();
 
-          // Create repeats
+          console.log("🧭 Final Repeat Generation Check", {
+            startDate: safeDate,
+            repeatDays,
+            intervalWeeks,
+            maxOccurrences,
+            endDate: endDate?.toISOString().split("T")[0],
+            generated: uniqueDates,
+          });
+
           if (uniqueDates.length > 0) {
             await Promise.all(
               uniqueDates.map((d) =>
                 appointmentsApi.create({
                   ...payload,
-                  date: d, // already local YYYY-MM-DD
+                  date: d,
                   is_recurring: true,
                 })
               )
@@ -224,6 +198,9 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
     }
   }
 
+  // -------------------------------
+  // Render
+  // -------------------------------
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
@@ -269,9 +246,11 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
               providerId={providerId}
               onCancel={onClose}
               onGetFormData={(data: AppointmentPayload) => setFormData(data)}
-              initialDate={initialDate?.toISOString().split("T")[0]}
-              initialStartTime={initialStartTime?.toTimeString().slice(0, 5)}
-              initialEndTime={initialEndTime?.toTimeString().slice(0, 5)}
+              initialDate={
+                initialDate ? initialDate.toISOString().split("T")[0] : ""
+              }
+              initialStartTime={normalizeToTimeString(initialStartTime)}
+              initialEndTime={normalizeToTimeString(initialEndTime)}
               initialPatient={initialPatient}
               appointmentTypes={appointmentTypes}
             />

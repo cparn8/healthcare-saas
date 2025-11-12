@@ -1,10 +1,11 @@
 // frontend/src/features/schedule/pages/Schedule.tsx
 import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { addDays } from "date-fns";
+import { startOfWeek, addDays } from "date-fns";
 
 import DayViewGrid from "../components/DayViewGrid";
 import WeekViewGrid from "../components/WeekViewGrid";
+import { useVisibleAppointments } from "../hooks/useVisibleAppointments";
 import NewAppointmentModal from "../components/NewAppointmentModal";
 import EditAppointmentModal from "../components/EditAppointmentModal";
 import SettingsPanel from "../components/SettingsPanel";
@@ -18,6 +19,12 @@ import {
   ScheduleSettings,
   AppointmentTypeDef,
 } from "../types/scheduleSettings";
+import {
+  parseLocalDate,
+  formatShortDate,
+  formatYMDLocal,
+  safeDate,
+} from "../../../utils/dateUtils";
 
 type TabKey = "appointments" | "day" | "week" | "settings";
 type OfficeKey = "north" | "south";
@@ -34,32 +41,39 @@ const TABS = [
 
 const SLOT_OPTIONS: SlotSize[] = [15, 30, 60];
 
-function formatShortDate(d: Date) {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(d);
-}
+/**
+ * Given any date string (YYYY-MM-DD),
+ * returns a readable Mon–Fri week range (local-safe).
+ */
+function formatWeekRange(input: string | Date): string {
+  const start =
+    typeof input === "string"
+      ? parseLocalDate(input)
+      : parseLocalDate(input.toISOString().split("T")[0]);
 
-function formatWeekRange(d: Date) {
-  const start = new Date(d);
-  const diff = (start.getDay() + 6) % 7;
-  start.setDate(start.getDate() - diff);
-  const end = new Date(start);
-  end.setDate(start.getDate() + 4);
+  // Normalize to local midnight
+  const localStart = safeDate(formatYMDLocal(start));
 
-  const sameMonth = start.getMonth() === end.getMonth();
+  // Find Monday of that week (assuming Sunday=0)
+  const diff = (localStart.getDay() + 6) % 7;
+  localStart.setDate(localStart.getDate() - diff);
+
+  const end = safeDate(formatYMDLocal(localStart));
+  end.setDate(localStart.getDate() + 4); // Mon → Fri
+
+  const sameMonth = localStart.getMonth() === end.getMonth();
+
   const startFmt = new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
-  }).format(start);
+  }).format(localStart);
+
   const endFmt = new Intl.DateTimeFormat("en-US", {
     month: sameMonth ? undefined : "short",
     day: "numeric",
     year: "numeric",
   }).format(end);
+
   return `${startFmt} – ${endFmt}`;
 }
 
@@ -71,7 +85,21 @@ const SchedulePage: React.FC = () => {
     (searchParams.get("tab") as TabKey) || "day"
   );
   const [office, setOffice] = useState<OfficeKey>("north");
-  const [cursorDate, setCursorDate] = useState<Date>(new Date());
+  const [cursorDate, setCursorDate] = useState<Date>(
+    safeDate(formatYMDLocal(new Date()))
+  );
+  // Determine the date range the current tab should display
+  const visibleRange = useMemo(() => {
+    if (activeTab === "week") {
+      const start = startOfWeek(cursorDate, { weekStartsOn: 1 });
+      const end = addDays(start, 7);
+      return { start, end };
+    }
+    const start = safeDate(formatYMDLocal(cursorDate));
+    const end = addDays(start, 1);
+    return { start, end };
+  }, [activeTab, cursorDate]);
+
   const [slotSize, setSlotSize] = useState<SlotSize>(30);
 
   // --- Data State ---
@@ -100,6 +128,12 @@ const SchedulePage: React.FC = () => {
     onConfirm: () => void;
   }>({ open: false, message: "", onConfirm: () => {} });
 
+  const visibleAppointments = useVisibleAppointments({
+    allAppointments: appointments,
+    visibleStart: visibleRange.start,
+    visibleEnd: visibleRange.end,
+  });
+
   /* ----------------------------- Navigation ----------------------------- */
   const changeTab = (tab: TabKey) => {
     setActiveTab(tab);
@@ -112,7 +146,7 @@ const SchedulePage: React.FC = () => {
   function findNextOpenDay(current: Date, direction: 1 | -1): Date {
     if (!scheduleSettings || !office) return current;
     const maxAttempts = 7;
-    let next = new Date(current);
+    let next = parseLocalDate(formatYMDLocal(current));
 
     for (let i = 0; i < maxAttempts; i++) {
       next = addDays(next, direction);
@@ -174,34 +208,38 @@ const SchedulePage: React.FC = () => {
   }, []);
 
   /* ----------------------------- Appointment Loading ----------------------------- */
+
+  function getWeekRange(date: Date) {
+    const start = startOfWeek(date, { weekStartsOn: 1 }); // Monday
+    const end = addDays(start, 7); // next Monday
+    return {
+      start_date: start.toISOString().split("T")[0],
+      end_date: end.toISOString().split("T")[0],
+    };
+  }
+
   const loadAppointments = useCallback(async () => {
     if (!providerId) return;
     try {
       setLoadingAppts(true);
-      const params = { office, provider: providerId };
-      const result = await appointmentsApi.list(params);
-      setAppointments(result.results || []);
+      const { start_date, end_date } = getWeekRange(cursorDate);
+      const result = await appointmentsApi.list({
+        provider: providerId,
+        office,
+        start_date,
+        end_date,
+      });
+      setAppointments(result.results || result || []);
     } catch (err) {
       console.error("❌ Failed to load appointments:", err);
     } finally {
       setLoadingAppts(false);
     }
-  }, [providerId, office]);
+  }, [providerId, office, cursorDate]);
 
   useEffect(() => {
-    if (!providerId) return;
-    const params = {
-      provider: providerId,
-      office,
-      date: cursorDate.toISOString().split("T")[0],
-    };
-
-    appointmentsApi
-      .list(params)
-      .then((result) => setAppointments(result.results || []))
-      .catch((err) => console.error("❌ Failed to load appointments:", err))
-      .finally(() => setLoadingAppts(false));
-  }, [providerId, office, cursorDate]);
+    if (providerId) loadAppointments();
+  }, [providerId, office, cursorDate, loadAppointments]);
 
   /* ----------------------------- Appointment Types ----------------------------- */
   useEffect(() => {
@@ -367,7 +405,7 @@ const SchedulePage: React.FC = () => {
             }
             scheduleSettings={scheduleSettings}
             slotMinutes={slotSize}
-            appointments={appointments}
+            appointments={visibleAppointments}
             loading={loadingAppts}
             date={cursorDate}
             providerId={providerId}
@@ -393,7 +431,7 @@ const SchedulePage: React.FC = () => {
             }
             scheduleSettings={scheduleSettings}
             slotMinutes={slotSize}
-            appointments={appointments}
+            appointments={visibleAppointments}
             loading={loadingAppts}
             providerId={providerId}
             onEditAppointment={(appt) => setEditingAppt(appt)}
@@ -424,7 +462,9 @@ const SchedulePage: React.FC = () => {
             setInitialPatient(null);
           }}
           providerId={providerId}
-          initialDate={prefill?.date ? new Date(prefill.date) : undefined}
+          initialDate={
+            prefill?.date ? new Date(prefill.date + "T00:00") : undefined
+          }
           initialStartTime={
             prefill?.start_time
               ? new Date(`1970-01-01T${prefill.start_time}`)

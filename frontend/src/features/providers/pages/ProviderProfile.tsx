@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import API from '../../../services/api';
-import Skeleton from '../../../components/Skeleton';
-import FormField from '../../../components/ui/FormField';
-import ProfileHeader from '../../../components/ui/ProfileHeader';
-import { normalizeDRFErrors } from '../../../utils/apiErrors';
-import { validateProvider, ProviderPayload } from '../../../utils/validation';
+import { useEffect, useState } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import API from "../../../services/api";
+import Skeleton from "../../../components/Skeleton";
+import FormField from "../../../components/ui/FormField";
+import ProfileHeader from "../../../components/ui/ProfileHeader";
+import { normalizeDRFErrors } from "../../../utils/apiErrors";
+import { validateProvider, ProviderPayload } from "../../../utils/validation";
 
 interface Provider {
   id: number;
@@ -27,17 +27,17 @@ const ProviderProfile: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
-    current_password: '',
-    new_password: '',
-    confirm_password: '',
+    current_password: "",
+    new_password: "",
+    confirm_password: "",
   });
-  const [passwordMessage, setPasswordMessage] = useState('');
-  const [passwordError, setPasswordError] = useState('');
+  const [passwordMessage, setPasswordMessage] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const navigate = useNavigate();
 
   // Enable edit mode if ?edit=true
   useEffect(() => {
-    if (searchParams.get('edit') === 'true') setEditMode(true);
+    if (searchParams.get("edit") === "true") setEditMode(true);
   }, [searchParams]);
 
   // Fetch provider data
@@ -59,7 +59,7 @@ const ProviderProfile: React.FC = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ✅ Save general provider info only
+  // Save general provider info only
   const handleSave = async () => {
     if (!id) return;
 
@@ -82,55 +82,55 @@ const ProviderProfile: React.FC = () => {
     }
   };
 
-  // ✅ Handle password form changes separately
+  // Handle password form changes separately
   const handlePasswordChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     setPasswordForm({ ...passwordForm, [e.target.name]: e.target.value });
   };
 
-  // ✅ Change password only when all 3 fields are filled
+  // Change password only when all 3 fields are filled
   const handlePasswordUpdate = async () => {
-    setPasswordError('');
-    setPasswordMessage('');
+    setPasswordError("");
+    setPasswordMessage("");
 
     const { current_password, new_password, confirm_password } = passwordForm;
 
     if (!current_password || !new_password || !confirm_password) {
-      setPasswordError('All fields are required.');
+      setPasswordError("All fields are required.");
       return;
     }
 
     try {
-      const res = await API.post('/auth/change-password/', passwordForm);
-      setPasswordMessage(res.data.detail || 'Password updated successfully!');
+      const res = await API.post("/auth/change-password/", passwordForm);
+      setPasswordMessage(res.data.detail || "Password updated successfully!");
       setPasswordForm({
-        current_password: '',
-        new_password: '',
-        confirm_password: '',
+        current_password: "",
+        new_password: "",
+        confirm_password: "",
       });
       setShowPasswordForm(false);
     } catch (err: any) {
       if (err.response?.data) {
         const data = err.response.data;
         const errorText =
-          typeof data === 'string'
+          typeof data === "string"
             ? data
-            : Object.values(data).flat().join(' ');
+            : Object.values(data).flat().join(" ");
         setPasswordError(errorText);
       } else {
-        setPasswordError('An unexpected error occurred.');
+        setPasswordError("An unexpected error occurred.");
       }
     }
   };
 
   if (loading) {
     return (
-      <div className='p-6'>
-        <Skeleton className='h-6 w-40 mb-4' />
-        <Skeleton className='w-28 h-28 rounded-full mb-2' />
-        <Skeleton className='h-4 w-48 mb-1' />
-        <Skeleton className='h-4 w-32 mb-1' />
+      <div className="p-6">
+        <Skeleton className="h-6 w-40 mb-4" />
+        <Skeleton className="w-28 h-28 rounded-full mb-2" />
+        <Skeleton className="h-4 w-48 mb-1" />
+        <Skeleton className="h-4 w-32 mb-1" />
       </div>
     );
   }
@@ -138,30 +138,30 @@ const ProviderProfile: React.FC = () => {
   if (!provider) return <p>Not found</p>;
 
   return (
-    <div className='p-6 space-y-8'>
+    <div className="p-6 space-y-8">
       {!editMode ? (
         <>
           <ProfileHeader
-            backTo='/doctor/manage-users/providers'
+            backTo="/doctor/manage-users/providers"
             title={`${provider.first_name} ${provider.last_name}`}
-            subtitle={provider.specialty || 'Provider'}
+            subtitle={provider.specialty || "Provider"}
             actions={
               <button
                 onClick={() => setEditMode(true)}
-                className='px-4 py-2 bg-yellow-500 text-white rounded'
+                className="px-4 py-2 bg-yellow-500 text-white rounded"
               >
                 Edit
               </button>
             }
           />
 
-          <div className='flex items-center space-x-6'>
+          <div className="flex items-center space-x-6">
             <img
               src={
-                provider.profile_picture || '/images/provider-placeholder.png'
+                provider.profile_picture || "/images/provider-placeholder.png"
               }
-              alt='profile'
-              className='w-28 h-28 rounded-full object-cover'
+              alt="profile"
+              className="w-28 h-28 rounded-full object-cover"
             />
             <div>
               <p>{provider.email}</p>
@@ -173,70 +173,70 @@ const ProviderProfile: React.FC = () => {
       ) : (
         <div>
           <ProfileHeader
-            backTo='/doctor/manage-users/providers'
-            title='Edit Provider Info'
-            subtitle={provider.specialty || ''}
+            backTo="/doctor/manage-users/providers"
+            title="Edit Provider Info"
+            subtitle={provider.specialty || ""}
           />
 
           {/* General Info Form */}
-          <form className='space-y-4 mb-10'>
+          <form className="space-y-4 mb-10">
             <FormField
-              type='text'
-              name='first_name'
-              label='First Name'
-              value={formData.first_name || ''}
+              type="text"
+              name="first_name"
+              label="First Name"
+              value={formData.first_name || ""}
               onChange={handleChange}
               error={errors.first_name}
             />
 
             <FormField
-              type='text'
-              name='last_name'
-              label='Last Name'
-              value={formData.last_name || ''}
+              type="text"
+              name="last_name"
+              label="Last Name"
+              value={formData.last_name || ""}
               onChange={handleChange}
               error={errors.last_name}
             />
 
             <FormField
-              type='email'
-              name='email'
-              label='Email'
-              value={formData.email || ''}
+              type="email"
+              name="email"
+              label="Email"
+              value={formData.email || ""}
               onChange={handleChange}
               error={errors.email}
             />
 
             <FormField
-              type='text'
-              name='phone'
-              label='Phone'
-              value={formData.phone || ''}
+              type="text"
+              name="phone"
+              label="Phone"
+              value={formData.phone || ""}
               onChange={handleChange}
               error={errors.phone}
             />
 
             <FormField
-              type='text'
-              name='specialty'
-              label='Specialty'
-              value={formData.specialty || ''}
+              type="text"
+              name="specialty"
+              label="Specialty"
+              value={formData.specialty || ""}
               onChange={handleChange}
               error={errors.specialty}
             />
 
-            <div className='space-x-4'>
+            <div className="space-x-4">
               <button
-                type='button'
+                type="button"
                 onClick={handleSave}
-                className='px-4 py-2 bg-green-600 text-white rounded'
+                className="px-4 py-2 bg-green-600 text-white rounded"
               >
                 Save
               </button>
               <button
-                type='button'
+                type="button"
                 onClick={() => setEditMode(false)}
-                className='px-4 py-2 bg-gray-400 text-white rounded'
+                className="px-4 py-2 bg-gray-400 text-white rounded"
               >
                 Cancel
               </button>
@@ -244,70 +244,70 @@ const ProviderProfile: React.FC = () => {
           </form>
 
           {/* 🔒 Toggleable Password Change Section */}
-          <div className='border-t pt-6 mt-8'>
-            <h2 className='text-xl font-semibold mb-4 text-gray-700'>
+          <div className="border-t pt-6 mt-8">
+            <h2 className="text-xl font-semibold mb-4 text-gray-700">
               Security
             </h2>
 
             {!showPasswordForm ? (
               <button
                 onClick={() => setShowPasswordForm(true)}
-                className='px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700'
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               >
                 Change Password
               </button>
             ) : (
-              <div className='space-y-4'>
+              <div className="space-y-4">
                 <FormField
-                  type='password'
-                  name='current_password'
-                  label='Current Password'
+                  type="password"
+                  name="current_password"
+                  label="Current Password"
                   value={passwordForm.current_password}
                   onChange={handlePasswordChange}
                 />
 
                 <FormField
-                  type='password'
-                  name='new_password'
-                  label='New Password'
+                  type="password"
+                  name="new_password"
+                  label="New Password"
                   value={passwordForm.new_password}
                   onChange={handlePasswordChange}
                 />
 
                 <FormField
-                  type='password'
-                  name='confirm_password'
-                  label='Confirm Password'
+                  type="password"
+                  name="confirm_password"
+                  label="Confirm Password"
                   value={passwordForm.confirm_password}
                   onChange={handlePasswordChange}
                 />
 
                 {passwordError && (
-                  <p className='text-red-500 text-sm'>{passwordError}</p>
+                  <p className="text-red-500 text-sm">{passwordError}</p>
                 )}
                 {passwordMessage && (
-                  <p className='text-green-600 text-sm'>{passwordMessage}</p>
+                  <p className="text-green-600 text-sm">{passwordMessage}</p>
                 )}
 
-                <div className='flex space-x-4'>
+                <div className="flex space-x-4">
                   <button
-                    type='button'
+                    type="button"
                     onClick={handlePasswordUpdate}
-                    className='px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700'
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                   >
                     Update Password
                   </button>
                   <button
-                    type='button'
+                    type="button"
                     onClick={() => {
                       setShowPasswordForm(false);
                       setPasswordForm({
-                        current_password: '',
-                        new_password: '',
-                        confirm_password: '',
+                        current_password: "",
+                        new_password: "",
+                        confirm_password: "",
                       });
                     }}
-                    className='px-4 py-2 bg-gray-400 text-white rounded'
+                    className="px-4 py-2 bg-gray-400 text-white rounded"
                   >
                     Cancel
                   </button>

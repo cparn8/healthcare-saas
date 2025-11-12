@@ -1,8 +1,12 @@
-// frontend/src/features/schedule/components/WeekViewGrid.tsx
 import React, { useMemo, useState } from "react";
-import { startOfWeek, addDays, format, isSameDay, parseISO } from "date-fns";
+import { addDays, format, isSameDay } from "date-fns";
 import { Appointment } from "../types/appointment";
 import { ScheduleSettings, Weekday } from "../types/scheduleSettings";
+import {
+  parseLocalDate,
+  DAY_INDEX_TO_KEY,
+  isSameLocalDay,
+} from "../../../utils/dateUtils";
 
 interface WeekViewGridProps {
   providerName: string;
@@ -21,11 +25,10 @@ interface WeekViewGridProps {
 const SLOT_ROW_PX = 48;
 const SLIVER_PERCENT = 12;
 
-function wkKey(d: Date): Weekday {
-  return d
-    .toLocaleDateString("en-US", { weekday: "short" })
-    .toLowerCase()
-    .slice(0, 3) as Weekday;
+function wkKey(d: Date | string): Weekday {
+  const local = typeof d === "string" ? parseLocalDate(d) : d;
+  const jsIndex = local.getDay(); // 0–6
+  return DAY_INDEX_TO_KEY[jsIndex];
 }
 
 export default function WeekViewGrid({
@@ -43,25 +46,19 @@ export default function WeekViewGrid({
 }: WeekViewGridProps) {
   const weekDays = useMemo(
     () =>
-      Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(baseDate), i)),
+      Array.from({ length: 7 }, (_, i) => {
+        const monday = addDays(baseDate, -((baseDate.getDay() + 6) % 7));
+        return addDays(monday, i);
+      }),
     [baseDate]
   );
 
   const minuteHeight = SLOT_ROW_PX / slotMinutes;
-
   const timeToMinutes = (t: string) => {
     const [h, m] = t.split(":").map(Number);
     return h * 60 + m;
   };
 
-  const overlaps = (
-    aStart: number,
-    aEnd: number,
-    bStart: number,
-    bEnd: number
-  ): boolean => aStart < bEnd && aEnd > bStart;
-
-  // filter visible days based on business_hours
   const openDays = weekDays.filter((day) => {
     const weekday = wkKey(day);
     const hours =
@@ -80,10 +77,10 @@ export default function WeekViewGrid({
     if (!hours) return null;
 
     const startHour = parseInt(hours.start.split(":")[0], 10);
-    const endHour = parseInt(hours.end.split(":")[0], 10);
 
-    const apptsForDay = appointments
-      .filter((a) => a.date && isSameDay(parseISO(a.date), day))
+    // Only show appointments that actually fall on this day
+    const apptsForDay = (appointments ?? [])
+      .filter((a) => a.date && isSameLocalDay(a.date, day))
       .filter((a) => a.start_time && a.end_time)
       .map((a) => ({
         ...a,
@@ -91,6 +88,8 @@ export default function WeekViewGrid({
         end: timeToMinutes(a.end_time),
       }))
       .sort((a, b) => a.start - b.start);
+
+    // Optional debug to confirm we only render each once
 
     const clusters: (typeof apptsForDay)[] = [];
     let currentCluster: typeof apptsForDay = [];
@@ -100,8 +99,6 @@ export default function WeekViewGrid({
         currentCluster.push(appt);
         continue;
       }
-
-      // only cluster if there is actual time overlap, not back-to-back
       if (appt.start < last.end) {
         currentCluster.push(appt);
       } else {
@@ -127,7 +124,7 @@ export default function WeekViewGrid({
 
         return (
           <div
-            key={appt.id}
+            key={`${appt.id}-${appt.date}-${appt.start_time}`}
             onClick={() => onEditAppointment?.(appt)}
             className="absolute rounded text-white text-xs p-1.5 shadow-sm cursor-pointer hover:brightness-105 transition-all"
             style={{
@@ -152,7 +149,7 @@ export default function WeekViewGrid({
     });
   };
 
-  // --- Selection (drag-to-create) ---
+  // ---- Drag selection logic (restored) ----
   const [isSelecting, setIsSelecting] = useState(false);
   const [selDay, setSelDay] = useState<Date | null>(null);
   const [selStartIdx, setSelStartIdx] = useState<number | null>(null);
@@ -188,9 +185,9 @@ export default function WeekViewGrid({
     const startMinutes = startHour * 60 + a * slotMinutes;
     const endMinutes = startHour * 60 + (b + 1) * slotMinutes;
 
-    const start = new Date(selDay);
+    const start = parseLocalDate(selDay.toISOString().split("T")[0]);
     start.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
-    const end = new Date(selDay);
+    const end = parseLocalDate(selDay.toISOString().split("T")[0]);
     end.setHours(Math.floor(endMinutes / 60), endMinutes % 60, 0, 0);
 
     const s = (h: string) => {
@@ -217,13 +214,14 @@ export default function WeekViewGrid({
     if (overlap && requestConfirm) {
       requestConfirm(
         "This time overlaps with another appointment for the same provider. Continue?",
-        () => proceed(true) // allowOverlap = true when user confirms
+        () => proceed(true)
       );
     } else {
       proceed(false);
     }
   };
 
+  // ---- Render ----
   return (
     <div className="border rounded overflow-hidden bg-white select-none relative">
       {/* Header */}
@@ -239,7 +237,6 @@ export default function WeekViewGrid({
         ))}
       </div>
 
-      {/* Body */}
       {loading ? (
         <div className="p-6 text-center text-gray-500 italic">
           Loading appointments…
@@ -251,20 +248,26 @@ export default function WeekViewGrid({
             gridTemplateColumns: `120px repeat(${openDays.length}, 1fr)`,
           }}
         >
-          {/* Time column */}
+          {/* Time column with horizontal lines */}
+          {/* Time column with alternating shading */}
           <div>
             {Array.from({ length: (17 - 8) * (60 / slotMinutes) }).map(
-              (_, i) => (
-                <div
-                  key={i}
-                  className="border-r border-b p-2 text-gray-700 h-12 bg-gray-50"
-                >
-                  {`${String(8 + Math.floor((i * slotMinutes) / 60)).padStart(
-                    2,
-                    "0"
-                  )}:${String((i * slotMinutes) % 60).padStart(2, "0")}`}
-                </div>
-              )
+              (_, i) => {
+                const hourIndex = Math.floor((i * slotMinutes) / 60);
+                const shaded = hourIndex % 2 === 0;
+                return (
+                  <div
+                    key={i}
+                    className={`border-r border-b p-2 text-gray-700 h-12 ${
+                      shaded ? "bg-gray-50" : "bg-gray-100/40"
+                    }`}
+                  >
+                    {`${String(8 + hourIndex).padStart(2, "0")}:${String(
+                      (i * slotMinutes) % 60
+                    ).padStart(2, "0")}`}
+                  </div>
+                );
+              }
             )}
           </div>
 
@@ -309,6 +312,7 @@ export default function WeekViewGrid({
                   );
                 })}
 
+                {/* Appointments overlay */}
                 <div className="absolute inset-0 pointer-events-none">
                   <div className="pointer-events-auto">
                     {renderAppointmentsForDay(day)}

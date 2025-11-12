@@ -144,7 +144,7 @@ DATABASES = {
 # Authentication
 # -------------------------------------------------
 AUTHENTICATION_BACKENDS = [
-    "django.contrib.auth.backends.ModelBackend",  # ✅ required for `authenticate()`
+    "django.contrib.auth.backends.ModelBackend",  # required for `authenticate()`
 ]
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -158,7 +158,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # -------------------------------------------------
 LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
+TIME_ZONE = "America/Chicago"
 USE_I18N = True
 USE_TZ = True
 
@@ -180,7 +180,7 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",  # ✅ only /auth/login is AllowAny
+        "rest_framework.permissions.IsAuthenticated",  # only /auth/login is AllowAny
     ],
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",

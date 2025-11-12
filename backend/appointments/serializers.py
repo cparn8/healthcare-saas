@@ -2,6 +2,8 @@
 from rest_framework import serializers
 from .models import Appointment
 from django.db.models import Q
+from datetime import datetime, time
+from django.utils import timezone
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
@@ -94,35 +96,52 @@ class AppointmentSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {"non_field_errors": ["This time overlaps with another appointment or block time."]}
                 )
-            
-            # --- Repeat logic validation ---
-            if data.get("is_recurring"):
-                start_date = data.get("date")
-                end_date = data.get("repeat_end_date")
-                occurrences = data.get("repeat_occurrences")
-                repeat_days = data.get("repeat_days", [])
 
-                if end_date and start_date and end_date < start_date:
-                    raise serializers.ValidationError({
-                        "repeat_end_date": "Repeat end date cannot be before the initial appointment date."
-                    })
+        # --- Repeat logic validation ---
+        if data.get("is_recurring"):
+            start_date = data.get("date")
+            end_date = data.get("repeat_end_date")
+            occurrences = data.get("repeat_occurrences")
+            repeat_days = data.get("repeat_days", [])
 
-                if occurrences is not None and occurrences < 1:
-                    raise serializers.ValidationError({
-                        "repeat_occurrences": "Must have at least one repeat occurrence."
-                    })
+            if end_date and start_date and end_date < start_date:
+                raise serializers.ValidationError({
+                    "repeat_end_date": "Repeat end date cannot be before the initial appointment date."
+                })
 
-                if not repeat_days:
-                    raise serializers.ValidationError({
-                        "repeat_days": "At least one day must be selected for recurring appointments."
-                    })
+            if occurrences is not None and occurrences < 1:
+                raise serializers.ValidationError({
+                    "repeat_occurrences": "Must have at least one repeat occurrence."
+                })
 
+            if not repeat_days:
+                raise serializers.ValidationError({
+                    "repeat_days": "At least one day must be selected for recurring appointments."
+                })
+
+        
+        return data
+
+    def to_representation(self, instance):
+        """
+        Ensure date fields are returned as local (TIME_ZONE) midnights
+        instead of naive UTC midnights, preventing one-day drift in frontend.
+        """
+        data = super().to_representation(instance)
+
+        if "date" in data and data["date"]:
+            try:
+                local_dt = timezone.localtime(
+                    timezone.make_aware(datetime.combine(instance.date, time.min))
+                )
+                data["date"] = local_dt.date().isoformat()
+            except Exception:
+                # fallback to plain ISO if anything goes wrong
+                pass
 
         return data
-    
+
     def create(self, validated_data):
         # Remove 'allow_overlap' if present since it's not a DB field
         validated_data.pop("allow_overlap", None)
         return super().create(validated_data)
-
-

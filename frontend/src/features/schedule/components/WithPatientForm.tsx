@@ -62,25 +62,8 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
   const [repeatEnabled, setRepeatEnabled] = useState(false);
 
   // --- Form state ---
-  const [formData, setFormData] = useState<{
-    patient: number | null;
-    provider: number | null;
-    office: string;
-    appointment_type: string;
-    color_code: string;
-    chief_complaint: string;
-    date: string;
-    start_time: string;
-    end_time: string;
-    duration: number;
-    is_recurring: boolean;
-    repeat_days: string[];
-    repeat_interval_weeks: number;
-    repeat_end_date: string;
-    repeat_occurrences: number;
-    send_intake_form: boolean;
-  }>({
-    patient: null,
+  const [formData, setFormData] = useState({
+    patient: null as number | null,
     provider: providerId ?? null,
     office: "north",
     appointment_type: appointmentTypes?.[0]?.name || "",
@@ -91,12 +74,35 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     start_time: initialStartTime || "",
     end_time: initialEndTime || "",
     is_recurring: false,
-    repeat_days: [],
+    repeat_days: [] as string[],
     repeat_interval_weeks: 1,
     repeat_end_date: "",
     repeat_occurrences: 1,
     send_intake_form: false,
   });
+
+  // -------------------------------
+  // Generic field handler
+  // -------------------------------
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
+    const { name, value, type } = e.target;
+    let next: string | number | boolean = value;
+
+    if (e.target instanceof HTMLInputElement && type === "checkbox") {
+      next = e.target.checked;
+    }
+
+    if (name === "duration") next = Number(next);
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: next,
+    }));
+  };
 
   // -------------------------------
   // Fetch provider list
@@ -109,8 +115,6 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
         const list = await providersApi.list();
         if (!active) return;
         setProviders(list);
-
-        // If none selected yet, use prop if available
         if (formData.provider == null && providerId) {
           setFormData((prev) => ({ ...prev, provider: providerId }));
         }
@@ -129,14 +133,30 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // -------------------------------
+  // Prefill from modal-provided values
+  // -------------------------------
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      start_time: initialStartTime || prev.start_time,
+      end_time: initialEndTime || prev.end_time,
+      date: initialDate || prev.date,
+    }));
+  }, [initialDate, initialStartTime, initialEndTime]);
+
+  // -------------------------------
   // Sync provider if parent prop changes later
+  // -------------------------------
   useEffect(() => {
     if (providerId && formData.provider == null) {
       setFormData((p) => ({ ...p, provider: providerId }));
     }
   }, [providerId, formData.provider]);
 
-  // Bring back newly added patient from session storage
+  // -------------------------------
+  // Restore new patient from sessionStorage
+  // -------------------------------
   useEffect(() => {
     const stored = sessionStorage.getItem("newPatient");
     if (stored) {
@@ -146,19 +166,23 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     }
   }, []);
 
-  // Track patient selection
+  // -------------------------------
+  // Update patient id when selected
+  // -------------------------------
   useEffect(() => {
     if (selectedPatient)
       setFormData((p) => ({ ...p, patient: selectedPatient.id }));
   }, [selectedPatient]);
 
-  // Bubble up form data to parent (NewAppointmentModal)
+  // -------------------------------
+  // Bubble up form data
+  // -------------------------------
   useEffect(() => {
     onGetFormData?.(formData);
   }, [formData, onGetFormData]);
 
   // -------------------------------
-  // Patient search (debounced)
+  // Debounced patient search
   // -------------------------------
   useEffect(() => {
     const delay = setTimeout(async () => {
@@ -182,7 +206,9 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     return () => clearTimeout(delay);
   }, [query]);
 
-  // If redirected back with newPatientId param
+  // -------------------------------
+  // Load new patient by ID from search params
+  // -------------------------------
   useEffect(() => {
     const newPatientId = searchParams.get("newPatientId");
     if (!newPatientId) return;
@@ -197,7 +223,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
   }, [searchParams]);
 
   // -------------------------------
-  // Helpers
+  // Provider display helper
   // -------------------------------
   const providerFullName = (p: Provider) =>
     `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || `Provider #${p.id}`;
@@ -328,9 +354,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
             <select
               name="office"
               value={formData.office}
-              onChange={(e) =>
-                setFormData((p) => ({ ...p, office: e.target.value }))
-              }
+              onChange={handleChange}
               className="w-full border rounded p-2"
             >
               <option value="north">North Office</option>
@@ -347,9 +371,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
           <textarea
             name="chief_complaint"
             value={formData.chief_complaint}
-            onChange={(e) =>
-              setFormData((p) => ({ ...p, chief_complaint: e.target.value }))
-            }
+            onChange={handleChange}
             className="w-full border rounded p-2"
             placeholder="Brief description of symptoms or reason for visit"
             rows={2}
@@ -364,16 +386,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
           <select
             name="appointment_type"
             value={formData.appointment_type}
-            onChange={(e) => {
-              const val = e.target.value;
-              const selected = appointmentTypes?.find((t) => t.name === val);
-              setFormData((prev) => ({
-                ...prev,
-                appointment_type: val,
-                duration: selected?.default_duration ?? prev.duration,
-                color_code: selected?.color_code ?? prev.color_code,
-              }));
-            }}
+            onChange={handleChange}
             className="w-full border rounded p-2"
           >
             <option value="">Select type</option>
@@ -399,9 +412,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
               type="date"
               name="date"
               value={formData.date}
-              onChange={(e) =>
-                setFormData((p) => ({ ...p, date: e.target.value }))
-              }
+              onChange={handleChange}
               className="w-full border rounded p-2"
             />
           </div>
@@ -414,9 +425,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
               type="time"
               name="start_time"
               value={formData.start_time}
-              onChange={(e) =>
-                setFormData((p) => ({ ...p, start_time: e.target.value }))
-              }
+              onChange={handleChange}
               className="w-full border rounded p-2"
             />
           </div>
@@ -429,9 +438,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
               type="time"
               name="end_time"
               value={formData.end_time}
-              onChange={(e) =>
-                setFormData((p) => ({ ...p, end_time: e.target.value }))
-              }
+              onChange={handleChange}
               className="w-full border rounded p-2"
             />
           </div>
@@ -454,10 +461,9 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
           </label>
         </div>
 
-        {/* Repeat section */}
+        {/* Repeat Section */}
         {repeatEnabled && (
           <div className="w-full mt-4 border-t border-gray-200 pt-4 text-[15px] space-y-4">
-            {/* Row 1 — Occurs On */}
             <div className="flex flex-wrap items-center gap-3">
               <span className="font-semibold text-gray-800 whitespace-nowrap">
                 Occurs On:
@@ -490,7 +496,6 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
               </div>
             </div>
 
-            {/* Row 2 — Every X week(s), Ends On, after N appointments */}
             <div className="flex flex-row flex-wrap items-center gap-3">
               <span className="font-semibold text-gray-800">Every</span>
               <select
@@ -517,12 +522,8 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
               <input
                 type="date"
                 value={formData.repeat_end_date || ""}
-                onChange={(e) =>
-                  setFormData((p) => ({
-                    ...p,
-                    repeat_end_date: e.target.value,
-                  }))
-                }
+                onChange={handleChange}
+                name="repeat_end_date"
                 className="border rounded px-2 py-1 text-sm"
               />
 
@@ -530,13 +531,9 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
               <input
                 type="number"
                 min={1}
+                name="repeat_occurrences"
                 value={formData.repeat_occurrences}
-                onChange={(e) =>
-                  setFormData((p) => ({
-                    ...p,
-                    repeat_occurrences: Number(e.target.value),
-                  }))
-                }
+                onChange={handleChange}
                 className="border rounded w-20 px-2 py-1 text-sm"
               />
               <span className="text-gray-800">appointment(s)</span>

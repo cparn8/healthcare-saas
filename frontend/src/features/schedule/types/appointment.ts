@@ -1,4 +1,4 @@
-// src/features/schedule/types/appointment.ts
+// src/features/schedule/types/appointment.ts: Probably redundant file defining Appointment interface
 export interface Appointment {
   id: number;
   patient: number | null;
