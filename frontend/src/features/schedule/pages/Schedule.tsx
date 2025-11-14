@@ -3,6 +3,7 @@ import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { startOfWeek, addDays } from "date-fns";
 
+import AppointmentsTable from "../components/AppointmentsTable";
 import DayViewGrid from "../components/DayViewGrid";
 import WeekViewGrid from "../components/WeekViewGrid";
 import { useVisibleAppointments } from "../hooks/useVisibleAppointments";
@@ -305,7 +306,6 @@ const SchedulePage: React.FC = () => {
           </span>
         </div>
       </div>
-
       {/* Tabs */}
       <div className="flex gap-2 border-b">
         {TABS.map((t) => (
@@ -322,7 +322,6 @@ const SchedulePage: React.FC = () => {
           </button>
         ))}
       </div>
-
       {/* Toolbar */}
       {(activeTab === "appointments" ||
         activeTab === "day" ||
@@ -349,12 +348,21 @@ const SchedulePage: React.FC = () => {
               </select>
             </div>
 
-            <button
-              className="px-3 py-1.5 border rounded bg-green-600 text-white hover:bg-green-700"
-              onClick={() => setShowNewAppointment(true)}
-            >
-              + Add appointment
-            </button>
+            {activeTab === "appointments" ? (
+              <button
+                className="px-3 py-1.5 border rounded bg-gray-800 text-white hover:bg-gray-900"
+                onClick={() => window.print()}
+              >
+                Print day
+              </button>
+            ) : (
+              <button
+                className="px-3 py-1.5 border rounded bg-green-600 text-white hover:bg-green-700"
+                onClick={() => setShowNewAppointment(true)}
+              >
+                + Add appointment
+              </button>
+            )}
           </div>
 
           <hr className="border-gray-200" />
@@ -381,11 +389,16 @@ const SchedulePage: React.FC = () => {
                 </button>
               </div>
               <select
-                className="px-3 py-1.5 border rounded"
+                className={`px-3 py-1.5 border rounded ${
+                  activeTab === "appointments"
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : ""
+                }`}
                 value={slotSize}
                 onChange={(e) =>
                   setSlotSize(Number(e.target.value) as SlotSize)
                 }
+                disabled={activeTab === "appointments"}
               >
                 {SLOT_OPTIONS.map((s) => (
                   <option key={s} value={s}>
@@ -399,9 +412,17 @@ const SchedulePage: React.FC = () => {
           <hr className="border-gray-200" />
         </>
       )}
-
       {/* Content */}
       <div className="min-h-[400px] bg-white border rounded p-4">
+        {activeTab === "appointments" && (
+          <AppointmentsTable
+            appointments={visibleAppointments}
+            date={cursorDate}
+            loading={loadingAppts}
+            loadAppointments={loadAppointments}
+          />
+        )}
+
         {activeTab === "day" && (
           <DayViewGrid
             office={office}
@@ -453,7 +474,6 @@ const SchedulePage: React.FC = () => {
 
         {activeTab === "settings" && <SettingsPanel />}
       </div>
-
       {/* Modals */}
       {showNewAppointment && (
         <NewAppointmentModal
@@ -487,7 +507,6 @@ const SchedulePage: React.FC = () => {
           scheduleSettings={scheduleSettings}
         />
       )}
-
       {editingAppt && (
         <EditAppointmentModal
           appointment={{
@@ -498,7 +517,6 @@ const SchedulePage: React.FC = () => {
           onUpdated={loadAppointments}
         />
       )}
-
       {/* Confirmation Dialog */}
       <ConfirmDialog
         open={confirmData.open}

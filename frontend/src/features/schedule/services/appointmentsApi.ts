@@ -26,6 +26,20 @@ export interface AppointmentPayload {
   send_intake_form?: boolean;
   allow_overlap?: boolean;
   is_block?: boolean; // identifies Block Time entries
+  status?:
+    | "pending"
+    | "arrived"
+    | "in_room"
+    | "no_show"
+    | "cancelled"
+    | "in_lobby"
+    | "seen"
+    | "tentative";
+  room?: string | null;
+  intake_status?: "not_submitted" | "submitted";
+  patient_dob?: string | null;
+  patient_gender?: string | null;
+  patient_phone?: string | null;
 }
 
 /**

@@ -13,6 +13,22 @@ class Appointment(models.Model):
         ("south", "South Office"),
     ]
 
+    STATUS_CHOICES = [
+        ("pending", "Pending arrival"),
+        ("arrived", "Arrived"),
+        ("in_room", "In room"),
+        ("no_show", "No show"),
+        ("cancelled", "Cancelled"),
+        ("in_lobby", "In lobby"),
+        ("seen", "Seen"),
+        ("tentative", "Tentative"),
+    ]
+
+    INTAKE_STATUS_CHOICES = [
+        ("not_submitted", "Not Submitted"),
+        ("submitted", "Submitted"),
+    ]
+
     # ---------------------------
     # Core Relationships
     # ---------------------------
@@ -53,6 +69,32 @@ class Appointment(models.Model):
     is_block = models.BooleanField(
         default=False,
         help_text="True if this record represents a provider block of time."
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="pending",
+        help_text="Workflow status used on the schedule Appointments tab.",
+    )
+
+    room = models.CharField(
+        max_length=6,
+        blank=True,
+        default="",
+        help_text="Optional room number when status is 'in_room' (e.g. '2' or '309B').",
+    )
+
+    intake_status = models.CharField(
+        max_length=20,
+        choices=INTAKE_STATUS_CHOICES,
+        default="not_submitted",
+        help_text="Intake form status used on the schedule Appointments tab.",
+    )
+
+    notes = models.TextField(
+        blank=True,
+        help_text="Internal staff notes visible on the schedule Appointments tab.",
     )
 
     color_code = models.CharField(

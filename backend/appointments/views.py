@@ -14,7 +14,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["patient__first_name", "patient__last_name", "chief_complaint"]
-    ordering_fields = ["start_time", "end_time", "created_at"]
+    ordering_fields = ["start_time", "end_time", "created_at", "status", "date"]
 
     def perform_create(self, serializer):
         """

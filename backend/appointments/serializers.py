@@ -4,6 +4,7 @@ from .models import Appointment
 from django.db.models import Q
 from datetime import datetime, time
 from django.utils import timezone
+from providers.models import Provider  # needed for PrimaryKeyRelatedField
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
@@ -16,7 +17,20 @@ class AppointmentSerializer(serializers.ModelSerializer):
     patient_name = serializers.SerializerMethodField()
     provider_name = serializers.CharField(source="provider.__str__", read_only=True)
     office_display = serializers.CharField(source="get_office_display", read_only=True)
+
     allow_overlap = serializers.BooleanField(write_only=True, required=False, default=False)
+
+    # --- IMPORTANT FIXES ---
+    provider = serializers.PrimaryKeyRelatedField(
+        queryset=Provider.objects.all(),
+        required=True
+    )
+
+    status = serializers.CharField(required=False)
+    room = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    intake_status = serializers.CharField(required=False)
+
+    notes = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = Appointment
@@ -27,6 +41,11 @@ class AppointmentSerializer(serializers.ModelSerializer):
             "office",
             "office_display",
             "appointment_type",
+            "is_block",
+            "status",
+            "room",
+            "intake_status",
+            "notes",
             "color_code",
             "chief_complaint",
             "date",
@@ -37,7 +56,6 @@ class AppointmentSerializer(serializers.ModelSerializer):
             "repeat_days",
             "repeat_interval_weeks",
             "repeat_end_date",
-            "is_block",
             "repeat_occurrences",
             "created_at",
             "updated_at",
@@ -79,11 +97,9 @@ class AppointmentSerializer(serializers.ModelSerializer):
                 {"patient": "Patient is required unless creating a block time."}
             )
 
-
         # --- Overlap validation ---
         allow_overlap = data.get("allow_overlap")
         if allow_overlap is None:
-            # handle case where initial_data contains it (common for write-only fields)
             allow_overlap = self.initial_data.get("allow_overlap", False)
 
         if not allow_overlap and start and end and data.get("provider") and data.get("date"):
@@ -124,7 +140,6 @@ class AppointmentSerializer(serializers.ModelSerializer):
                     "repeat_days": "At least one day must be selected for recurring appointments."
                 })
 
-        
         return data
 
     def to_representation(self, instance):
@@ -141,16 +156,28 @@ class AppointmentSerializer(serializers.ModelSerializer):
                 )
                 data["date"] = local_dt.date().isoformat()
             except Exception:
-                # fallback to plain ISO if anything goes wrong
                 pass
 
         return data
 
     def create(self, validated_data):
-        # Remove 'allow_overlap' if present since it's not a DB field
         validated_data.pop("allow_overlap", None)
+
         # Automatically assign gray color for block times
         appt_type = (validated_data.get("appointment_type") or "").lower()
         if appt_type in ["block time", "out of office", "meeting", "surgery", "lunch", "other"]:
             validated_data["color_code"] = "#737373"
+
         return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        # --- Status rule: clear room on "seen" ---
+        new_status = validated_data.get("status", instance.status)
+        if new_status == "seen":
+            validated_data["room"] = ""
+
+        # --- Intake status default rule ---
+        if "intake_status" not in validated_data:
+            validated_data["intake_status"] = instance.intake_status
+
+        return super().update(instance, validated_data)
