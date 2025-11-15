@@ -62,46 +62,45 @@ MIDDLEWARE = [
 ]
 
 # -------------------------------------------------
-# Dynamic CORS & CSRF Configuration
+# Dynamic CORS & CSRF Configuration (fixed)
 # -------------------------------------------------
 
-# Detect which frontend URL should be trusted
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 parsed = urlparse(FRONTEND_URL)
 frontend_origin = f"{parsed.scheme}://{parsed.netloc}"
 
+# Shared headers (needed for JWT + API calls)
+CORS_ALLOW_HEADERS = [
+    "Authorization",
+    "Content-Type",
+    "Accept",
+    "Origin",
+    "User-Agent",
+    "DNT",
+    "Cache-Control",
+    "X-Requested-With",
+    "X-CSRFToken",
+]
+
+CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+CORS_ALLOW_CREDENTIALS = True
+
 if DEBUG:
-    # 🧩 Development mode — relaxed for localhost
+    # --- Development Mode ---
     CORS_ALLOW_ALL_ORIGINS = True
-    CORS_ALLOW_CREDENTIALS = True
-    CORS_ALLOW_HEADERS = ["*"]
-    CORS_ALLOW_METHODS = ["*"]
     CSRF_TRUSTED_ORIGINS = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ]
-    print(f"🌍 Running in DEBUG mode — trusting {CSRF_TRUSTED_ORIGINS}")
+    print(f"🌍 DEBUG mode — trusting {CSRF_TRUSTED_ORIGINS}")
+
 else:
-    # 🧩 Production mode — only trust your deployed frontend
-    CORS_ALLOW_ALL_ORIGINS = False
+    # --- Production Mode ---
+    CORS_ALLOW_ALL_ORIGINS = False  # lock down explicitly
     CORS_ALLOWED_ORIGINS = [frontend_origin]
-    CORS_ALLOW_CREDENTIALS = True
-    CORS_ALLOW_HEADERS = [
-        "Authorization",
-        "Content-Type",
-        "Accept",
-        "X-CSRFToken",
-    ]
-    CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
     CSRF_TRUSTED_ORIGINS = [frontend_origin]
     print(f"🔒 Production CORS locked to {frontend_origin}")
 
-# Trust the same frontend URLs for CSRF protection
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    os.getenv("FRONTEND_URL", "https://app.healthcapstone.com"),
-]
 
 
 # -------------------------------------------------

@@ -59,13 +59,20 @@ export interface Appointment extends AppointmentPayload {
  */
 export const appointmentsApi = {
   // ---- List ----
-  async list(params: Record<string, any> = {}) {
+  async list(params: {
+    provider: number;
+    office: string;
+    start_date: string;
+    end_date: string;
+  }): Promise<Appointment[]> {
     const res = await API.get("/appointments/", { params });
-    const data = res.data;
-    if (Array.isArray(data)) return data;
-    if (data?.results && Array.isArray(data.results)) return data.results;
 
-    console.warn("⚠️ Unexpected appointmentsApi.list() response:", data);
+    if (Array.isArray(res.data)) return res.data;
+
+    if (res.data?.results && Array.isArray(res.data.results))
+      return res.data.results; // DRF pagination safe return
+
+    console.warn("⚠️ Unexpected appointmentsApi.list() payload:", res.data);
     return [];
   },
 

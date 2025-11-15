@@ -15,6 +15,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["patient__first_name", "patient__last_name", "chief_complaint"]
     ordering_fields = ["start_time", "end_time", "created_at", "status", "date"]
+    filterset_fields = ["provider", "office", "status"]
 
     def perform_create(self, serializer):
         """
@@ -55,5 +56,15 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                 duration = match.get("default_duration", duration)
 
         serializer.save(provider=provider, color_code=color, duration=duration)
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+
+        # ---- Office Filtering ----
+        office = self.request.query_params.get("office")
+        if office:
+            qs = qs.filter(office__iexact=str(office).strip())
+
+        return qs
 
 

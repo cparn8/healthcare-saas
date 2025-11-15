@@ -34,7 +34,13 @@ async function save(payload: ScheduleSettings): Promise<ScheduleSettings> {
   }
 }
 
+async function getAppointmentTypes() {
+  const settings = await get();
+  return settings.appointment_types || [];
+}
+
 export const scheduleSettingsApi = {
   get,
   save,
+  getAppointmentTypes,
 };

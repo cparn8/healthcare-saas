@@ -17,6 +17,8 @@ interface AppointmentsTableProps {
 
 /** Status & intake types */
 
+// NOTE: "na" is a FRONTEND-ONLY status used for Block Time rows.
+// It persists to the backend as "pending".
 type StatusKey =
   | "pending"
   | "arrived"
@@ -25,10 +27,11 @@ type StatusKey =
   | "cancelled"
   | "in_lobby"
   | "seen"
-  | "tentative";
+  | "tentative"
+  | "na";
 
 const STATUS_OPTIONS: {
-  key: StatusKey;
+  key: Exclude<StatusKey, "na">;
   label: string;
   dotClass: string; // Tailwind bg class
 }[] = [
@@ -40,6 +43,16 @@ const STATUS_OPTIONS: {
   { key: "in_lobby", label: "In lobby", dotClass: "bg-yellow-500" },
   { key: "seen", label: "Seen", dotClass: "bg-gray-300" },
   { key: "tentative", label: "Tentative", dotClass: "bg-gray-600" },
+];
+
+// Block-time specific status options
+const BLOCK_STATUS_OPTIONS: {
+  key: StatusKey;
+  label: string;
+  dotClass: string;
+}[] = [
+  { key: "na", label: "N/A", dotClass: "bg-white" },
+  { key: "in_room", label: "In room", dotClass: "bg-orange-500" },
 ];
 
 type IntakeStatus = "not_submitted" | "submitted";
@@ -102,8 +115,198 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
 
   const [roomEditorId, setRoomEditorId] = useState<number | null>(null);
   const [roomDraft, setRoomDraft] = useState<string>("");
+  const [refreshQueued, setRefreshQueued] = useState(false);
 
   const dayStr = useMemo(() => date.toISOString().split("T")[0], [date]);
+
+  const noteInputRef = React.useRef<HTMLTextAreaElement | null>(null);
+  const roomInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const noteModalRef = React.useRef<HTMLDivElement | null>(null);
+  const roomModalRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Prevent refresh while a modal is open; queue it for later
+  const safeRefresh = () => {
+    // Always queue; a separate effect will decide when it's safe
+    setRefreshQueued(true);
+  };
+
+  /* ---------------- Notes (with persistence) ---------------- */
+
+  const handleNoteSave = async (id: number, noteText: string) => {
+    // 1. Update UI immediately for smooth UX
+    setRowState((prev) => {
+      const existing = prev[id] || {
+        note: "",
+        status: "pending" as StatusKey,
+        room: "",
+        intakeStatus: "not_submitted" as IntakeStatus,
+      };
+      return {
+        ...prev,
+        [id]: {
+          ...existing,
+          note: noteText,
+        },
+      };
+    });
+
+    setEditingNoteId(null);
+
+    // 2. Persist to backend
+    const appt = appointments.find((a) => a.id === id);
+    if (!appt) return;
+
+    try {
+      await appointmentsApi.update(id, {
+        ...appt,
+        provider: appt.provider,
+        notes: noteText,
+      });
+
+      safeRefresh();
+    } catch (err) {
+      console.error("Failed to save note:", err);
+    }
+  };
+
+  /* ---------------- Room modal save / cancel ---------------- */
+
+  const handleRoomSave = () => {
+    if (roomEditorId == null) return;
+
+    const trimmed = roomDraft.trim().slice(0, MAX_ROOM_LEN);
+
+    setRowState((prev) => {
+      const existing = prev[roomEditorId] || {
+        note: "",
+        status: "pending" as StatusKey,
+        room: "",
+        intakeStatus: "not_submitted" as IntakeStatus,
+      };
+      return {
+        ...prev,
+        [roomEditorId]: {
+          ...existing,
+          status: "in_room",
+          room: trimmed,
+        },
+      };
+    });
+
+    // Persist to backend
+    const appt = appointments.find((a) => a.id === roomEditorId);
+    if (appt) {
+      appointmentsApi
+        .update(roomEditorId, {
+          ...appt,
+          room: trimmed,
+          status: "in_room",
+        })
+        .then(() => safeRefresh())
+        .catch((err) => console.error("Failed to update room:", err));
+    }
+
+    setRoomEditorId(null);
+    setRoomDraft("");
+  };
+
+  const handleRoomCancel = () => {
+    setRoomEditorId(null);
+    setRoomDraft("");
+  };
+
+  const noteSaveRef = React.useRef(handleNoteSave);
+  const roomSaveRef = React.useRef(handleRoomSave);
+
+  useEffect(() => {
+    noteSaveRef.current = handleNoteSave;
+    roomSaveRef.current = handleRoomSave;
+  });
+
+  // Autofocus note textarea when the note modal opens
+  useEffect(() => {
+    if (editingNoteId !== null && noteInputRef.current) {
+      noteInputRef.current.focus();
+      noteInputRef.current.select();
+    }
+  }, [editingNoteId]);
+
+  // Autofocus room input when the room modal opens
+  useEffect(() => {
+    if (roomEditorId === null) return;
+
+    requestAnimationFrame(() => {
+      if (roomInputRef.current) {
+        roomInputRef.current.focus();
+        roomInputRef.current.select();
+      }
+    });
+  }, [roomEditorId]);
+
+  // Run queued refresh after modals close
+  useEffect(() => {
+    const modalOpen = editingNoteId !== null || roomEditorId !== null;
+
+    // When modals CLOSE, run queued refresh (if any)
+    if (!modalOpen && refreshQueued) {
+      setRefreshQueued(false);
+      loadAppointments?.();
+    }
+  }, [editingNoteId, roomEditorId, refreshQueued, loadAppointments]);
+
+  // Keyboard shortcuts + click-outside handlers
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      // Note modal
+      if (editingNoteId !== null) {
+        if (e.key === "Escape") {
+          setEditingNoteId(null);
+        }
+        if (e.key === "Enter" && e.ctrlKey) {
+          noteSaveRef.current(editingNoteId, noteDraft.trim());
+        }
+      }
+
+      // Room modal
+      if (roomEditorId !== null) {
+        if (e.key === "Escape") {
+          handleRoomCancel();
+        }
+        if (e.key === "Enter") {
+          roomSaveRef.current();
+        }
+      }
+    }
+
+    function handleClickOutside(e: MouseEvent) {
+      // Note modal
+      if (
+        editingNoteId !== null &&
+        noteModalRef.current &&
+        !noteModalRef.current.contains(e.target as Node)
+      ) {
+        setEditingNoteId(null);
+      }
+
+      // Room modal
+      if (
+        roomEditorId !== null &&
+        roomModalRef.current &&
+        !roomModalRef.current.contains(e.target as Node)
+      ) {
+        handleRoomCancel();
+      }
+    }
+
+    document.addEventListener("keydown", handleKey);
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [editingNoteId, roomEditorId, noteDraft]);
 
   // Filter to current day
   const dayAppointments = useMemo(
@@ -114,20 +317,45 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
   // Initialize/refresh row state when appointments change
   // (hydrate from backend: notes, status, room, intake_status)
   useEffect(() => {
+    const modalOpen = editingNoteId !== null || roomEditorId !== null;
+    if (modalOpen) return; // Prevent flicker while user is editing
+
     setRowState((prev) => {
       const next: Record<number, RowState> = { ...prev };
 
       for (const appt of dayAppointments) {
         const anyAppt = appt as any;
         const existing = next[appt.id];
+        const isBlock = !!anyAppt.is_block;
 
+        // Backend always stores real Django status values.
+        const backendStatus: string = anyAppt.status || "pending";
+
+        // -----------------------------
+        //    STATUS DERIVATION LOGIC
+        // -----------------------------
+        let derivedStatus: StatusKey;
+
+        if (isBlock) {
+          // Block Time → only "na" or "in_room"
+          if (backendStatus === "in_room") {
+            derivedStatus = "in_room";
+          } else {
+            derivedStatus = "na";
+          }
+        } else {
+          // Normal appointments → use backend status
+          derivedStatus = (backendStatus as StatusKey) || "pending";
+        }
+
+        // -----------------------------
+        //    HYDRATED CLIENT STATE
+        // -----------------------------
         next[appt.id] = {
           note:
             existing?.note ??
             (typeof anyAppt.notes === "string" ? anyAppt.notes : ""),
-          status:
-            existing?.status ??
-            ((anyAppt.status as StatusKey) || ("pending" as StatusKey)),
+          status: existing?.status ?? derivedStatus,
           room: existing?.room ?? (anyAppt.room || ""),
           intakeStatus:
             existing?.intakeStatus ??
@@ -137,7 +365,7 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
 
       return next;
     });
-  }, [dayAppointments]);
+  }, [dayAppointments, editingNoteId, roomEditorId]);
 
   // Sorting by time (then patient name)
   const sortedAppointments = useMemo(() => {
@@ -170,6 +398,9 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
   /* ---------------- Status change (with persistence) ---------------- */
 
   const handleStatusChange = (id: number, status: StatusKey) => {
+    const appt = appointments.find((a) => a.id === id);
+    const isBlock = !!(appt as any)?.is_block;
+
     setRowState((prev) => {
       const existing = prev[id] || {
         note: "",
@@ -177,12 +408,16 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
         room: "",
         intakeStatus: "not_submitted" as IntakeStatus,
       };
+
+      // Clear room when status moves to "seen" or "na" for block-time
+      const shouldClearRoom = status === "seen" || (isBlock && status === "na");
+
       return {
         ...prev,
         [id]: {
           ...existing,
           status,
-          room: status === "seen" ? "" : existing.room,
+          room: shouldClearRoom ? "" : existing.room,
         },
       };
     });
@@ -196,18 +431,27 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
       setRoomDraft("");
     }
 
-    // ---- Persist to backend ----
-    const appt = appointments.find((a) => a.id === id);
-    if (appt) {
-      appointmentsApi
-        .update(id, {
-          ...appt,
-          status,
-          room: status === "seen" ? "" : rowState[id]?.room || "",
-        })
-        .then(() => loadAppointments?.())
-        .catch((err) => console.error("Failed to update status:", err));
+    if (!appt) return;
+
+    // Map frontend "na" → backend "pending"
+    let backendStatus: string = status;
+    if (status === "na") {
+      backendStatus = "pending";
     }
+
+    const roomForBackend =
+      backendStatus === "seen" || (isBlock && backendStatus === "pending")
+        ? ""
+        : rowState[id]?.room || "";
+
+    appointmentsApi
+      .update(id, {
+        ...appt,
+        status: backendStatus as Appointment["status"],
+        room: roomForBackend,
+      })
+      .then(() => safeRefresh())
+      .catch((err) => console.error("Failed to update status:", err));
   };
 
   /* ---------------- Intake change (with persistence) ---------------- */
@@ -229,112 +473,18 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
       };
     });
 
-    // ---- Persist to backend ----
     const appt = appointments.find((a) => a.id === id);
     if (appt) {
       appointmentsApi
         .update(id, { ...appt, intake_status: intake })
-        .then(() => loadAppointments?.())
+        .then(() => safeRefresh())
         .catch((err) => console.error("Failed to update intake status:", err));
     }
-  };
-
-  /* ---------------- Notes (with persistence) ---------------- */
-
-  const handleNoteSave = async (id: number, noteText: string) => {
-    // 1. Update UI immediately for smooth UX
-    setRowState((prev) => {
-      const existing = prev[id] || {
-        note: "",
-        status: "pending" as StatusKey,
-        room: "",
-        intakeStatus: "not_submitted" as IntakeStatus,
-      };
-      return {
-        ...prev,
-        [id]: {
-          ...existing,
-          note: noteText,
-        },
-      };
-    });
-
-    setEditingNoteId(null);
-
-    // 2. Persist to backend
-    const appt = appointments.find((a) => a.id === id);
-    if (!appt) return;
-
-    try {
-      // Assuming appointmentsApi.update accepts partial payloads
-      await appointmentsApi.update(id, {
-        ...appt,
-        provider: appt.provider,
-        notes: noteText,
-      });
-
-      loadAppointments?.();
-    } catch (err) {
-      console.error("Failed to save note:", err);
-    }
-  };
-
-  /* ---------------- Room modal save / cancel ---------------- */
-
-  const openRoomModal = (id: number) => {
-    const currentRoom = rowState[id]?.room || "";
-    setRoomEditorId(id);
-    setRoomDraft(currentRoom);
-  };
-
-  const handleRoomSave = () => {
-    if (roomEditorId == null) return;
-
-    const trimmed = roomDraft.trim().slice(0, MAX_ROOM_LEN);
-
-    setRowState((prev) => {
-      const existing = prev[roomEditorId] || {
-        note: "",
-        status: "pending" as StatusKey,
-        room: "",
-        intakeStatus: "not_submitted" as IntakeStatus,
-      };
-      return {
-        ...prev,
-        [roomEditorId]: {
-          ...existing,
-          status: "in_room",
-          room: trimmed,
-        },
-      };
-    });
-
-    // ---- Persist to backend ----
-    const appt = appointments.find((a) => a.id === roomEditorId);
-    if (appt) {
-      appointmentsApi
-        .update(roomEditorId, {
-          ...appt,
-          room: trimmed,
-          status: "in_room",
-        })
-        .then(() => loadAppointments?.())
-        .catch((err) => console.error("Failed to update room:", err));
-    }
-
-    setRoomEditorId(null);
-    setRoomDraft("");
-  };
-
-  const handleRoomCancel = () => {
-    setRoomEditorId(null);
-    setRoomDraft("");
   };
 
   /* ---------------- Render helpers ---------------- */
 
   const renderPatientInfo = (appt: Appointment) => {
-    // These are optional; backend can add them later.
     const anyAppt = appt as any;
     const dob: string | undefined = anyAppt.patient_dob;
     const genderRaw: string | undefined = anyAppt.patient_gender;
@@ -367,14 +517,17 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
     );
   };
 
-  const renderStatusLabel = (id: number, state: RowState) => {
-    const base = STATUS_OPTIONS.find((o) => o.key === state.status);
+  const renderStatusLabel = (id: number, state: RowState, isBlock: boolean) => {
+    const options = isBlock ? BLOCK_STATUS_OPTIONS : STATUS_OPTIONS;
+    const base = options.find((o) => o.key === state.status);
+
     if (!base) return null;
 
     let label = base.label;
     if (state.status === "in_room" && state.room) {
       label = `${base.label} ${state.room}`;
     }
+
     return (
       <div className="flex items-center gap-2">
         <span
@@ -440,6 +593,9 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
               intakeStatus: "not_submitted" as IntakeStatus,
             };
 
+            const anyAppt = appt as any;
+            const isBlock = !!anyAppt.is_block;
+
             const fullComplaint = appt.chief_complaint || "";
             const shortComplaint =
               fullComplaint.length > 15
@@ -448,15 +604,22 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
 
             const isSeen = state.status === "seen";
 
+            const baseRowColor = isBlock
+              ? "bg-gray-200"
+              : isSeen
+              ? "bg-gray-50"
+              : "bg-white";
+
+            const hoverClass = isBlock ? "" : " hover:bg-gray-50";
+
             return (
               <tr
                 key={appt.id}
-                className={`border-b ${
-                  isSeen ? "bg-gray-50" : "bg-white"
-                } hover:bg-gray-50 transition-colors`}
+                className={`border-b ${baseRowColor}${hoverClass} transition-colors`}
               >
                 {/* Note cell */}
                 <td className="px-2 py-2 align-top">
+                  {/* Block time: still allow notes */}
                   <div className="relative flex items-center">
                     <button
                       type="button"
@@ -486,8 +649,12 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
 
                   {/* Inline note editor */}
                   {editingNoteId === appt.id && (
-                    <div className="mt-2 rounded border bg-white p-2 shadow-md text-xs z-20 relative">
+                    <div
+                      ref={noteModalRef}
+                      className="mt-2 rounded border bg-white p-2 shadow-md text-xs z-20 relative"
+                    >
                       <textarea
+                        ref={noteInputRef}
                         className="w-full border rounded p-1 text-xs"
                         rows={3}
                         value={noteDraft}
@@ -508,6 +675,7 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
                           type="button"
                           onClick={() => {
                             handleNoteSave(appt.id, noteDraft.trim());
+                            setEditingNoteId(null);
                           }}
                         >
                           Save
@@ -522,20 +690,27 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
                   <StatusDropdown
                     value={state.status}
                     onChange={(status) => handleStatusChange(appt.id, status)}
-                    onRequestRoom={() => openRoomModal(appt.id)}
-                    display={renderStatusLabel(appt.id, state)}
+                    display={renderStatusLabel(appt.id, state, isBlock)}
+                    isBlock={isBlock}
                   />
 
-                  {/* Room mini-modal */}
+                  {/* Room mini-modal (still allowed for block time when In room) */}
                   {roomEditorId === appt.id && (
-                    <div className="absolute z-30 mt-1 w-56 rounded-lg border bg-white p-3 shadow-lg">
+                    <div
+                      ref={roomModalRef}
+                      className="absolute z-30 mt-1 w-56 rounded-lg border bg-white p-3 shadow-lg"
+                    >
                       <div className="flex items-center gap-2 mb-2">
                         <Info size={14} className="text-blue-500" />
                         <span className="text-xs font-semibold">
                           Which room?
                         </span>
                       </div>
+
                       <input
+                        ref={(el) => {
+                          roomInputRef.current = el;
+                        }}
                         type="text"
                         className="w-full border rounded px-2 py-1 text-xs"
                         maxLength={MAX_ROOM_LEN}
@@ -543,6 +718,7 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
                         onChange={(e) => setRoomDraft(e.target.value)}
                         placeholder="e.g. 2 or 309B"
                       />
+
                       <div className="mt-2 flex justify-end gap-2">
                         <button
                           type="button"
@@ -565,7 +741,7 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
 
                 {/* Patient */}
                 <td className="px-2 py-2 align-top">
-                  {renderPatientInfo(appt)}
+                  {isBlock ? null : renderPatientInfo(appt)}
                 </td>
 
                 {/* Time */}
@@ -603,10 +779,12 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
 
                 {/* Intake form */}
                 <td className="px-2 py-2 align-top">
-                  <IntakeDropdown
-                    value={state.intakeStatus}
-                    onChange={(val) => handleIntakeChange(appt.id, val)}
-                  />
+                  {isBlock ? null : (
+                    <IntakeDropdown
+                      value={state.intakeStatus}
+                      onChange={(val) => handleIntakeChange(appt.id, val)}
+                    />
+                  )}
                 </td>
               </tr>
             );
@@ -627,23 +805,26 @@ interface StatusDropdownProps {
   value: StatusKey;
   display: React.ReactNode;
   onChange: (status: StatusKey) => void;
-  onRequestRoom: () => void;
+  isBlock: boolean;
 }
 
 const StatusDropdown: React.FC<StatusDropdownProps> = ({
   value,
   display,
   onChange,
-  onRequestRoom,
+  isBlock,
 }) => {
   const [open, setOpen] = useState(false);
 
-  const handleSelect = (key: StatusKey) => {
+  const options = isBlock ? BLOCK_STATUS_OPTIONS : STATUS_OPTIONS;
+
+  const handleSelect = (
+    key: StatusKey,
+    e?: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    e?.currentTarget?.blur();
     setOpen(false);
     onChange(key);
-    if (key === "in_room") {
-      onRequestRoom();
-    }
   };
 
   return (
@@ -659,14 +840,14 @@ const StatusDropdown: React.FC<StatusDropdownProps> = ({
 
       {open && (
         <div className="absolute z-30 mt-1 w-44 rounded border bg-white shadow-lg">
-          {STATUS_OPTIONS.map((opt) => (
+          {options.map((opt) => (
             <button
               key={opt.key}
               type="button"
               className={`flex w-full items-center gap-2 px-2 py-1 text-left text-xs hover:bg-gray-100 ${
                 value === opt.key ? "bg-gray-50" : ""
               }`}
-              onClick={() => handleSelect(opt.key)}
+              onClick={(e) => handleSelect(opt.key, e)}
             >
               <span
                 className={`inline-block h-2 w-2 rounded-full ${opt.dotClass}`}
