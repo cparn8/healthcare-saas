@@ -12,6 +12,8 @@ import NewAppointmentModal from "../components/NewAppointmentModal";
 import EditAppointmentModal from "../components/EditAppointmentModal";
 import SettingsPanel from "../components/SettingsPanel";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
+import ScheduleFilters from "../components/ScheduleFilters";
+import { ScheduleFilters as FilterState } from "../types";
 
 import { appointmentsApi, Appointment } from "../services/appointmentsApi";
 import { providersApi, Provider } from "../../providers/services/providersApi";
@@ -141,16 +143,24 @@ const SchedulePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>(
     (searchParams.get("tab") as TabKey) || "day"
   );
-  const [office, setOffice] = useState<OfficeKey>("north");
+
   const [cursorDate, setCursorDate] = useState<Date>(
     safeDate(formatYMDLocal(new Date()))
   );
   const [slotSize, setSlotSize] = useState<SlotSize>(30);
 
+  const [showFilters, setShowFilters] = useState(false);
+
   /* ----------------------------- Data State --------------------------- */
 
   const [providerId, setProviderId] = useState<number | null>(null);
   const [provider, setProvider] = useState<Provider | null>(null);
+  const [providersList, setProvidersList] = useState<Provider[]>([]);
+
+  const [office, setOffice] = useState<OfficeKey>(() => {
+    const stored = localStorage.getItem("lastOffice") as OfficeKey | null;
+    return stored === "south" || stored === "north" ? stored : "north";
+  });
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingAppts, setLoadingAppts] = useState(false);
@@ -160,6 +170,14 @@ const SchedulePage: React.FC = () => {
   >([]);
   const [scheduleSettings, setScheduleSettings] =
     useState<ScheduleSettings | null>(null);
+
+  const [filters, setFilters] = useState<FilterState>({
+    providers: [],
+    types: [],
+    statuses: [],
+    defaultView: "day",
+    includeBlockedTimes: true,
+  });
 
   /* ----------------------------- Modal State -------------------------- */
 
@@ -197,6 +215,44 @@ const SchedulePage: React.FC = () => {
     visibleStart: visibleRange.start,
     visibleEnd: visibleRange.end,
   });
+
+  const filteredAppointments = useMemo(() => {
+    return visibleAppointments.filter((appt) => {
+      // 1) Providers (multi-select)
+      if (filters.providers.length > 0) {
+        const apptProvider = appt.provider ?? null;
+        if (!apptProvider || !filters.providers.includes(apptProvider)) {
+          return false;
+        }
+      }
+
+      // 2) Appointment types (skip if no filter selected)
+      if (filters.types.length > 0) {
+        if (
+          !appt.appointment_type ||
+          !filters.types.includes(appt.appointment_type)
+        ) {
+          return false;
+        }
+      }
+
+      // 3) Statuses (skip if no filter selected)
+      if (filters.statuses.length > 0) {
+        if (!appt.status || !filters.statuses.includes(appt.status as any)) {
+          return false;
+        }
+      }
+
+      // 4) Blocked time visibility
+      if (!filters.includeBlockedTimes) {
+        if (appt.is_block || appt.appointment_type === "Block Time") {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [visibleAppointments, filters]);
 
   const leftLabel = useMemo(
     () =>
@@ -248,6 +304,24 @@ const SchedulePage: React.FC = () => {
     fetchProvider();
   }, []);
 
+  // Load last office for this provider once providerId is known
+  useEffect(() => {
+    if (!providerId) return;
+    const key = `lastOffice_${providerId}`;
+    const stored = window.localStorage.getItem(key) as OfficeKey | null;
+
+    if (stored === "north" || stored === "south") {
+      setOffice(stored);
+    }
+  }, [providerId]);
+
+  // Persist office whenever it changes (per provider)
+  useEffect(() => {
+    if (!providerId) return;
+    const key = `lastOffice_${providerId}`;
+    window.localStorage.setItem(key, office);
+  }, [office, providerId]);
+
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (!calendarWrapperRef.current) return;
@@ -258,6 +332,28 @@ const SchedulePage: React.FC = () => {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const list = await providersApi.list();
+        setProvidersList(list);
+      } catch (err) {
+        console.error("❌ Provider list failed:", err);
+        setProvidersList([]);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!providerId) return;
+
+    setFilters((prev) => {
+      // if user already has saved filters, don't overwrite
+      if (prev.providers.length > 0) return prev;
+      return { ...prev, providers: [providerId] };
+    });
+  }, [providerId]);
 
   /* ----------------------------- Effects: appointment loading --------- */
 
@@ -372,6 +468,7 @@ const SchedulePage: React.FC = () => {
       date: start.toISOString().split("T")[0],
       start_time: start.toTimeString().slice(0, 5),
       end_time: end.toTimeString().slice(0, 5),
+      office,
       allow_overlap: allowOverlap,
     };
 
@@ -389,7 +486,7 @@ const SchedulePage: React.FC = () => {
         <div className="flex items-baseline gap-3">
           <h1 className="text-2xl font-semibold">Schedule</h1>
           <span className="text-sm text-gray-500">
-            {appointments.length} appointments
+            {filteredAppointments.length} appointments
           </span>
         </div>
       </div>
@@ -418,9 +515,15 @@ const SchedulePage: React.FC = () => {
         <>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <button className="px-3 py-1.5 border rounded hover:bg-gray-50">
+              <button
+                className={`px-3 py-1.5 border rounded hover:bg-gray-50 ${
+                  showFilters ? "bg-blue-50 border-blue-600 text-blue-600" : ""
+                }`}
+                onClick={() => setShowFilters((prev) => !prev)}
+              >
                 Filter
               </button>
+
               <button
                 className="px-3 py-1.5 border rounded hover:bg-gray-50"
                 onClick={loadAppointments}
@@ -529,67 +632,80 @@ const SchedulePage: React.FC = () => {
         </>
       )}
 
-      {/* Content */}
-      <div className="min-h-[400px] bg-white border rounded p-4">
-        {activeTab === "appointments" && (
-          <AppointmentsTable
-            appointments={visibleAppointments}
-            date={cursorDate}
-            loading={loadingAppts}
-            loadAppointments={loadAppointments}
-          />
-        )}
-
-        {activeTab === "day" && (
-          <DayViewGrid
-            office={office}
-            providerName={
-              provider
-                ? `${provider.first_name} ${provider.last_name}`
-                : "Loading..."
-            }
-            scheduleSettings={scheduleSettings}
-            slotMinutes={slotSize}
-            appointments={visibleAppointments}
-            loading={loadingAppts}
-            date={cursorDate}
+      <div className="flex min-h-[400px] bg-white border rounded">
+        {/* Filters Sidebar */}
+        {showFilters && (
+          <ScheduleFilters
             providerId={providerId}
-            onEditAppointment={(appt) => setEditingAppt(appt)}
-            onSelectEmptySlot={(start, end, allow) =>
-              handleSlotSelect(start, end, !!allow)
-            }
-            onChangeDate={(newDate) => setCursorDate(newDate)}
-            requestConfirm={(message, onConfirm) =>
-              setConfirmData({ open: true, message, onConfirm })
-            }
+            allProviders={providersList}
+            appointmentTypes={appointmentTypes}
+            currentFilters={filters}
+            onUpdateFilters={setFilters}
           />
         )}
 
-        {activeTab === "week" && (
-          <WeekViewGrid
-            baseDate={cursorDate}
-            office={office}
-            providerName={
-              provider
-                ? `${provider.first_name} ${provider.last_name}`
-                : "Loading..."
-            }
-            scheduleSettings={scheduleSettings}
-            slotMinutes={slotSize}
-            appointments={visibleAppointments}
-            loading={loadingAppts}
-            providerId={providerId}
-            onEditAppointment={(appt) => setEditingAppt(appt)}
-            onSelectEmptySlot={(start, end, allow) =>
-              handleSlotSelect(start, end, !!allow)
-            }
-            requestConfirm={(message, onConfirm) =>
-              setConfirmData({ open: true, message, onConfirm })
-            }
-          />
-        )}
+        {/* Main Content */}
+        <div className={`flex-1 p-4 ${showFilters ? "w-5/6" : "w-full"}`}>
+          {activeTab === "appointments" && (
+            <AppointmentsTable
+              appointments={filteredAppointments}
+              date={cursorDate}
+              loading={loadingAppts}
+              loadAppointments={loadAppointments}
+            />
+          )}
 
-        {activeTab === "settings" && <SettingsPanel />}
+          {activeTab === "day" && (
+            <DayViewGrid
+              office={office}
+              providerName={
+                provider
+                  ? `${provider.first_name} ${provider.last_name}`
+                  : "Loading..."
+              }
+              scheduleSettings={scheduleSettings}
+              slotMinutes={slotSize}
+              appointments={filteredAppointments}
+              loading={loadingAppts}
+              date={cursorDate}
+              providerId={providerId}
+              onEditAppointment={(appt) => setEditingAppt(appt)}
+              onSelectEmptySlot={(start, end, allow) =>
+                handleSlotSelect(start, end, !!allow)
+              }
+              onChangeDate={(newDate) => setCursorDate(newDate)}
+              requestConfirm={(message, onConfirm) =>
+                setConfirmData({ open: true, message, onConfirm })
+              }
+            />
+          )}
+
+          {activeTab === "week" && (
+            <WeekViewGrid
+              baseDate={cursorDate}
+              office={office}
+              providerName={
+                provider
+                  ? `${provider.first_name} ${provider.last_name}`
+                  : "Loading..."
+              }
+              scheduleSettings={scheduleSettings}
+              slotMinutes={slotSize}
+              appointments={filteredAppointments}
+              loading={loadingAppts}
+              providerId={providerId}
+              onEditAppointment={(appt) => setEditingAppt(appt)}
+              onSelectEmptySlot={(start, end, allow) =>
+                handleSlotSelect(start, end, !!allow)
+              }
+              requestConfirm={(message, onConfirm) =>
+                setConfirmData({ open: true, message, onConfirm })
+              }
+            />
+          )}
+
+          {activeTab === "settings" && <SettingsPanel />}
+        </div>
       </div>
 
       {/* Modals */}
@@ -607,6 +723,7 @@ const SchedulePage: React.FC = () => {
             setInitialPatient(null);
           }}
           providerId={providerId}
+          defaultOffice={office}
           initialDate={
             prefill?.date ? new Date(prefill.date + "T00:00") : undefined
           }

@@ -24,6 +24,7 @@ interface WithPatientFormProps {
   initialDate?: string;
   initialStartTime?: string;
   initialEndTime?: string;
+  defaultOffice?: string;
   initialPatient?: any;
   appointmentTypes?: {
     id?: number;
@@ -40,6 +41,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
   initialDate,
   initialStartTime,
   initialEndTime,
+  defaultOffice,
   initialPatient,
   appointmentTypes,
 }) => {
@@ -73,7 +75,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
   const [formData, setFormData] = useState({
     patient: null as number | null,
     provider: providerId ?? null,
-    office: "north",
+    office: defaultOffice ?? "north",
     appointment_type: appointmentTypes?.[0]?.name || "",
     color_code: appointmentTypes?.[0]?.color_code || "#FF6B6B",
     duration: prefilled.duration,
@@ -230,9 +232,6 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     })();
   }, [searchParams]);
 
-  // -------------------------------
-  // Provider display helper
-  // -------------------------------
   const providerFullName = (p: Provider) =>
     `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || `Provider #${p.id}`;
 

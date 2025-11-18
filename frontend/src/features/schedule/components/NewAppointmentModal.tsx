@@ -1,3 +1,4 @@
+// frontend/src/features/schedule/components/NewAppointmentModal.tsx
 import React, { useState, useEffect } from "react";
 import X from "lucide-react/dist/esm/icons/x";
 import WithPatientForm from "./WithPatientForm";
@@ -20,6 +21,7 @@ interface NewAppointmentModalProps {
   initialDate?: Date;
   initialStartTime?: Date;
   initialEndTime?: Date;
+  defaultOffice?: string;
   initialPatient?: any;
   appointmentTypes?: {
     id?: number;
@@ -37,6 +39,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
   initialDate,
   initialStartTime,
   initialEndTime,
+  defaultOffice,
   initialPatient,
   appointmentTypes,
   scheduleSettings,
@@ -47,7 +50,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
   const [formData, setFormData] = useState<AppointmentPayload | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // --- Time sync (safe for TS) ---
+  // --- Time sync (safe for TS, kept for future use if needed) ---
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [startTime, setStartTime] = useState<string>(
     initialStartTime ? initialStartTime.toTimeString().slice(0, 5) : ""
@@ -103,7 +106,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
       const payload: AppointmentPayload = {
         ...formData,
         provider: formData.provider ?? providerId ?? 1,
-        office: formData.office || "north",
+        office: formData.office ?? defaultOffice ?? "north",
         repeat_end_date: formData.repeat_end_date || null,
         date: safeDate,
         start_time: slot?.start_time || formData.start_time,
@@ -141,7 +144,6 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
             ? parseLocalDate(formData.repeat_end_date)
             : null;
 
-          // Map "Mon" → 1, "Tue" → 2, etc. (aligns with JS getDay())
           const targetDays = repeatDays.map((d) =>
             ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].indexOf(
               d.toLowerCase().slice(0, 3)
@@ -151,7 +153,6 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
           const generatedDates: string[] = [];
           let current = new Date(startDate);
 
-          // Generate forward until we hit max occurrences or end date
           while (generatedDates.length < maxOccurrences - 1) {
             current = new Date(current);
             current.setDate(current.getDate() + 1);
@@ -163,7 +164,6 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
               (current.getTime() - startDate.getTime()) /
               (1000 * 60 * 60 * 24 * 7);
 
-            // Only add if matches target day AND week offset respects interval
             if (
               targetDays.includes(jsDay) &&
               Math.floor(weekDiff) % intervalWeeks === 0
@@ -268,6 +268,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
               initialEndTime={normalizeToTimeString(initialEndTime)}
               initialPatient={initialPatient}
               appointmentTypes={appointmentTypes}
+              defaultOffice={defaultOffice}
             />
           ) : (
             <BlockTimeForm
@@ -281,6 +282,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
               }
               initialStartTime={normalizeToTimeString(initialStartTime)}
               initialEndTime={normalizeToTimeString(initialEndTime)}
+              defaultOffice={defaultOffice}
             />
           )}
         </div>

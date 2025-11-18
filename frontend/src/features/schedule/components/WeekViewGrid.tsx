@@ -24,10 +24,7 @@ interface WeekViewGridProps {
 const SLOT_ROW_PX = 48;
 const SLIVER_PERCENT = 12;
 
-/* -------------------------------------------------------------------------- */
-/*                       Intelligent Width-Aware Truncator                    */
-/* -------------------------------------------------------------------------- */
-
+/* Intelligent Width-Aware Truncator */
 interface TruncateFitProps {
   text: string;
   className?: string;
@@ -49,13 +46,11 @@ function TruncateFit({ text, className = "", title }: TruncateFitProps) {
     const containerWidth = container.clientWidth;
     const textWidth = measure.scrollWidth;
 
-    // Fits → no truncation needed
     if (textWidth <= containerWidth) {
       setOutput(text);
       return;
     }
 
-    // Binary-search truncate
     let lo = 0;
     let hi = text.length;
     let best = text;
@@ -186,42 +181,47 @@ export default function WeekViewGrid({
           <div
             key={`${appt.id}-${appt.date}-${appt.start_time}`}
             onClick={() => onEditAppointment?.(appt)}
-            className="absolute rounded text-white text-xs p-1.5 shadow-sm cursor-pointer hover:brightness-105 transition-all flex flex-col items-center justify-center text-center"
+            className="absolute rounded text-white text-xs p-1.5 shadow-sm cursor-pointer hover:brightness-105 transition-all flex flex-col items-start justify-center text-left"
             style={{
               top,
               height,
               left: `${left}%`,
               width: `${widthPercent}%`,
               backgroundColor: bg,
+              minWidth: 0,
             }}
+            title={
+              !isBlockType
+                ? `${appt.patient_name || "(No Patient)"} — ${
+                    appt.appointment_type
+                  }`
+                : undefined
+            }
           >
-            {/* Block Time appointment */}
             {isBlockType ? (
-              <>
-                <TruncateFit
-                  text={appt.appointment_type}
-                  className="text-s uppercase tracking-wide font-semibold"
-                />
-                <TruncateFit
-                  text={appt.provider_name ?? ""}
-                  className="text-xs opacity-90"
-                />
-                {appt.chief_complaint && (
-                  <TruncateFit
-                    text={appt.chief_complaint}
-                    className="text-xs italic opacity-90"
-                  />
-                )}
-              </>
+              <div
+                title={
+                  `${appt.appointment_type} - ${appt.provider_name}` +
+                  (appt.chief_complaint ? `\n${appt.chief_complaint}` : "")
+                }
+                className="flex flex-col items-center justify-center text-center"
+              >
+                <div className="font-semibold uppercase truncate">
+                  {appt.appointment_type}
+                </div>
+                <div className="truncate text-xs opacity-90">
+                  {appt.provider_name}
+                </div>
+              </div>
             ) : (
               <>
                 <TruncateFit
                   text={appt.patient_name || "(No Patient)"}
-                  className="font-semibold leading-tight"
+                  className="font-semibold w-full"
                 />
                 <TruncateFit
                   text={appt.appointment_type}
-                  className="opacity-90 leading-tight"
+                  className="opacity-90 w-full"
                 />
               </>
             )}

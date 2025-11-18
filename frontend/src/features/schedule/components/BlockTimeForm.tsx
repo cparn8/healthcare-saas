@@ -1,3 +1,4 @@
+// frontend/src/features/schedule/components/BlockTimeForm.tsx
 import React, { useState, useEffect } from "react";
 import { providersApi, Provider } from "../../providers/services/providersApi";
 import { AppointmentPayload } from "../services/appointmentsApi";
@@ -17,6 +18,7 @@ interface BlockTimeFormProps {
   initialDate?: string;
   initialStartTime?: string;
   initialEndTime?: string;
+  defaultOffice?: string;
 }
 
 const BlockTimeForm: React.FC<BlockTimeFormProps> = ({
@@ -28,6 +30,7 @@ const BlockTimeForm: React.FC<BlockTimeFormProps> = ({
   initialDate,
   initialStartTime,
   initialEndTime,
+  defaultOffice,
 }) => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [providersLoading, setProvidersLoading] = useState(false);
@@ -42,7 +45,7 @@ const BlockTimeForm: React.FC<BlockTimeFormProps> = ({
 
   const [formData, setFormData] = useState<AppointmentPayload>({
     provider: providerId ?? null,
-    office: "north",
+    office: defaultOffice ?? "north",
     appointment_type: "Block Time",
     date: prefilled.date,
     start_time: prefilled.start_time,
