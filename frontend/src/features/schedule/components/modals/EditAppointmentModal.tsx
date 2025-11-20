@@ -5,10 +5,13 @@ import {
   appointmentsApi,
   AppointmentPayload,
   Appointment,
-} from "../services/appointmentsApi";
-import { providersApi, Provider } from "../../providers/services/providersApi";
-import { toastPromise, toastError } from "../../../utils/toastUtils";
-import ConfirmDialog from "../../../components/common/ConfirmDialog";
+} from "../../services";
+import {
+  providersApi,
+  Provider,
+} from "../../../providers/services/providersApi";
+import { toastPromise, toastError } from "../../../../utils";
+import ConfirmDialog from "../../../../components/common/ConfirmDialog";
 
 interface EditAppointmentModalProps {
   appointment: Appointment;

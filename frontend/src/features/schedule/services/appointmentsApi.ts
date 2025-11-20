@@ -61,16 +61,17 @@ export const appointmentsApi = {
   // ---- List ----
   async list(params: {
     provider: number;
-    office: string;
     start_date: string;
     end_date: string;
   }): Promise<Appointment[]> {
-    const res = await API.get("/appointments/", { params });
+    const { provider, start_date, end_date } = params;
+    const res = await API.get("/appointments/", {
+      params: { provider, start_date, end_date },
+    });
 
     if (Array.isArray(res.data)) return res.data;
-
     if (res.data?.results && Array.isArray(res.data.results))
-      return res.data.results; // DRF pagination safe return
+      return res.data.results;
 
     console.warn("⚠️ Unexpected appointmentsApi.list() payload:", res.data);
     return [];

@@ -1,12 +1,23 @@
 // frontend/src/features/schedule/components/DayViewGrid.tsx
+
 import React, { useMemo, useState } from "react";
-import { Appointment } from "../services/appointmentsApi";
-import { ScheduleSettings } from "../types/scheduleSettings";
-import { parseLocalDate, isSameLocalDay } from "../../../utils/dateUtils";
-import { useBusinessHoursFilter } from "../hooks/useBusinessHoursFilter";
+import { Appointment } from "../../services";
+import { ScheduleSettings } from "../../types";
+import { parseLocalDate, isSameLocalDay } from "../../../../utils";
+import { useBusinessHours, usePositionedAppointments } from "../../hooks";
+import { MultiSlotModal } from "../modals";
+import {
+  SLIVER_PERCENT,
+  computeClusterBoxes,
+  computeClosedOverlays,
+  buildDaySlots,
+  formatTimeLabel,
+  formatOfficeLabel,
+} from "./logic";
 
 interface DayViewGridProps {
   office: string;
+  selectedOffices?: string[];
   providerName: string;
   slotMinutes: number;
   appointments?: Appointment[];
@@ -20,11 +31,9 @@ interface DayViewGridProps {
   requestConfirm?: (message: string, onConfirm: () => void) => void;
 }
 
-const SLOT_ROW_PX = 48;
-const SLIVER_PERCENT = 12;
-
 export default function DayViewGrid({
   office,
+  selectedOffices,
   providerName,
   slotMinutes,
   appointments = [],
@@ -36,85 +45,104 @@ export default function DayViewGrid({
   providerId,
   requestConfirm,
 }: DayViewGridProps) {
-  const { isDayOpen, getOpenRange } = useBusinessHoursFilter(
+  /* ------------------------------ Hours Logic ------------------------------ */
+
+  const officesForHours = useMemo(
+    () =>
+      selectedOffices && selectedOffices.length > 0
+        ? selectedOffices
+        : [office],
+    [office, selectedOffices]
+  );
+
+  const { isDayOpen, getOpenRange } = useBusinessHours(
     scheduleSettings,
-    office
+    officesForHours
   );
 
   const open = isDayOpen(date);
   const { start: openHour, end: closeHour } = getOpenRange(date);
 
-  const minuteHeight = SLOT_ROW_PX / slotMinutes;
-  const timeToMinutes = (t: string) => {
-    const [h, m] = t.split(":").map(Number);
-    return h * 60 + m;
-  };
+  const slots = useMemo(
+    () => buildDaySlots(openHour, closeHour, slotMinutes),
+    [openHour, closeHour, slotMinutes]
+  );
 
-  // --- Time slots derived from hours ---
-  const slots = useMemo(() => {
-    const out: string[] = [];
-    for (let h = openHour; h < closeHour; h++) {
-      for (let m = 0; m < 60; m += slotMinutes) {
-        out.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+  /* --------------------- Appointment Position + Clusters -------------------- */
+
+  const dayAppointments = useMemo(
+    () =>
+      (appointments ?? []).filter(
+        (a) => a.date && isSameLocalDay(a.date, date)
+      ),
+    [appointments, date]
+  );
+
+  const { positioned, clusters } = usePositionedAppointments(dayAppointments);
+
+  /* ------------------------------ Cluster Modal ----------------------------- */
+
+  const [clusterModal, setClusterModal] = useState<{
+    open: boolean;
+    appointments: Appointment[];
+  }>({ open: false, appointments: [] });
+
+  /* ----------------------------- Office Label ------------------------------- */
+
+  const officeLabel = useMemo(
+    () => formatOfficeLabel(officesForHours, office),
+    [officesForHours, office]
+  );
+
+  /* ------------------------------- Render Appts ----------------------------- */
+
+  const renderAppointments = () => {
+    return clusters.flatMap((cluster, clusterIndex) => {
+      const { n, boxes, collapsedBox } = computeClusterBoxes(
+        cluster,
+        openHour,
+        slotMinutes
+      );
+
+      if (collapsedBox) {
+        return [
+          <div
+            key={`cluster-${date.toISOString()}-${clusterIndex}`}
+            className="absolute rounded text-white text-xs p-1.5 shadow-sm hover:brightness-105 transition-all pointer-events-auto flex items-center justify-center text-center bg-orange-500"
+            style={{
+              top: collapsedBox.top,
+              height: collapsedBox.height,
+              left: 0,
+              width: `${100 - SLIVER_PERCENT}%`,
+              zIndex: 15,
+            }}
+            title={`Click to view all ${n} appointments`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setClusterModal({ open: true, appointments: cluster });
+            }}
+          >
+            Click to view all {n} appointments
+          </div>,
+        ];
       }
-    }
-    return out;
-  }, [openHour, closeHour, slotMinutes]);
 
-  // --- Filter and cluster appointments ---
-  const apptsForDay = useMemo(() => {
-    const filtered = (appointments ?? [])
-      .filter((a) => a.date && isSameLocalDay(a.date, date))
-      .filter((a) => a.start_time && a.end_time)
-      .map((a) => ({
-        ...a,
-        start: timeToMinutes(a.start_time ?? "00:00"),
-        end: timeToMinutes(a.end_time ?? "00:00"),
-      }))
-      .sort((a, b) => a.start - b.start);
-
-    const clusters: (typeof filtered)[] = [];
-    let current: typeof filtered = [];
-    let clusterEnd = -1;
-    for (const appt of filtered) {
-      if (!current.length || appt.start < clusterEnd) {
-        current.push(appt);
-        clusterEnd = Math.max(clusterEnd, appt.end);
-      } else {
-        clusters.push(current);
-        current = [appt];
-        clusterEnd = appt.end;
-      }
-    }
-    if (current.length) clusters.push(current);
-    return clusters;
-  }, [appointments, date]);
-
-  const renderAppointments = () =>
-    apptsForDay.flatMap((cluster) => {
-      const n = cluster.length;
-      const usable = 100 - SLIVER_PERCENT;
-      const widthPercent = n > 0 ? usable / n : usable;
-
-      return cluster.map((appt, i) => {
-        const top = (appt.start - openHour * 60) * minuteHeight;
-        const height = (appt.end - appt.start) * minuteHeight;
-        const left = i * widthPercent;
+      return boxes.map(({ appt, top, height, leftPercent, widthPercent }) => {
         const bg =
           appt.appointment_type === "Block Time"
             ? "#737373"
             : appt.color_code || "#3B82F6";
 
-        const isBlockType = appt.is_block === true;
+        const isBlock = appt.is_block === true;
 
         return (
           <div
-            key={`${appt.id ?? "ghost"}-${appt.date}-${appt.start_time}`}
+            key={`${appt.id}-${appt.date}-${appt.start_time}`}
             className="absolute rounded text-white text-xs p-1.5 shadow-sm hover:brightness-105 transition-all pointer-events-auto flex flex-col items-center justify-center text-center"
             style={{
               top,
               height,
-              left: `${left}%`,
+              left: `${leftPercent}%`,
               width: `${widthPercent}%`,
               backgroundColor: bg,
               zIndex: 10,
@@ -124,17 +152,14 @@ export default function DayViewGrid({
               onEditAppointment?.(appt);
             }}
           >
-            {isBlockType ? (
+            {isBlock ? (
               <>
-                <div className="text-s uppercase tracking-wide">
+                <div className="text-[11px] uppercase tracking-wide">
                   {appt.appointment_type}
                 </div>
-                <div className="text-xs">{appt.provider_name}</div>
-                {appt.chief_complaint && (
-                  <div className="text-xs italic opacity-90">
-                    {appt.chief_complaint}
-                  </div>
-                )}
+                <div className="text-[11px] opacity-90">
+                  {appt.provider_name}
+                </div>
               </>
             ) : (
               <>
@@ -150,8 +175,10 @@ export default function DayViewGrid({
         );
       });
     });
+  };
 
-  // ---- Drag-to-select ----
+  /* ------------------------------ Drag Select ------------------------------ */
+
   const [isSelecting, setIsSelecting] = useState(false);
   const [selStartIdx, setSelStartIdx] = useState<number | null>(null);
   const [selEndIdx, setSelEndIdx] = useState<number | null>(null);
@@ -167,31 +194,29 @@ export default function DayViewGrid({
     setSelStartIdx(idx);
     setSelEndIdx(idx);
   };
+
   const handleMouseEnter = (idx: number) => {
     if (isSelecting) setSelEndIdx(idx);
   };
+
   const handleMouseUp = () => {
     if (!isSelecting || selStartIdx === null || selEndIdx === null) return;
 
     const a = Math.min(selStartIdx, selEndIdx);
     const b = Math.max(selStartIdx, selEndIdx);
+
     const startMinutes = openHour * 60 + a * slotMinutes;
     const endMinutes = openHour * 60 + (b + 1) * slotMinutes;
 
     const start = parseLocalDate(date.toISOString().split("T")[0]);
     start.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
+
     const end = parseLocalDate(date.toISOString().split("T")[0]);
     end.setHours(Math.floor(endMinutes / 60), endMinutes % 60, 0, 0);
 
-    const overlaps = appointments.some((x) => {
-      const startStr = x.start_time ?? "00:00";
-      const endStr = x.end_time ?? "00:00";
-
-      const s =
-        parseInt(startStr.slice(0, 2)) * 60 + parseInt(startStr.slice(3, 5));
-      const e =
-        parseInt(endStr.slice(0, 2)) * 60 + parseInt(endStr.slice(3, 5));
-
+    const overlaps = positioned.some((x) => {
+      const s = x.startMinutes;
+      const e = x.endMinutes;
       return (
         x.provider === providerId &&
         x.date === start.toISOString().split("T")[0] &&
@@ -201,6 +226,7 @@ export default function DayViewGrid({
     });
 
     const finalize = (allow = false) => onSelectEmptySlot?.(start, end, allow);
+
     if (overlaps && requestConfirm) {
       requestConfirm(
         "This time overlaps with another appointment for the same provider. Continue?",
@@ -209,16 +235,36 @@ export default function DayViewGrid({
     } else {
       finalize(false);
     }
+
     resetSelection();
   };
 
-  // ---- Render ----
+  /* ------------------------------ Closed Hours ------------------------------ */
+
+  const { topOverlayHeightPx, bottomOverlayTopPx } = computeClosedOverlays(
+    openHour,
+    closeHour,
+    slotMinutes
+  );
+
+  /* -------------------------------- RENDER -------------------------------- */
+
   if (!open) {
     return (
       <div className="border rounded overflow-hidden bg-white select-none relative">
         <div className="p-6 text-center text-gray-500 italic">
           Office closed on {date.toLocaleDateString()}
         </div>
+
+        {clusterModal.open && (
+          <MultiSlotModal
+            appointments={clusterModal.appointments}
+            onClose={() => setClusterModal({ open: false, appointments: [] })}
+            onEditAppointment={(appt) => {
+              if (onEditAppointment) onEditAppointment(appt);
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -231,7 +277,7 @@ export default function DayViewGrid({
           Time
         </div>
         <div className="p-2">
-          {providerName} — {office}
+          {providerName} — {officeLabel}
         </div>
       </div>
 
@@ -241,27 +287,23 @@ export default function DayViewGrid({
         </div>
       ) : (
         <div className="grid grid-cols-[120px_1fr] text-sm relative">
-          {/* Time column */}
+          {/* Time Column */}
           <div>
-            {slots.map((time, i) => {
-              const [h, m] = time.split(":").map(Number);
-              const suffix = h >= 12 ? "PM" : "AM";
-              const hour12 = ((h + 11) % 12) + 1;
-              const shaded = Math.floor((i * slotMinutes) / 60) % 2 === 0;
+            {slots.map((t) => {
+              const [h, m] = t.split(":").map(Number);
+
               return (
                 <div
-                  key={time}
-                  className={`border-r border-b p-2 text-gray-700 h-12 text-right pr-3 font-medium ${
-                    shaded ? "bg-gray-50" : "bg-gray-100/40"
-                  }`}
+                  key={t}
+                  className="border-r border-b p-2 text-gray-700 h-12 text-right pr-3 font-medium bg-gray-50"
                 >
-                  {`${hour12}:${String(m).padStart(2, "0")} ${suffix}`}
+                  {formatTimeLabel(h, m)}
                 </div>
               );
             })}
           </div>
 
-          {/* Interactive grid */}
+          {/* Grid */}
           <div
             className="relative border-l"
             onMouseUp={handleMouseUp}
@@ -274,6 +316,7 @@ export default function DayViewGrid({
                 selEndIdx !== null &&
                 idx >= Math.min(selStartIdx, selEndIdx) &&
                 idx <= Math.max(selStartIdx, selEndIdx);
+
               return (
                 <div
                   key={idx}
@@ -286,26 +329,18 @@ export default function DayViewGrid({
               );
             })}
 
-            {/* Dim closed hours outside open/close range */}
-            {openHour > 8 && (
+            {/* Closed-Hours Overlays */}
+            {topOverlayHeightPx > 0 && (
               <div
                 className="absolute top-0 left-0 right-0 bg-gray-100 opacity-60 pointer-events-none"
-                style={{
-                  height: `${
-                    (openHour - 8) * (60 / slotMinutes) * SLOT_ROW_PX
-                  }px`,
-                }}
+                style={{ height: `${topOverlayHeightPx}px` }}
               />
             )}
-            {closeHour < 17 && (
+
+            {bottomOverlayTopPx !== null && (
               <div
                 className="absolute left-0 right-0 bg-gray-100 opacity-60 pointer-events-none"
-                style={{
-                  top: `${
-                    (closeHour - 8) * (60 / slotMinutes) * SLOT_ROW_PX
-                  }px`,
-                  bottom: 0,
-                }}
+                style={{ top: `${bottomOverlayTopPx}px`, bottom: 0 }}
               />
             )}
 
@@ -315,6 +350,16 @@ export default function DayViewGrid({
             </div>
           </div>
         </div>
+      )}
+
+      {clusterModal.open && (
+        <MultiSlotModal
+          appointments={clusterModal.appointments}
+          onClose={() => setClusterModal({ open: false, appointments: [] })}
+          onEditAppointment={(appt) => {
+            if (onEditAppointment) onEditAppointment(appt);
+          }}
+        />
       )}
     </div>
   );

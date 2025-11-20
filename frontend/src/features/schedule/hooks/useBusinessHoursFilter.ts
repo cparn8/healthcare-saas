@@ -1,58 +1,105 @@
-import { useMemo } from "react";
-import { ScheduleSettings, Weekday } from "../types/scheduleSettings";
-import { DAY_INDEX_TO_KEY } from "../../../utils/dateUtils";
+// src/features/schedule/hooks/useBusinessHoursFilter.ts
+import { useMemo, useCallback } from "react";
+import { ScheduleSettings, Weekday, DayHours } from "../types";
+import { DAY_INDEX_TO_KEY } from "../../../utils";
 
-/**
- * Hook to interpret and safely access scheduleSettings business hours.
- */
 export function useBusinessHoursFilter(
   scheduleSettings: ScheduleSettings | null | undefined,
-  office: string
+  offices: string[]
 ) {
-  // Default hours in case of missing data
-  const defaultHours = { open: true, start: "08:00", end: "17:00" };
+  const defaultHours = useMemo<DayHours>(
+    () => ({ open: true, start: "08:00", end: "17:00" }),
+    []
+  );
 
-  /**
-   * Get business hours for a specific weekday.
-   */
-  const getDayHours = (weekday: Weekday) => {
-    const officeHours =
-      scheduleSettings?.business_hours?.[office]?.[weekday] ?? defaultHours;
-    return officeHours;
-  };
+  const officeKeys = useMemo(() => {
+    if (offices && offices.length > 0) return offices;
 
-  /**
-   * Convert "08:00" -> 8, "17:30" -> 17.5
-   */
-  const parseHour = (hhmm: string): number => {
+    const allKeys = Object.keys(scheduleSettings?.business_hours || {});
+    return allKeys.length > 0 ? allKeys : ["north"];
+  }, [offices, scheduleSettings]);
+
+  const parseHour = useCallback((hhmm: string): number => {
     const [h, m] = hhmm.split(":").map(Number);
     return h + m / 60;
-  };
+  }, []);
 
-  /**
-   * Returns whether a given date is an open business day.
-   */
-  const isDayOpen = (date: Date) => {
-    const weekday = DAY_INDEX_TO_KEY[date.getDay()] as Weekday;
-    const hours = getDayHours(weekday);
-    return !!hours.open;
-  };
+  const toHHMM = useCallback((val: number): string => {
+    const h = Math.floor(val);
+    const m = Math.round((val - h) * 60);
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  }, []);
 
-  /**
-   * Returns the start and end hour (as numbers) for a given date.
-   */
-  const getOpenRange = (date: Date) => {
-    const weekday = DAY_INDEX_TO_KEY[date.getDay()] as Weekday;
-    const hours = getDayHours(weekday);
-    return {
-      start: parseHour(hours.start),
-      end: parseHour(hours.end),
-    };
-  };
+  const getDayHours = useCallback(
+    (weekday: Weekday): DayHours => {
+      if (!scheduleSettings?.business_hours) return defaultHours;
 
-  /**
-   * Optional: Returns a list of open weekdays (for WeekViewGrid).
-   */
+      let anyDefined = false;
+      let anyOpen = false;
+      let earliestStart = Number.POSITIVE_INFINITY;
+      let latestEnd = Number.NEGATIVE_INFINITY;
+
+      for (const key of officeKeys) {
+        const hours = scheduleSettings.business_hours[key]?.[weekday];
+        if (!hours) continue;
+
+        anyDefined = true;
+
+        if (hours.open) {
+          anyOpen = true;
+          const s = parseHour(hours.start);
+          const e = parseHour(hours.end);
+          if (s < earliestStart) earliestStart = s;
+          if (e > latestEnd) latestEnd = e;
+        }
+      }
+
+      if (anyOpen && isFinite(earliestStart) && isFinite(latestEnd)) {
+        return {
+          open: true,
+          start: toHHMM(earliestStart),
+          end: toHHMM(latestEnd),
+        };
+      }
+
+      if (anyDefined) {
+        const first = officeKeys[0];
+        const base =
+          scheduleSettings.business_hours[first]?.[weekday] || defaultHours;
+        return { ...base, open: false };
+      }
+
+      return defaultHours;
+    },
+    [
+      scheduleSettings,
+      officeKeys,
+      parseHour,
+      toHHMM,
+      defaultHours, // ← THIS removes your warning
+    ]
+  );
+
+  const isDayOpen = useCallback(
+    (date: Date) => {
+      const weekday = DAY_INDEX_TO_KEY[date.getDay()] as Weekday;
+      return getDayHours(weekday).open;
+    },
+    [getDayHours]
+  );
+
+  const getOpenRange = useCallback(
+    (date: Date) => {
+      const weekday = DAY_INDEX_TO_KEY[date.getDay()] as Weekday;
+      const hours = getDayHours(weekday);
+      return {
+        start: parseHour(hours.start),
+        end: parseHour(hours.end),
+      };
+    },
+    [getDayHours, parseHour]
+  );
+
   const openWeekdays = useMemo(() => {
     const weekKeys: Weekday[] = [
       "sun",
@@ -63,12 +110,9 @@ export function useBusinessHoursFilter(
       "fri",
       "sat",
     ];
-    return weekKeys.filter(
-      (d) =>
-        scheduleSettings?.business_hours?.[office]?.[d]?.open ??
-        defaultHours.open
-    );
-  }, [scheduleSettings, office, defaultHours.open]);
+
+    return weekKeys.filter((d) => getDayHours(d).open);
+  }, [getDayHours]);
 
   return { getDayHours, isDayOpen, getOpenRange, openWeekdays };
 }

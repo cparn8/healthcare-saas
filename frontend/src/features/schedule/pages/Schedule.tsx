@@ -1,43 +1,41 @@
 // frontend/src/features/schedule/pages/Schedule.tsx
-import React, { useMemo, useState, useEffect, useCallback } from "react";
-import Calendar from "lucide-react/dist/esm/icons/calendar";
-import { useSearchParams } from "react-router-dom";
-import { startOfWeek, addDays } from "date-fns";
 
-import AppointmentsTable from "../components/AppointmentsTable";
-import DayViewGrid from "../components/DayViewGrid";
-import WeekViewGrid from "../components/WeekViewGrid";
-import { useVisibleAppointments } from "../hooks/useVisibleAppointments";
-import NewAppointmentModal from "../components/NewAppointmentModal";
-import EditAppointmentModal from "../components/EditAppointmentModal";
+import React, { useMemo, useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
+import { addDays } from "date-fns";
+
+import AppointmentsTable from "../components/appointments-table";
+import { DayViewGrid, WeekViewGrid } from "../components/grid";
+import { NewAppointmentModal, EditAppointmentModal } from "..components/modals";
 import SettingsPanel from "../components/SettingsPanel";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
-import ScheduleFilters from "../components/ScheduleFilters";
-import { ScheduleFilters as FilterState } from "../types";
+import ScheduleFilters from "../components/filters/ScheduleFilters";
+import DatePickerPopover from "../components/DatePickerPopover";
 
-import { appointmentsApi, Appointment } from "../services/appointmentsApi";
+import { filterAppointments } from "../utils/filterAppointments";
+import { useVisibleAppointments } from "../hooks/useVisibleAppointments";
+import { useScheduleData } from "../hooks/useScheduleData";
+import { useScheduleFilters } from "../hooks/useScheduleFilters";
+import { useOfficePersistence, OfficeKey } from "../hooks/useOfficePersistence";
+
+import { Appointment } from "../services/appointmentsApi";
 import { providersApi, Provider } from "../../providers/services/providersApi";
-import { scheduleSettingsApi } from "../services/scheduleSettingsApi";
+
 import {
-  ScheduleSettings,
-  AppointmentTypeDef,
-} from "../types/scheduleSettings";
-import {
-  parseLocalDate,
   formatShortDate,
   formatYMDLocal,
   safeDate,
 } from "../../../utils/dateUtils";
+
+import { formatWeekRange } from "../logic/dateMath";
+import { findNextOpenDay, normalizeToWeekStart } from "../logic/dateNavigation";
 
 /* ------------------------------------------------------------------ */
 /* Types & constants                                                   */
 /* ------------------------------------------------------------------ */
 
 type TabKey = "appointments" | "day" | "week" | "settings";
-type OfficeKey = "north" | "south";
 type SlotSize = 15 | 30 | 60;
-type OfficeKeyStrict = keyof ScheduleSettings["business_hours"];
-type WeekdayKeyStrict = keyof ScheduleSettings["business_hours"]["north"];
 
 const TABS = [
   { key: "appointments", label: "Appointments" },
@@ -48,84 +46,77 @@ const TABS = [
 
 const SLOT_OPTIONS: SlotSize[] = [15, 30, 60];
 
-/**
- * Given any date string (YYYY-MM-DD) or Date,
- * returns a readable Mon–Fri week range (local-safe).
- */
-function formatWeekRange(input: string | Date): string {
-  const start =
-    typeof input === "string"
-      ? parseLocalDate(input)
-      : parseLocalDate(input.toISOString().split("T")[0]);
+/* ------------------------------------------------------------------ */
+/* Simple multi-office dropdown                                       */
+/* ------------------------------------------------------------------ */
 
-  // Normalize to local midnight
-  const localStart = safeDate(formatYMDLocal(start));
+function MultiOfficeDropdown({
+  selectedOffices,
+  onChange,
+}: {
+  selectedOffices: OfficeKey[];
+  onChange: (offices: OfficeKey[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
 
-  // Find Monday of that week (assuming Sunday=0)
-  const diff = (localStart.getDay() + 6) % 7;
-  localStart.setDate(localStart.getDate() - diff);
-
-  const end = safeDate(formatYMDLocal(localStart));
-  end.setDate(localStart.getDate() + 4); // Mon → Fri
-
-  const sameMonth = localStart.getMonth() === end.getMonth();
-
-  const startFmt = new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-  }).format(localStart);
-
-  const endFmt = new Intl.DateTimeFormat("en-US", {
-    month: sameMonth ? undefined : "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(end);
-
-  return `${startFmt} – ${endFmt}`;
-}
-
-/**
- * Smart skip to next/previous *open* day based on ScheduleSettings.
- */
-function findNextOpenDay(
-  current: Date,
-  direction: 1 | -1,
-  scheduleSettings: ScheduleSettings | null,
-  office: OfficeKey
-): Date {
-  if (!scheduleSettings || !office) return current;
-
-  const maxAttempts = 7;
-  let next = parseLocalDate(formatYMDLocal(current));
-
-  for (let i = 0; i < maxAttempts; i++) {
-    next = addDays(next, direction);
-    const weekday = next
-      .toLocaleDateString("en-US", { weekday: "short" })
-      .toLowerCase()
-      .slice(0, 3) as WeekdayKeyStrict;
-
-    const officeHours =
-      scheduleSettings.business_hours?.[office as OfficeKeyStrict]?.[weekday];
-
-    if (!officeHours || officeHours.open) {
-      return next;
-    }
-  }
-
-  return current;
-}
-
-/**
- * Compute the Mon–Mon range that the backend uses for list queries.
- */
-function getWeekRangeForApi(date: Date) {
-  const start = startOfWeek(date, { weekStartsOn: 1 }); // Monday
-  const end = addDays(start, 7); // next Monday
-  return {
-    start_date: start.toISOString().split("T")[0],
-    end_date: end.toISOString().split("T")[0],
+  const labelsMap: Record<OfficeKey, string> = {
+    north: "North Office",
+    south: "South Office",
   };
+
+  const displayLabel =
+    selectedOffices.length === 0
+      ? "No Office Selected"
+      : selectedOffices.map((k) => labelsMap[k]).join(", ");
+
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="px-3 py-1.5 border rounded bg-white min-w-[180px] text-left"
+      >
+        {displayLabel}
+      </button>
+
+      {open && (
+        <div className="absolute mt-1 w-48 bg-white border rounded shadow-lg z-30 p-2">
+          {/* All Offices */}
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={selectedOffices.length === 2}
+              onChange={(e) =>
+                onChange(e.target.checked ? ["north", "south"] : [])
+              }
+            />
+            <span>All Offices</span>
+          </label>
+
+          {/* Individual toggles */}
+          {(["north", "south"] as OfficeKey[]).map((office) => (
+            <label
+              key={office}
+              className="flex items-center gap-2 capitalize cursor-pointer mt-1"
+            >
+              <input
+                type="checkbox"
+                checked={selectedOffices.includes(office)}
+                onChange={() => {
+                  if (selectedOffices.includes(office)) {
+                    onChange(selectedOffices.filter((o) => o !== office));
+                  } else {
+                    onChange([...selectedOffices, office]);
+                  }
+                }}
+              />
+              <span>{labelsMap[office]}</span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -134,9 +125,9 @@ function getWeekRangeForApi(date: Date) {
 
 const SchedulePage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const datePickerRef = React.useRef<HTMLInputElement | null>(null);
-  const [showCalendar, setShowCalendar] = useState(false);
-  const calendarWrapperRef = React.useRef<HTMLDivElement | null>(null);
+
+  // This ref is still useful for future extensions (e.g., focusing)
+  const datePickerWrapperRef = useRef<HTMLDivElement | null>(null);
 
   /* ----------------------------- UI State ----------------------------- */
 
@@ -148,36 +139,19 @@ const SchedulePage: React.FC = () => {
     safeDate(formatYMDLocal(new Date()))
   );
   const [slotSize, setSlotSize] = useState<SlotSize>(30);
-
   const [showFilters, setShowFilters] = useState(false);
 
   /* ----------------------------- Data State --------------------------- */
 
   const [providerId, setProviderId] = useState<number | null>(null);
   const [provider, setProvider] = useState<Provider | null>(null);
-  const [providersList, setProvidersList] = useState<Provider[]>([]);
 
-  const [office, setOffice] = useState<OfficeKey>(() => {
-    const stored = localStorage.getItem("lastOffice") as OfficeKey | null;
-    return stored === "south" || stored === "north" ? stored : "north";
-  });
+  // Office + multi-office selection, persisted per provider
+  const { office, selectedOffices, setSelectedOffices } =
+    useOfficePersistence(providerId);
 
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loadingAppts, setLoadingAppts] = useState(false);
-
-  const [appointmentTypes, setAppointmentTypes] = useState<
-    AppointmentTypeDef[]
-  >([]);
-  const [scheduleSettings, setScheduleSettings] =
-    useState<ScheduleSettings | null>(null);
-
-  const [filters, setFilters] = useState<FilterState>({
-    providers: [],
-    types: [],
-    statuses: [],
-    defaultView: "day",
-    includeBlockedTimes: true,
-  });
+  // Filters + provider list in one place
+  const { filters, setFilters, providersList } = useScheduleFilters(providerId);
 
   /* ----------------------------- Modal State -------------------------- */
 
@@ -196,12 +170,24 @@ const SchedulePage: React.FC = () => {
     onConfirm: () => void;
   }>({ open: false, message: "", onConfirm: () => {} });
 
+  /* ----------------------------- Central Data Hook -------------------- */
+
+  const {
+    appointments,
+    loadingAppts,
+    reloadAppointments,
+    scheduleSettings,
+    appointmentTypes,
+  } = useScheduleData({
+    cursorDate,
+    providerId,
+  });
+
   /* ----------------------------- Derived Values ----------------------- */
 
-  // Determine the date range the current tab should display
   const visibleRange = useMemo(() => {
     if (activeTab === "week") {
-      const start = startOfWeek(cursorDate, { weekStartsOn: 1 });
+      const start = normalizeToWeekStart(cursorDate);
       const end = addDays(start, 7);
       return { start, end };
     }
@@ -216,43 +202,15 @@ const SchedulePage: React.FC = () => {
     visibleEnd: visibleRange.end,
   });
 
-  const filteredAppointments = useMemo(() => {
-    return visibleAppointments.filter((appt) => {
-      // 1) Providers (multi-select)
-      if (filters.providers.length > 0) {
-        const apptProvider = appt.provider ?? null;
-        if (!apptProvider || !filters.providers.includes(apptProvider)) {
-          return false;
-        }
-      }
-
-      // 2) Appointment types (skip if no filter selected)
-      if (filters.types.length > 0) {
-        if (
-          !appt.appointment_type ||
-          !filters.types.includes(appt.appointment_type)
-        ) {
-          return false;
-        }
-      }
-
-      // 3) Statuses (skip if no filter selected)
-      if (filters.statuses.length > 0) {
-        if (!appt.status || !filters.statuses.includes(appt.status as any)) {
-          return false;
-        }
-      }
-
-      // 4) Blocked time visibility
-      if (!filters.includeBlockedTimes) {
-        if (appt.is_block || appt.appointment_type === "Block Time") {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [visibleAppointments, filters]);
+  const filteredAppointments = useMemo(
+    () =>
+      filterAppointments({
+        appointments: visibleAppointments,
+        filters,
+        selectedOffices,
+      }),
+    [visibleAppointments, filters, selectedOffices]
+  );
 
   const leftLabel = useMemo(
     () =>
@@ -262,33 +220,7 @@ const SchedulePage: React.FC = () => {
     [cursorDate, activeTab]
   );
 
-  /* ----------------------------- Effects: settings & provider --------- */
-
-  // Load schedule settings once
-  useEffect(() => {
-    async function loadSettings() {
-      try {
-        const data = await scheduleSettingsApi.get();
-        setScheduleSettings(data);
-      } catch {
-        console.warn("⚠️ Falling back to default hours");
-      }
-    }
-    loadSettings();
-  }, []);
-
-  // Load appointment types (separate helper, same backing row for now)
-  useEffect(() => {
-    (async () => {
-      try {
-        const types = await scheduleSettingsApi.getAppointmentTypes();
-        setAppointmentTypes(types || []);
-      } catch (err) {
-        console.error("❌ Failed to load appointment types:", err);
-        setAppointmentTypes([]);
-      }
-    })();
-  }, []);
+  /* ----------------------------- Effects: provider -------------------- */
 
   // Load current provider (me)
   useEffect(() => {
@@ -303,88 +235,6 @@ const SchedulePage: React.FC = () => {
     };
     fetchProvider();
   }, []);
-
-  // Load last office for this provider once providerId is known
-  useEffect(() => {
-    if (!providerId) return;
-    const key = `lastOffice_${providerId}`;
-    const stored = window.localStorage.getItem(key) as OfficeKey | null;
-
-    if (stored === "north" || stored === "south") {
-      setOffice(stored);
-    }
-  }, [providerId]);
-
-  // Persist office whenever it changes (per provider)
-  useEffect(() => {
-    if (!providerId) return;
-    const key = `lastOffice_${providerId}`;
-    window.localStorage.setItem(key, office);
-  }, [office, providerId]);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (!calendarWrapperRef.current) return;
-      if (!calendarWrapperRef.current.contains(e.target as Node)) {
-        setShowCalendar(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const list = await providersApi.list();
-        setProvidersList(list);
-      } catch (err) {
-        console.error("❌ Provider list failed:", err);
-        setProvidersList([]);
-      }
-    })();
-  }, []);
-
-  useEffect(() => {
-    if (!providerId) return;
-
-    setFilters((prev) => {
-      // if user already has saved filters, don't overwrite
-      if (prev.providers.length > 0) return prev;
-      return { ...prev, providers: [providerId] };
-    });
-  }, [providerId]);
-
-  /* ----------------------------- Effects: appointment loading --------- */
-
-  const loadAppointments = useCallback(async () => {
-    if (!providerId) return;
-
-    try {
-      setLoadingAppts(true);
-
-      const { start_date, end_date } = getWeekRangeForApi(cursorDate);
-
-      const appts = await appointmentsApi.list({
-        provider: providerId,
-        office,
-        start_date,
-        end_date,
-      });
-
-      setAppointments(appts);
-    } catch (err) {
-      console.error("❌ Failed to load appointments:", err);
-    } finally {
-      setLoadingAppts(false);
-    }
-  }, [providerId, office, cursorDate]);
-
-  useEffect(() => {
-    if (providerId) {
-      loadAppointments();
-    }
-  }, [providerId, office, cursorDate, loadAppointments]);
 
   /* ----------------------------- Effects: return from Add Patient ----- */
 
@@ -412,28 +262,6 @@ const SchedulePage: React.FC = () => {
 
   /* ----------------------------- Handlers: navigation ----------------- */
 
-  function toggleCalendar() {
-    setShowCalendar((prev) => !prev);
-  }
-
-  function handleCalendarSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const value = e.target.value;
-    if (!value) return;
-
-    const selected = new Date(value + "T00:00");
-
-    if (activeTab === "week") {
-      const diff = (selected.getDay() + 6) % 7;
-      const monday = new Date(selected);
-      monday.setDate(selected.getDate() - diff);
-      setCursorDate(monday);
-    } else {
-      setCursorDate(selected);
-    }
-
-    setShowCalendar(false);
-  }
-
   const changeTab = (tab: TabKey) => {
     setActiveTab(tab);
     const next = new URLSearchParams(searchParams);
@@ -458,6 +286,14 @@ const SchedulePage: React.FC = () => {
       setCursorDate((prev) =>
         findNextOpenDay(prev, 1, scheduleSettings, office)
       );
+    }
+  };
+
+  const handleDateSelect = (selected: Date) => {
+    if (activeTab === "week") {
+      setCursorDate(normalizeToWeekStart(selected));
+    } else {
+      setCursorDate(safeDate(formatYMDLocal(selected)));
     }
   };
 
@@ -526,18 +362,15 @@ const SchedulePage: React.FC = () => {
 
               <button
                 className="px-3 py-1.5 border rounded hover:bg-gray-50"
-                onClick={loadAppointments}
+                onClick={reloadAppointments}
               >
                 Refresh
               </button>
-              <select
-                className="px-3 py-1.5 border rounded"
-                value={office}
-                onChange={(e) => setOffice(e.target.value as OfficeKey)}
-              >
-                <option value="north">North Office</option>
-                <option value="south">South Office</option>
-              </select>
+
+              <MultiOfficeDropdown
+                selectedOffices={selectedOffices}
+                onChange={setSelectedOffices}
+              />
             </div>
 
             {activeTab === "appointments" ? (
@@ -563,30 +396,11 @@ const SchedulePage: React.FC = () => {
           <div className="flex items-center justify-between gap-2">
             <div className="text-sm text-gray-700">{leftLabel}</div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center">
-                <div ref={calendarWrapperRef} className="relative">
-                  {/* Calendar icon button */}
-                  <button
-                    type="button"
-                    className="px-2 py-1.5 border rounded-l hover:bg-gray-50 flex items-center"
-                    onClick={toggleCalendar}
-                  >
-                    <Calendar className="text-gray-600" />
-                  </button>
-
-                  {/* Floating popover calendar */}
-                  {showCalendar && (
-                    <div className="absolute left-0 mt-1 z-50 bg-white border shadow-lg rounded p-2">
-                      <input
-                        ref={datePickerRef}
-                        type="date"
-                        className="border rounded px-2 py-1 text-sm"
-                        onChange={handleCalendarSelect}
-                        autoFocus
-                      />
-                    </div>
-                  )}
-                </div>
+              <div className="flex items-center" ref={datePickerWrapperRef}>
+                <DatePickerPopover
+                  value={cursorDate}
+                  onSelect={handleDateSelect}
+                />
 
                 <button
                   className="px-3 py-1.5 border border-l-0 hover:bg-gray-50"
@@ -651,13 +465,14 @@ const SchedulePage: React.FC = () => {
               appointments={filteredAppointments}
               date={cursorDate}
               loading={loadingAppts}
-              loadAppointments={loadAppointments}
+              loadAppointments={reloadAppointments}
             />
           )}
 
           {activeTab === "day" && (
             <DayViewGrid
               office={office}
+              selectedOffices={selectedOffices}
               providerName={
                 provider
                   ? `${provider.first_name} ${provider.last_name}`
@@ -684,6 +499,7 @@ const SchedulePage: React.FC = () => {
             <WeekViewGrid
               baseDate={cursorDate}
               office={office}
+              selectedOffices={selectedOffices}
               providerName={
                 provider
                   ? `${provider.first_name} ${provider.last_name}`
@@ -717,7 +533,7 @@ const SchedulePage: React.FC = () => {
             setInitialPatient(null);
           }}
           onSaved={() => {
-            loadAppointments();
+            reloadAppointments();
             setShowNewAppointment(false);
             setPrefill(null);
             setInitialPatient(null);
@@ -750,7 +566,7 @@ const SchedulePage: React.FC = () => {
             repeat_days: editingAppt.repeat_days || [],
           }}
           onClose={() => setEditingAppt(null)}
-          onUpdated={loadAppointments}
+          onUpdated={reloadAppointments}
         />
       )}
 

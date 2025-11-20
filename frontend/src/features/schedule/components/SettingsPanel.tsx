@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { toastSuccess, toastError, toastInfo } from "../../../utils/toastUtils";
-import { scheduleSettingsApi } from "../services/scheduleSettingsApi";
+import { toastSuccess, toastError, toastInfo } from "../../../utils";
+import { scheduleSettingsApi } from "../services";
 import {
   ScheduleSettings,
   Weekday,
   AppointmentTypeDef,
   LocationKeyedHours,
-} from "../types/scheduleSettings";
+} from "../types";
 import PlusCircle from "lucide-react/dist/esm/icons/plus-circle";
 import Trash2 from "lucide-react/dist/esm/icons/trash-2";
 

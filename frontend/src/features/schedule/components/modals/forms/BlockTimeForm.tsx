@@ -1,8 +1,11 @@
 // frontend/src/features/schedule/components/BlockTimeForm.tsx
 import React, { useState, useEffect } from "react";
-import { providersApi, Provider } from "../../providers/services/providersApi";
-import { AppointmentPayload } from "../services/appointmentsApi";
-import { usePrefilledAppointmentFields } from "../hooks/usePrefilledAppointmentFields";
+import {
+  providersApi,
+  Provider,
+} from "../../../../providers/services/providersApi";
+import { AppointmentPayload } from "../../../services";
+import { usePrefilledAppointmentFields } from "../../../hooks";
 
 interface BlockTimeFormProps {
   onGetFormData?: (data: AppointmentPayload) => void;

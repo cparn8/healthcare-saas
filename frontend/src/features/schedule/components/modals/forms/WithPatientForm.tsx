@@ -2,10 +2,13 @@
 import React, { useState, useEffect } from "react";
 import Search from "lucide-react/dist/esm/icons/search";
 import UserPlus from "lucide-react/dist/esm/icons/user-plus";
-import API from "../../../services/api";
+import API from "../../../../../services/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { providersApi, Provider } from "../../providers/services/providersApi";
-import { usePrefilledAppointmentFields } from "../hooks/usePrefilledAppointmentFields";
+import {
+  providersApi,
+  Provider,
+} from "../../../../providers/services/providersApi";
+import { usePrefilledAppointmentFields } from "../../../hooks";
 
 interface Patient {
   id: number;

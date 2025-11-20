@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { parseLocalDate } from "../../../utils/dateUtils";
-import { Appointment } from "../services/appointmentsApi";
+import { parseLocalDate } from "../../../utils";
+import { Appointment } from "../services";
 
 interface Options {
   allAppointments: Appointment[];
@@ -10,8 +10,7 @@ interface Options {
 
 /**
  * Returns only the appointments that fall within the visible date range.
- * This version is side-effect-free and memoized by inputs,
- * so it cannot infinite-loop or over-expand.
+ * Deduplicates strictly by appointment ID so double-booking still displays properly.
  */
 export function useVisibleAppointments({
   allAppointments,
@@ -28,15 +27,24 @@ export function useVisibleAppointments({
       return inRange(d);
     });
 
-    // Deduplicate by (provider, date, start, end)
-    const unique = new Map<string, Appointment>();
-    for (const a of windowed) {
-      const key = `${a.provider}-${a.date}-${a.start_time}-${a.end_time}`;
-      if (!unique.has(key)) unique.set(key, a);
+    // Deduplicate ONLY by ID, never by time range.
+    const seenIds = new Set<number>();
+    const deduped: Appointment[] = [];
+
+    for (const appt of windowed) {
+      if (typeof appt.id === "number") {
+        if (!seenIds.has(appt.id)) {
+          seenIds.add(appt.id);
+          deduped.push(appt);
+        }
+      } else {
+        // Appointments without IDs (rare) should still be included
+        deduped.push(appt);
+      }
     }
 
     // Sort for consistent rendering
-    return Array.from(unique.values()).sort((a, b) => {
+    return deduped.sort((a, b) => {
       const da = parseLocalDate(a.date).getTime();
       const db = parseLocalDate(b.date).getTime();
       if (da !== db) return da - db;

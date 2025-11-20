@@ -1,5 +1,8 @@
 // src/features/schedule/types/index.ts
 
+export * from "./scheduleSettings";
+export * from "./index";
+
 // Type for appointment types (linked to views in schedule)
 export interface AppointmentTypeDef {
   name: string;
@@ -28,4 +31,5 @@ export interface ScheduleFilters {
   statuses: AppointmentStatus[]; // appointment statuses
   defaultView: "appointments" | "day" | "week";
   includeBlockedTimes: boolean;
+  offices: string[];
 }

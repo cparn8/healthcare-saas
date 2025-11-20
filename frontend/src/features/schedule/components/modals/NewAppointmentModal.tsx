@@ -1,18 +1,16 @@
 // frontend/src/features/schedule/components/NewAppointmentModal.tsx
 import React, { useState, useEffect } from "react";
 import X from "lucide-react/dist/esm/icons/x";
-import WithPatientForm from "./WithPatientForm";
-import BlockTimeForm from "./BlockTimeForm";
-import {
-  appointmentsApi,
-  AppointmentPayload,
-} from "../services/appointmentsApi";
+import WithPatientForm from "./forms/WithPatientForm";
+import BlockTimeForm from "./forms/BlockTimeForm";
+import { appointmentsApi, AppointmentPayload } from "../../services";
 import {
   toastError,
   toastSuccess,
   toastPromise,
-} from "../../../utils/toastUtils";
-import { parseLocalDate, formatYMDLocal } from "../../../utils/dateUtils";
+  parseLocalDate,
+  formatYMDLocal,
+} from "../../../../utils";
 
 interface NewAppointmentModalProps {
   onClose: () => void;
