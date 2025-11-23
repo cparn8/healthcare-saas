@@ -11,9 +11,10 @@ interface UseScheduleDataOptions {
 
 /**
  * Centralized data hook for the Schedule page.
- * - Loads schedule settings
- * - Loads appointment types
- * - Loads appointments for the visible week and provider
+ * Loads:
+ *  - schedule settings
+ *  - appointment types
+ *  - ALL appointments for the visible provider + week (pagination-safe)
  */
 export function useScheduleData({
   cursorDate,
@@ -24,6 +25,7 @@ export function useScheduleData({
 
   const [scheduleSettings, setScheduleSettings] =
     useState<ScheduleSettings | null>(null);
+
   const [appointmentTypes, setAppointmentTypes] = useState<
     AppointmentTypeDef[]
   >([]);
@@ -69,30 +71,32 @@ export function useScheduleData({
     };
   }, []);
 
-  /* ------------------------ Appointments (week range) ------------------------ */
+  /* ------------------------ Appointments (full week, all pages) ------------------------ */
 
   const reloadAppointments = useCallback(async () => {
     if (!providerId) return;
 
     setLoadingAppts(true);
+
     try {
       const { start_date, end_date } = getWeekRangeForApi(cursorDate);
 
-      // Backend already filters by provider + date range
-      const list = await appointmentsApi.list({
+      // pagination-safe fetch of ALL relevant appointments
+      const fullList = await appointmentsApi.listAllAppointments({
         provider: providerId,
         start_date,
         end_date,
       });
 
-      const sorted = [...list].sort((a, b) => {
+      // Sort locally by (date, start_time)
+      fullList.sort((a, b) => {
         const da = new Date(a.date + "T00:00").getTime();
         const db = new Date(b.date + "T00:00").getTime();
         if (da !== db) return da - db;
         return (a.start_time ?? "").localeCompare(b.start_time ?? "");
       });
 
-      setAppointments(sorted);
+      setAppointments(fullList);
     } catch (err) {
       console.error("❌ Failed to load appointments:", err);
     } finally {

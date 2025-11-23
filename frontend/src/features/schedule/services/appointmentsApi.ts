@@ -1,9 +1,9 @@
 // frontend/src/features/schedule/services/appointmentsApi.ts
+
 import API from "../../../services/api";
 
 /**
  * Payload used for creating or updating an appointment.
- * (Form submissions, POST/PUT requests)
  */
 export interface AppointmentPayload {
   id?: number;
@@ -17,7 +17,7 @@ export interface AppointmentPayload {
   date: string; // YYYY-MM-DD
   start_time?: string; // HH:mm
   end_time?: string; // HH:mm
-  duration: number; // minutes
+  duration: number;
   is_recurring: boolean;
   repeat_days?: string[];
   repeat_interval_weeks?: number;
@@ -25,7 +25,7 @@ export interface AppointmentPayload {
   repeat_occurrences?: number | null;
   send_intake_form?: boolean;
   allow_overlap?: boolean;
-  is_block?: boolean; // identifies Block Time entries
+  is_block?: boolean;
   status?:
     | "pending"
     | "arrived"
@@ -43,8 +43,7 @@ export interface AppointmentPayload {
 }
 
 /**
- * Full appointment record returned by the backend.
- * Includes database-only and derived fields.
+ * Full appointment returned by the backend.
  */
 export interface Appointment extends AppointmentPayload {
   id: number;
@@ -54,48 +53,116 @@ export interface Appointment extends AppointmentPayload {
   provider_name?: string;
 }
 
-/**
- * Appointments API
- */
+/* =======================================================================
+   INTERNAL — Generic DRF pagination fetcher
+   Fully typed. No TS7022 issues.
+   ======================================================================= */
+interface DRFListResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
+async function fetchPaginated<T>(
+  url: string,
+  params: Record<string, any>
+): Promise<T[]> {
+  const results: T[] = [];
+  let nextUrl: string | null = url;
+
+  while (nextUrl) {
+    // Explicitly typed response fixes TS recursion/inference issues
+    const response: { data: DRFListResponse<T> | T[] } = await API.get(
+      nextUrl,
+      { params }
+    );
+
+    const data = response.data;
+
+    // Case 1: backend returned a raw array (no pagination)
+    if (Array.isArray(data)) {
+      results.push(...data);
+      break;
+    }
+
+    // Case 2: standard DRF pagination
+    if (Array.isArray(data.results)) {
+      results.push(...data.results);
+      nextUrl = data.next; // includes full URL if paginated
+    } else {
+      console.warn("⚠️ Unexpected paginated response shape:", data);
+      break;
+    }
+
+    // Important: when using data.next, DRF already encoded params
+    params = {};
+  }
+
+  return results;
+}
+
+/* =======================================================================
+   PUBLIC API
+   ======================================================================= */
+
 export const appointmentsApi = {
-  // ---- List ----
+  /* -------------------------------------------------------------------
+     Standard paginated list (Appointments tab, exports, reporting)
+     ------------------------------------------------------------------- */
   async list(params: {
-    provider: number;
+    provider?: number | null;
+    start_date?: string;
+    end_date?: string;
+    page?: number;
+  }): Promise<DRFListResponse<Appointment>> {
+    const res = await API.get("/appointments/", { params });
+    return res.data;
+  },
+
+  /* -------------------------------------------------------------------
+     Fetch ALL appointments (used by Schedule.tsx)
+     Eliminates disappearing appointments (pagination bug).
+     ------------------------------------------------------------------- */
+  async listAllAppointments(options: {
+    provider?: number | null;
     start_date: string;
     end_date: string;
   }): Promise<Appointment[]> {
-    const { provider, start_date, end_date } = params;
-    const res = await API.get("/appointments/", {
-      params: { provider, start_date, end_date },
+    return fetchPaginated<Appointment>("/appointments/", {
+      provider: options.provider ?? undefined,
+      start_date: options.start_date,
+      end_date: options.end_date,
     });
-
-    if (Array.isArray(res.data)) return res.data;
-    if (res.data?.results && Array.isArray(res.data.results))
-      return res.data.results;
-
-    console.warn("⚠️ Unexpected appointmentsApi.list() payload:", res.data);
-    return [];
   },
 
-  // ---- Retrieve single ----
+  /* -------------------------------------------------------------------
+     Retrieve single appointment
+     ------------------------------------------------------------------- */
   async retrieve(id: number): Promise<Appointment> {
     const res = await API.get(`/appointments/${id}/`);
     return res.data;
   },
 
-  // ---- Create ----
+  /* -------------------------------------------------------------------
+     Create new appointment
+     ------------------------------------------------------------------- */
   async create(data: AppointmentPayload): Promise<Appointment> {
     const res = await API.post("/appointments/", data);
     return res.data;
   },
 
-  // ---- Update ----
+  /* -------------------------------------------------------------------
+     Update appointment
+     ------------------------------------------------------------------- */
   async update(id: number, data: AppointmentPayload): Promise<Appointment> {
     const res = await API.put(`/appointments/${id}/`, data);
     return res.data;
   },
 
-  // ---- Delete ----
+  /* -------------------------------------------------------------------
+     Delete appointment
+     ------------------------------------------------------------------- */
   async delete(id: number): Promise<void> {
     await API.delete(`/appointments/${id}/`);
   },
