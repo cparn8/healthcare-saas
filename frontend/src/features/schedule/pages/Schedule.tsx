@@ -4,19 +4,25 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { addDays } from "date-fns";
 
-import AppointmentsTable from "../components/appointments-table";
+import { AppointmentsTable } from "../components/appointments-table";
 import { DayViewGrid, WeekViewGrid } from "../components/grid";
-import { NewAppointmentModal, EditAppointmentModal } from "..components/modals";
+import {
+  NewAppointmentModal,
+  EditAppointmentModal,
+} from "../components/modals";
 import SettingsPanel from "../components/SettingsPanel";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
-import ScheduleFilters from "../components/filters/ScheduleFilters";
+import { ScheduleFilters } from "../components/filters";
 import DatePickerPopover from "../components/DatePickerPopover";
 
-import { filterAppointments } from "../utils/filterAppointments";
-import { useVisibleAppointments } from "../hooks/useVisibleAppointments";
-import { useScheduleData } from "../hooks/useScheduleData";
-import { useScheduleFilters } from "../hooks/useScheduleFilters";
-import { useOfficePersistence, OfficeKey } from "../hooks/useOfficePersistence";
+import { filterAppointments } from "../utils";
+import {
+  useVisibleAppointments,
+  useScheduleData,
+  useScheduleFilters,
+  useOfficePersistence,
+  OfficeKey,
+} from "../hooks";
 
 import { Appointment } from "../services/appointmentsApi";
 import { providersApi, Provider } from "../../providers/services/providersApi";
@@ -27,8 +33,11 @@ import {
   safeDate,
 } from "../../../utils/dateUtils";
 
-import { formatWeekRange } from "../logic/dateMath";
-import { findNextOpenDay, normalizeToWeekStart } from "../logic/dateNavigation";
+import {
+  formatWeekRange,
+  findNextOpenDay,
+  normalizeToWeekStart,
+} from "../logic";
 
 /* ------------------------------------------------------------------ */
 /* Types & constants                                                   */
@@ -560,14 +569,18 @@ const SchedulePage: React.FC = () => {
       )}
 
       {editingAppt && (
-        <EditAppointmentModal
-          appointment={{
-            ...editingAppt,
-            repeat_days: editingAppt.repeat_days || [],
-          }}
-          onClose={() => setEditingAppt(null)}
-          onUpdated={reloadAppointments}
-        />
+        <>
+          {console.log("Schedule → editingAppt.date =", editingAppt.date)}
+          <EditAppointmentModal
+            appointment={{
+              ...editingAppt,
+              repeat_days: editingAppt.repeat_days || [],
+            }}
+            onClose={() => setEditingAppt(null)}
+            onUpdated={reloadAppointments}
+            appointmentTypes={appointmentTypes}
+          />
+        </>
       )}
 
       {/* Confirmation Dialog */}

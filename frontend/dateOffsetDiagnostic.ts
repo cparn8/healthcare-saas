@@ -1,4 +1,4 @@
-import { parseLocalDate, formatYMDLocal } from "./src/utils/dateUtils";
+import { parseLocalDate, formatYMDLocal } from "./src/utils";
 
 console.log("TZ =", Intl.DateTimeFormat().resolvedOptions().timeZone);
 

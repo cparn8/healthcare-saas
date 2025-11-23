@@ -1,5 +1,5 @@
 // src/utils/dateUtils.ts
-import { Weekday } from "../features/schedule/types/scheduleSettings";
+import { Weekday } from "../features/schedule/types";
 
 /** Parse "YYYY-MM-DD" as a *local* date (no UTC drift) */
 export function parseLocalDate(ymd: string): Date {

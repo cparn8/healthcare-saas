@@ -1,4 +1,3 @@
-// frontend/src/features/schedule/components/NewAppointmentModal.tsx
 import React, { useState, useEffect } from "react";
 import X from "lucide-react/dist/esm/icons/x";
 import WithPatientForm from "./forms/WithPatientForm";

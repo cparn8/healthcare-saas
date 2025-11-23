@@ -102,10 +102,18 @@ class AppointmentSerializer(serializers.ModelSerializer):
         if allow_overlap is None:
             allow_overlap = self.initial_data.get("allow_overlap", False)
 
-        if not allow_overlap and start and end and data.get("provider") and data.get("date"):
+        if (
+            not allow_overlap
+            and start
+            and end
+            and data.get("provider")
+            and data.get("date")
+            and data.get("office")
+        ):
             overlapping = Appointment.objects.filter(
                 provider=data["provider"],
                 date=data["date"],
+                office=data["office"],  # Only conflict if same office
             ).filter(
                 Q(start_time__lt=end) & Q(end_time__gt=start)
             )
@@ -115,8 +123,13 @@ class AppointmentSerializer(serializers.ModelSerializer):
 
             if overlapping.exists():
                 raise serializers.ValidationError(
-                    {"non_field_errors": ["This time overlaps with another appointment or block time."]}
+                    {
+                        "non_field_errors": [
+                            f"This time overlaps with another appointment in {data['office']}."
+                        ]
+                    }
                 )
+
 
         # --- Repeat logic validation ---
         if data.get("is_recurring"):

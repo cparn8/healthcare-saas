@@ -1,6 +1,6 @@
 // frontend/src/features/schedule/services/scheduleSettingsApi.ts
 import API from "../../../services/api";
-import { ScheduleSettings } from "../types/scheduleSettings";
+import { ScheduleSettings } from "../types";
 
 const LOCAL_STORAGE_KEY = "scheduleSettings";
 const SETTINGS_ID = 1; // the single row in DB

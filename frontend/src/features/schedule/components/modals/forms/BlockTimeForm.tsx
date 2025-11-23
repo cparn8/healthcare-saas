@@ -1,4 +1,4 @@
-// frontend/src/features/schedule/components/BlockTimeForm.tsx
+// frontend/src/features/schedule/components/modals/forms/BlockTimeForm.tsx
 import React, { useState, useEffect } from "react";
 import {
   providersApi,
@@ -87,12 +87,22 @@ const BlockTimeForm: React.FC<BlockTimeFormProps> = ({
     };
   }, []);
 
-  // Bubble data up
+  // Bubble data up safely (prevent infinite loops)
   useEffect(() => {
-    const payload = { ...formData } as any;
-    if (allProviders) payload.all_providers = true;
-    onGetFormData?.(payload);
-  }, [formData, allProviders, onGetFormData]);
+    if (!onGetFormData) return;
+
+    const payload = {
+      ...formData,
+      ...(allProviders ? { all_providers: true } : {}),
+    };
+
+    const t = setTimeout(() => {
+      onGetFormData(payload);
+    }, 10);
+
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(formData), allProviders]);
 
   useEffect(() => {
     setFormData((prev) => ({

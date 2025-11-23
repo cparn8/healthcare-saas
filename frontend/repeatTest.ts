@@ -1,5 +1,5 @@
 // repeatTest.ts
-import { safeDate, formatYMDLocal } from "./src/utils/dateUtils";
+import { safeDate, formatYMDLocal } from "./src/utils";
 export {};
 type RepeatConfig = {
   startDate: string;

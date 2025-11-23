@@ -1,14 +1,24 @@
-// frontend/src/features/schedule/components/WithPatientForm.tsx
+// frontend/src/features/schedule/components/modals/forms/WithPatientForm.tsx
 import React, { useState, useEffect } from "react";
 import Search from "lucide-react/dist/esm/icons/search";
 import UserPlus from "lucide-react/dist/esm/icons/user-plus";
+
 import API from "../../../../../services/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
+
 import {
   providersApi,
   Provider,
 } from "../../../../providers/services/providersApi";
+
+import { AppointmentPayload } from "../../../services";
 import { usePrefilledAppointmentFields } from "../../../hooks";
+
+/** Common Modular Components */
+import AppointmentFormBase from "./common/AppointmentFormBase";
+import ProviderSelect from "./common/ProviderSelect";
+import AppointmentTypeSelect from "./common/AppointmentTypeSelect";
+import RepeatSection from "./common/RepeatSection";
 
 interface Patient {
   id: number;
@@ -22,7 +32,7 @@ interface Patient {
 
 interface WithPatientFormProps {
   onCancel: () => void;
-  onGetFormData?: (data: any) => void;
+  onGetFormData?: (data: AppointmentPayload) => void;
   providerId?: number | null;
   initialDate?: string;
   initialStartTime?: string;
@@ -46,80 +56,59 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
   initialEndTime,
   defaultOffice,
   initialPatient,
-  appointmentTypes,
+  appointmentTypes = [],
 }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  /** Prefill from slot selection */
   const prefilled = usePrefilledAppointmentFields({
     initialDate,
     initialStartTime,
     initialEndTime,
     appointmentTypes,
-    initialTypeName: appointmentTypes?.[0]?.name,
+    initialTypeName: appointmentTypes[0]?.name,
   });
 
-  // --- Patient selection & search ---
+  /** ----------------------------- State ----------------------------- */
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(
-    initialPatient || null
+    initialPatient ?? null
   );
+
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // --- Providers (for dropdown) ---
+  /** Providers */
   const [providers, setProviders] = useState<Provider[]>([]);
   const [providersLoading, setProvidersLoading] = useState(false);
   const [providersError, setProvidersError] = useState<string | null>(null);
 
-  // --- Repeat toggle ---
-  const [repeatEnabled, setRepeatEnabled] = useState(false);
-
-  // --- Form state ---
-  const [formData, setFormData] = useState({
-    patient: null as number | null,
+  /** Core appointment form data */
+  const [formData, setFormData] = useState<AppointmentPayload>({
+    patient: initialPatient?.id ?? null,
     provider: providerId ?? null,
     office: defaultOffice ?? "north",
-    appointment_type: appointmentTypes?.[0]?.name || "",
-    color_code: appointmentTypes?.[0]?.color_code || "#FF6B6B",
-    duration: prefilled.duration,
+    appointment_type: appointmentTypes[0]?.name ?? "",
+    color_code: appointmentTypes[0]?.color_code ?? "#FF6B6B",
     chief_complaint: "",
+    notes: "",
     date: prefilled.date,
     start_time: prefilled.start_time,
     end_time: prefilled.end_time,
+    duration: prefilled.duration,
     is_recurring: false,
-    repeat_days: [] as string[],
+    repeat_days: [],
     repeat_interval_weeks: 1,
     repeat_end_date: "",
     repeat_occurrences: 1,
+    is_block: false,
     send_intake_form: false,
   });
 
-  // -------------------------------
-  // Generic field handler
-  // -------------------------------
-  const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
-  ) => {
-    const { name, value, type } = e.target;
-    let next: string | number | boolean = value;
+  /** ----------------------------- Effects ----------------------------- */
 
-    if (e.target instanceof HTMLInputElement && type === "checkbox") {
-      next = e.target.checked;
-    }
-
-    if (name === "duration") next = Number(next);
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]: next,
-    }));
-  };
-
-  // -------------------------------
-  // Fetch provider list
-  // -------------------------------
+  /** Fetch providers */
   useEffect(() => {
     let active = true;
     (async () => {
@@ -128,14 +117,9 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
         const list = await providersApi.list();
         if (!active) return;
         setProviders(list);
-        if (formData.provider == null && providerId) {
-          setFormData((prev) => ({ ...prev, provider: providerId }));
-        }
       } catch (err) {
-        if (active) {
-          console.error("❌ Provider fetch error:", err);
-          setProvidersError("Failed to load providers.");
-        }
+        setProvidersError("Failed to load providers.");
+        console.error(err);
       } finally {
         if (active) setProvidersLoading(false);
       }
@@ -143,60 +127,31 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     return () => {
       active = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // -------------------------------
-  // Prefill from modal-provided values
-  // -------------------------------
+  /** Prefill from initial slot */
   useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
+    setFormData((p) => ({
+      ...p,
       date: prefilled.date,
       start_time: prefilled.start_time,
       end_time: prefilled.end_time,
     }));
   }, [prefilled]);
 
-  // -------------------------------
-  // Sync provider if parent prop changes later
-  // -------------------------------
+  /** Handle patient selection → update patient id */
   useEffect(() => {
-    if (providerId && formData.provider == null) {
-      setFormData((p) => ({ ...p, provider: providerId }));
-    }
-  }, [providerId, formData.provider]);
-
-  // -------------------------------
-  // Restore new patient from sessionStorage
-  // -------------------------------
-  useEffect(() => {
-    const stored = sessionStorage.getItem("newPatient");
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      setSelectedPatient(parsed);
-      sessionStorage.removeItem("newPatient");
-    }
-  }, []);
-
-  // -------------------------------
-  // Update patient id when selected
-  // -------------------------------
-  useEffect(() => {
-    if (selectedPatient)
+    if (selectedPatient) {
       setFormData((p) => ({ ...p, patient: selectedPatient.id }));
+    }
   }, [selectedPatient]);
 
-  // -------------------------------
-  // Bubble up form data
-  // -------------------------------
+  /** Bubble form data upward */
   useEffect(() => {
     onGetFormData?.(formData);
   }, [formData, onGetFormData]);
 
-  // -------------------------------
-  // Debounced patient search
-  // -------------------------------
+  /** Debounced patient search */
   useEffect(() => {
     const delay = setTimeout(async () => {
       if (!query.trim()) {
@@ -211,41 +166,41 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
         const list = res.data?.results ?? res.data ?? [];
         setResults(Array.isArray(list) ? list : []);
       } catch (err) {
-        console.error("❌ Patient search failed:", err);
+        console.error("Patient search error", err);
       } finally {
         setLoading(false);
       }
-    }, 350);
+    }, 300);
+
     return () => clearTimeout(delay);
   }, [query]);
 
-  // -------------------------------
-  // Load new patient by ID from search params
-  // -------------------------------
+  /** Redirect-to-new-patient support */
   useEffect(() => {
-    const newPatientId = searchParams.get("newPatientId");
-    if (!newPatientId) return;
+    const newId = searchParams.get("newPatientId");
+    if (!newId) return;
     (async () => {
       try {
-        const res = await API.get(`/patients/${newPatientId}/`);
+        const res = await API.get(`/patients/${newId}/`);
         setSelectedPatient(res.data);
       } catch (err) {
-        console.error("❌ Failed to load new patient", err);
+        console.error("Failed to load new patient", err);
       }
     })();
   }, [searchParams]);
 
-  const providerFullName = (p: Provider) =>
-    `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || `Provider #${p.id}`;
+  /** ----------------------------- Helpers ----------------------------- */
 
-  // -------------------------------
-  // Render
-  // -------------------------------
-  return (
-    <div className="max-h-[70vh] overflow-y-auto space-y-6 p-4">
-      {/* --- Patient Section --- */}
+  const handleChange = (patch: Partial<AppointmentPayload>) => {
+    setFormData((prev) => ({ ...prev, ...patch }));
+  };
+
+  /** ----------------------------- Render ----------------------------- */
+
+  const patientSection = (
+    <div className="space-y-4">
       {!selectedPatient ? (
-        <section className="relative">
+        <div className="relative">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Search Patient
           </label>
@@ -268,7 +223,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
           )}
 
           {results.length > 0 && (
-            <div className="absolute z-20 bg-white border rounded w-full shadow-md mt-1 max-h-56 overflow-y-auto">
+            <div className="absolute bg-white border rounded w-full shadow-md mt-1 max-h-56 overflow-y-auto z-20">
               {results.map((p) => (
                 <button
                   key={p.id}
@@ -300,281 +255,89 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
           >
             <UserPlus size={16} /> Add New Patient
           </button>
-        </section>
+        </div>
       ) : (
-        <section>
-          <div className="flex justify-between items-center mb-2 text-sm">
-            <div className="font-semibold text-gray-800">
+        <div>
+          <div className="flex justify-between items-center mb-1">
+            <div className="font-semibold text-gray-800 text-sm">
               {selectedPatient.first_name} {selectedPatient.last_name}
             </div>
             <button
-              className="text-red-500 hover:underline"
               onClick={() => setSelectedPatient(null)}
+              className="text-red-500 hover:underline text-sm"
             >
-              Remove patient
+              Remove
             </button>
           </div>
           <div className="text-xs text-gray-600">
             PRN: {selectedPatient.prn} • DOB: {selectedPatient.date_of_birth}
             {selectedPatient.phone && <> • Phone: {selectedPatient.phone}</>}
           </div>
-        </section>
+        </div>
       )}
+    </div>
+  );
 
-      <hr className="border-gray-200" />
+  const providerSection = (
+    <ProviderSelect
+      providers={providers}
+      loading={providersLoading}
+      error={providersError}
+      value={formData.provider ?? null}
+      onChange={(providerId) => handleChange({ provider: providerId })}
+    />
+  );
 
-      {/* --- Appointment Details --- */}
-      <section>
-        <h3 className="text-lg font-semibold mb-2">Appointment details</h3>
+  const extraFields = (
+    <>
+      <AppointmentTypeSelect
+        appointmentTypes={appointmentTypes}
+        value={formData.appointment_type}
+        onChange={(t) =>
+          handleChange({
+            appointment_type: t.name,
+            color_code: t.color_code,
+            duration: t.default_duration,
+          })
+        }
+      />
 
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          {/* Provider Dropdown */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Provider
-            </label>
+      {/* Chief Complaint */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Chief Complaint
+        </label>
+        <textarea
+          className="w-full border rounded p-2"
+          rows={2}
+          value={formData.chief_complaint ?? ""}
+          onChange={(e) => handleChange({ chief_complaint: e.target.value })}
+        />
+      </div>
 
-            {providersLoading ? (
-              <div className="flex items-center gap-2 border rounded p-2 text-gray-500 bg-gray-50">
-                <svg
-                  className="animate-spin h-4 w-4 text-gray-400"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                  ></path>
-                </svg>
-                Loading providers…
-              </div>
-            ) : (
-              <select
-                name="provider"
-                value={formData.provider ?? ""}
-                onChange={(e) => {
-                  const newProviderId = Number(e.target.value) || null;
-                  setFormData((p) => ({ ...p, provider: newProviderId }));
-                  onGetFormData?.({ ...formData, provider: newProviderId });
-                }}
-                className="w-full border rounded p-2"
-              >
-                <option value="">Select a provider</option>
-                {providersError && <option disabled>{providersError}</option>}
-                {providers.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {providerFullName(p)}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
+      {/* Repeat section — only for new appointments */}
+      <RepeatSection
+        enabled={!!formData.is_recurring}
+        formData={formData}
+        onToggle={(checked) => handleChange({ is_recurring: checked })}
+        onChange={(patch) => handleChange(patch)}
+      />
+    </>
+  );
 
-          {/* Office */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Office
-            </label>
-            <select
-              name="office"
-              value={formData.office}
-              onChange={handleChange}
-              className="w-full border rounded p-2"
-            >
-              <option value="north">North Office</option>
-              <option value="south">South Office</option>
-            </select>
-          </div>
-        </div>
+  return (
+    <div className="max-h-[70vh] overflow-y-auto p-4">
+      {patientSection}
 
-        {/* Chief Complaint */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Chief Complaint
-          </label>
-          <textarea
-            name="chief_complaint"
-            value={formData.chief_complaint}
-            onChange={handleChange}
-            className="w-full border rounded p-2"
-            placeholder="Brief description of symptoms or reason for visit"
-            rows={2}
-          />
-        </div>
+      <hr className="my-6 border-gray-200" />
 
-        {/* Appointment Type */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Appointment Type
-          </label>
-          <select
-            name="appointment_type"
-            value={formData.appointment_type}
-            onChange={handleChange}
-            className="w-full border rounded p-2"
-          >
-            <option value="">Select type</option>
-            {appointmentTypes?.length ? (
-              appointmentTypes.map((t) => (
-                <option key={t.name} value={t.name}>
-                  {t.name} ({t.default_duration} min)
-                </option>
-              ))
-            ) : (
-              <option disabled>No types configured</option>
-            )}
-          </select>
-        </div>
-
-        {/* Date & Time */}
-        <div className="grid grid-cols-4 gap-4 items-end mb-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Date
-            </label>
-            <input
-              type="date"
-              name="date"
-              value={formData.date}
-              onChange={handleChange}
-              className="w-full border rounded p-2"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Start Time
-            </label>
-            <input
-              type="time"
-              name="start_time"
-              value={formData.start_time}
-              onChange={handleChange}
-              className="w-full border rounded p-2"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              End Time
-            </label>
-            <input
-              type="time"
-              name="end_time"
-              value={formData.end_time}
-              onChange={handleChange}
-              className="w-full border rounded p-2"
-            />
-          </div>
-
-          {/* Repeat Toggle */}
-          <label className="flex items-center gap-2 mb-2">
-            <input
-              type="checkbox"
-              checked={repeatEnabled}
-              onChange={(e) => {
-                setRepeatEnabled(e.target.checked);
-                setFormData((prev) => ({
-                  ...prev,
-                  is_recurring: e.target.checked,
-                }));
-              }}
-              className="h-4 w-4"
-            />
-            <span className="text-sm font-medium text-gray-700">Repeat</span>
-          </label>
-        </div>
-
-        {/* Repeat Section */}
-        {repeatEnabled && (
-          <div className="w-full mt-4 border-t border-gray-200 pt-4 text-[15px] space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="font-semibold text-gray-800 whitespace-nowrap">
-                Occurs On:
-              </span>
-              <div className="flex flex-row items-center gap-4 flex-wrap w-full">
-                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
-                  (day) => (
-                    <label
-                      key={day}
-                      className="flex items-center gap-1 text-[15px] cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={formData.repeat_days.includes(day)}
-                        onChange={(e) => {
-                          const updated = e.target.checked
-                            ? [...formData.repeat_days, day]
-                            : formData.repeat_days.filter((d) => d !== day);
-                          setFormData((prev) => ({
-                            ...prev,
-                            repeat_days: updated,
-                          }));
-                        }}
-                        className="h-4 w-4 accent-blue-600"
-                      />
-                      <span className="font-medium">{day}</span>
-                    </label>
-                  )
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-row flex-wrap items-center gap-3">
-              <span className="font-semibold text-gray-800">Every</span>
-              <select
-                value={formData.repeat_interval_weeks}
-                onChange={(e) =>
-                  setFormData((p) => ({
-                    ...p,
-                    repeat_interval_weeks: Number(e.target.value),
-                  }))
-                }
-                className="border rounded px-2 py-1 text-sm w-20"
-              >
-                {Array.from({ length: 9 }, (_, i) => i + 1).map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-              <span className="text-gray-800">week(s)</span>
-
-              <div className="h-5 border-l border-gray-300 mx-2" />
-
-              <span className="font-semibold text-gray-800">Ends On</span>
-              <input
-                type="date"
-                value={formData.repeat_end_date || ""}
-                onChange={handleChange}
-                name="repeat_end_date"
-                className="border rounded px-2 py-1 text-sm"
-              />
-
-              <span className="font-semibold text-gray-800">after</span>
-              <input
-                type="number"
-                min={1}
-                name="repeat_occurrences"
-                value={formData.repeat_occurrences}
-                onChange={handleChange}
-                className="border rounded w-20 px-2 py-1 text-sm"
-              />
-              <span className="text-gray-800">appointment(s)</span>
-            </div>
-          </div>
-        )}
-      </section>
+      <AppointmentFormBase
+        formData={formData}
+        onChange={handleChange}
+        providerSection={providerSection}
+        extraFields={extraFields}
+        onCancel={onCancel}
+      />
     </div>
   );
 };
