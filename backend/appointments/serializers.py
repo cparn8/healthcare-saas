@@ -1,4 +1,4 @@
-# appointments/serializers.py
+# backend/appointments/serializers.py
 from rest_framework import serializers
 from .models import Appointment
 from django.db.models import Q

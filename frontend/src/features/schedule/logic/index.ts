@@ -5,3 +5,4 @@ export * from "./businessHours";
 export * from "./clusterCalculations";
 export * from "./dateMath";
 export * from "./dateNavigation";
+export * from "./detectConflict";

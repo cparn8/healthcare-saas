@@ -134,8 +134,6 @@ function MultiOfficeDropdown({
 
 const SchedulePage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-
-  // This ref is still useful for future extensions (e.g., focusing)
   const datePickerWrapperRef = useRef<HTMLDivElement | null>(null);
 
   /* ----------------------------- UI State ----------------------------- */
@@ -177,7 +175,24 @@ const SchedulePage: React.FC = () => {
     open: boolean;
     message: string;
     onConfirm: () => void;
+    onCancel?: () => void;
   }>({ open: false, message: "", onConfirm: () => {} });
+
+  // Promise-based helper for modals (and anything else) to use styled ConfirmDialog
+  const requestConfirmAsync = (message: string): Promise<boolean> => {
+    return new Promise<boolean>((resolve) => {
+      setConfirmData({
+        open: true,
+        message,
+        onConfirm: () => {
+          resolve(true);
+        },
+        onCancel: () => {
+          resolve(false);
+        },
+      });
+    });
+  };
 
   /* ----------------------------- Central Data Hook -------------------- */
 
@@ -321,7 +336,6 @@ const SchedulePage: React.FC = () => {
     setPrefill(prefillSlot);
     setShowNewAppointment(true);
   };
-
   /* ----------------------------- Render ------------------------------- */
 
   return (
@@ -534,6 +548,9 @@ const SchedulePage: React.FC = () => {
       </div>
 
       {/* Modals */}
+      {showNewAppointment &&
+        (console.log("Schedule: providerId =", providerId), null)}
+
       {showNewAppointment && (
         <NewAppointmentModal
           onClose={() => {
@@ -565,6 +582,7 @@ const SchedulePage: React.FC = () => {
           initialPatient={initialPatient}
           appointmentTypes={appointmentTypes}
           scheduleSettings={scheduleSettings}
+          requestConfirm={requestConfirmAsync}
         />
       )}
 
@@ -579,6 +597,7 @@ const SchedulePage: React.FC = () => {
             onClose={() => setEditingAppt(null)}
             onUpdated={reloadAppointments}
             appointmentTypes={appointmentTypes}
+            requestConfirm={requestConfirmAsync}
           />
         </>
       )}
@@ -592,11 +611,24 @@ const SchedulePage: React.FC = () => {
         cancelLabel="Cancel"
         onConfirm={() => {
           confirmData.onConfirm();
-          setConfirmData({ open: false, message: "", onConfirm: () => {} });
+          setConfirmData({
+            open: false,
+            message: "",
+            onConfirm: () => {},
+            onCancel: undefined,
+          });
         }}
-        onCancel={() =>
-          setConfirmData({ open: false, message: "", onConfirm: () => {} })
-        }
+        onCancel={() => {
+          if (confirmData.onCancel) {
+            confirmData.onCancel();
+          }
+          setConfirmData({
+            open: false,
+            message: "",
+            onConfirm: () => {},
+            onCancel: undefined,
+          });
+        }}
       />
     </div>
   );

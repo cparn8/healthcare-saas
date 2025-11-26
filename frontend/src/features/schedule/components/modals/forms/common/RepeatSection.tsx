@@ -6,6 +6,7 @@ interface RepeatSectionProps {
   formData: AppointmentPayload;
   onToggle: (checked: boolean) => void;
   onChange: (patch: Partial<AppointmentPayload>) => void;
+  hideHeaderToggle?: boolean;
 }
 
 const WEEKDAYS = [
@@ -23,6 +24,7 @@ const RepeatSection: React.FC<RepeatSectionProps> = ({
   formData,
   onToggle,
   onChange,
+  hideHeaderToggle = false,
 }) => {
   const toggleWeekday = (dayKey: string, checked: boolean) => {
     const current = formData.repeat_days ?? [];
@@ -35,16 +37,18 @@ const RepeatSection: React.FC<RepeatSectionProps> = ({
 
   return (
     <div className="space-y-4 mt-2 border-t pt-4">
-      {/* Toggle */}
-      <label className="flex items-center gap-2 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(e) => onToggle(e.target.checked)}
-          className="h-4 w-4"
-        />
-        <span className="text-sm font-medium text-gray-700">Repeat</span>
-      </label>
+      {/* Header toggle (optional) */}
+      {!hideHeaderToggle && (
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={(e) => onToggle(e.target.checked)}
+            className="h-4 w-4"
+          />
+          <span className="text-sm font-medium text-gray-700">Repeat</span>
+        </label>
+      )}
 
       {!enabled ? null : (
         <div className="space-y-4 text-sm">

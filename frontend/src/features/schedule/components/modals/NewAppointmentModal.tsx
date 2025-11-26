@@ -1,3 +1,5 @@
+// frontend/src/features/schedule/components/modals/NewAppointmentModal.tsx
+
 import React, { useState, useEffect } from "react";
 import X from "lucide-react/dist/esm/icons/x";
 import WithPatientForm from "./forms/WithPatientForm";
@@ -6,10 +8,13 @@ import { appointmentsApi, AppointmentPayload } from "../../services";
 import {
   toastError,
   toastSuccess,
-  toastPromise,
   parseLocalDate,
   formatYMDLocal,
 } from "../../../../utils";
+import {
+  handleOverlapDuringSave,
+  detectOverlapError,
+} from "../../logic/detectConflict";
 
 interface NewAppointmentModalProps {
   onClose: () => void;
@@ -27,6 +32,7 @@ interface NewAppointmentModalProps {
     color_code: string;
   }[];
   scheduleSettings?: any;
+  requestConfirm?: (message: string) => Promise<boolean>;
 }
 
 const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
@@ -40,6 +46,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
   initialPatient,
   appointmentTypes,
   scheduleSettings,
+  requestConfirm,
 }) => {
   const [activeTab, setActiveTab] = useState<"withPatient" | "blockTime">(
     "withPatient"
@@ -71,6 +78,80 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
     return isNaN(date.getTime()) ? "" : date.toTimeString().slice(0, 5);
   }
 
+  // Helper for creating recurring appointments (reused for normal + overlap flows)
+  const createRecurrencesIfNeeded = async (
+    basePayload: AppointmentPayload,
+    safeDate: string
+  ) => {
+    if (!formData || !formData.is_recurring) return;
+
+    try {
+      const repeatDays = formData.repeat_days ?? [];
+      const intervalWeeks = formData.repeat_interval_weeks ?? 1;
+      const maxOccurrences = formData.repeat_occurrences ?? 1;
+      const startDate = parseLocalDate(safeDate);
+      const endDate = formData.repeat_end_date
+        ? parseLocalDate(formData.repeat_end_date)
+        : null;
+
+      const targetDays = repeatDays.map((d) =>
+        ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].indexOf(
+          d.toLowerCase().slice(0, 3)
+        )
+      );
+
+      const generatedDates: string[] = [];
+      let current = new Date(startDate);
+
+      while (generatedDates.length < maxOccurrences - 1) {
+        current = new Date(current);
+        current.setDate(current.getDate() + 1);
+
+        if (endDate && current > endDate) break;
+
+        const jsDay = current.getDay();
+        const weekDiff =
+          (current.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 7);
+
+        if (
+          targetDays.includes(jsDay) &&
+          Math.floor(weekDiff) % intervalWeeks === 0
+        ) {
+          generatedDates.push(formatYMDLocal(current));
+        }
+      }
+
+      const uniqueDates = Array.from(new Set(generatedDates)).sort();
+
+      console.log("🧭 Final Repeat Generation Check", {
+        startDate: safeDate,
+        repeatDays,
+        intervalWeeks,
+        maxOccurrences,
+        endDate: endDate?.toISOString().split("T")[0],
+        generated: uniqueDates,
+      });
+
+      if (uniqueDates.length > 0) {
+        await Promise.all(
+          uniqueDates.map((d) =>
+            appointmentsApi.create({
+              ...basePayload,
+              date: d,
+              is_recurring: true,
+            })
+          )
+        );
+        toastSuccess(
+          `Created ${uniqueDates.length + 1} recurring appointments!`
+        );
+      }
+    } catch (err) {
+      console.error("❌ Repeat creation failed:", err);
+      toastError("Some repeat appointments could not be created.");
+    }
+  };
+
   // -------------------------------
   // Handle Save
   // -------------------------------
@@ -88,19 +169,21 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
       return;
     }
 
-    try {
-      setIsSubmitting(true);
+    setIsSubmitting(true);
 
+    try {
       const slotRaw = sessionStorage.getItem("pendingSlot");
       const slot = slotRaw ? JSON.parse(slotRaw) : null;
 
       const rawDate = slot?.date || formData.date;
-      const safeDate =
+      const safeDateValue =
         rawDate && typeof rawDate === "string" && rawDate.includes("T")
           ? rawDate.split("T")[0]
           : rawDate;
 
-      const payload: AppointmentPayload = {
+      const safeDate = safeDateValue as string;
+
+      let payload: AppointmentPayload = {
         ...formData,
         provider: formData.provider ?? providerId ?? 1,
         office: formData.office ?? defaultOffice ?? "north",
@@ -108,7 +191,8 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
         date: safeDate,
         start_time: slot?.start_time || formData.start_time,
         end_time: slot?.end_time || formData.end_time,
-        allow_overlap: !!slot?.allow_overlap,
+        // existing behavior: slot-level allow_overlap (e.g. “force overlap” from grid)
+        allow_overlap: !!slot?.allow_overlap || !!formData.allow_overlap,
       };
 
       if (activeTab === "blockTime") {
@@ -116,94 +200,54 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
         payload.appointment_type = formData.appointment_type || "Block Time";
         (payload as any).is_block_time = true;
 
-        // If user chose “All Providers”
         if ((formData as any).all_providers) {
           payload.provider = null;
           (payload as any).all_providers = true;
         }
       }
 
-      // --- Create initial appointment ---
-      const created = await toastPromise(appointmentsApi.create(payload), {
-        loading: "Saving appointment...",
-        success: "✅ Appointment saved successfully!",
-        error: "❌ Failed to save appointment.",
-      });
+      // First attempt — no overlap override beyond what payload already has.
+      try {
+        //const created = await appointmentsApi.create(payload);
+        toastSuccess("✅ Appointment saved successfully!");
+        await createRecurrencesIfNeeded(payload, safeDate);
+        onSaved();
+        onClose();
+        return;
+      } catch (err) {
+        console.error("❌ Appointment save failed (first attempt):", err);
 
-      // --- Handle recurring logic ---
-      if (formData.is_recurring && created?.id) {
-        try {
-          const repeatDays = formData.repeat_days ?? [];
-          const intervalWeeks = formData.repeat_interval_weeks ?? 1;
-          const maxOccurrences = formData.repeat_occurrences ?? 1;
-          const startDate = parseLocalDate(safeDate);
-          const endDate = formData.repeat_end_date
-            ? parseLocalDate(formData.repeat_end_date)
-            : null;
+        // Check for overlap and use styled confirm dialog if so
+        const allowed = await handleOverlapDuringSave(
+          err,
+          payload.office,
+          requestConfirm
+        );
+        const overlapInfo = detectOverlapError(err);
 
-          const targetDays = repeatDays.map((d) =>
-            ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].indexOf(
-              d.toLowerCase().slice(0, 3)
-            )
-          );
-
-          const generatedDates: string[] = [];
-          let current = new Date(startDate);
-
-          while (generatedDates.length < maxOccurrences - 1) {
-            current = new Date(current);
-            current.setDate(current.getDate() + 1);
-
-            if (endDate && current > endDate) break;
-
-            const jsDay = current.getDay();
-            const weekDiff =
-              (current.getTime() - startDate.getTime()) /
-              (1000 * 60 * 60 * 24 * 7);
-
-            if (
-              targetDays.includes(jsDay) &&
-              Math.floor(weekDiff) % intervalWeeks === 0
-            ) {
-              generatedDates.push(formatYMDLocal(current));
-            }
+        if (!allowed) {
+          // If it wasn't an overlap error at all, show generic error
+          if (!overlapInfo.isOverlap) {
+            toastError("Unexpected error while saving appointment.");
           }
-
-          const uniqueDates = Array.from(new Set(generatedDates)).sort();
-
-          console.log("🧭 Final Repeat Generation Check", {
-            startDate: safeDate,
-            repeatDays,
-            intervalWeeks,
-            maxOccurrences,
-            endDate: endDate?.toISOString().split("T")[0],
-            generated: uniqueDates,
-          });
-
-          if (uniqueDates.length > 0) {
-            await Promise.all(
-              uniqueDates.map((d) =>
-                appointmentsApi.create({
-                  ...payload,
-                  date: d,
-                  is_recurring: true,
-                })
-              )
-            );
-            toastSuccess(
-              `Created ${uniqueDates.length + 1} recurring appointments!`
-            );
-          }
-        } catch (err) {
-          console.error("❌ Repeat creation failed:", err);
-          toastError("Some repeat appointments could not be created.");
+          // If it WAS overlap but user canceled → no extra toast.
+          return;
         }
-      }
 
-      onSaved();
-      onClose();
-    } catch (err) {
-      console.error("❌ Appointment save failed:", err);
+        // User approved the overlap → retry with allow_overlap = true
+        const overlapPayload: AppointmentPayload = {
+          ...payload,
+          allow_overlap: true,
+        };
+
+        //const created = await appointmentsApi.create(overlapPayload);
+        toastSuccess("✅ Appointment saved successfully (overlap allowed).");
+        await createRecurrencesIfNeeded(overlapPayload, safeDate);
+        onSaved();
+        onClose();
+      }
+    } catch (finalErr) {
+      console.error("❌ Appointment save failed (final):", finalErr);
       toastError("Unexpected error while saving appointment.");
     } finally {
       setIsSubmitting(false);
@@ -256,7 +300,6 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
           {activeTab === "withPatient" ? (
             <WithPatientForm
               providerId={providerId}
-              onCancel={onClose}
               onGetFormData={(data: AppointmentPayload) => setFormData(data)}
               initialDate={
                 initialDate ? initialDate.toISOString().split("T")[0] : ""

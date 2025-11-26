@@ -15,10 +15,10 @@ import { AppointmentPayload } from "../../../services";
 import { usePrefilledAppointmentFields } from "../../../hooks";
 
 /** Common Modular Components */
-import AppointmentFormBase from "./common/AppointmentFormBase";
 import ProviderSelect from "./common/ProviderSelect";
 import AppointmentTypeSelect from "./common/AppointmentTypeSelect";
 import RepeatSection from "./common/RepeatSection";
+import OfficeSelect from "./common/OfficeSelect";
 
 interface Patient {
   id: number;
@@ -31,7 +31,7 @@ interface Patient {
 }
 
 interface WithPatientFormProps {
-  onCancel: () => void;
+  onCancel?: () => void;
   onGetFormData?: (data: AppointmentPayload) => void;
   providerId?: number | null;
   initialDate?: string;
@@ -288,8 +288,97 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     />
   );
 
-  const extraFields = (
-    <>
+  const officeSection = (
+    <OfficeSelect
+      value={formData.office}
+      onChange={(office: string) => handleChange({ office })}
+    />
+  );
+
+  const dateTimeRow = (
+    <div className="grid grid-cols-4 gap-4 items-end">
+      {/* Date */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Date
+        </label>
+        <input
+          type="date"
+          value={formData.date || ""}
+          onChange={(e) => handleChange({ date: e.target.value })}
+          className="w-full border rounded p-2"
+        />
+      </div>
+
+      {/* Start Time */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Start Time
+        </label>
+        <input
+          type="time"
+          step="60"
+          value={formData.start_time || ""}
+          onChange={(e) => handleChange({ start_time: e.target.value })}
+          className="w-full border rounded p-2"
+        />
+      </div>
+
+      {/* End Time */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          End Time
+        </label>
+        <input
+          type="time"
+          step="60"
+          value={formData.end_time || ""}
+          onChange={(e) => handleChange({ end_time: e.target.value })}
+          className="w-full border rounded p-2"
+        />
+      </div>
+
+      {/* Repeat toggle */}
+      <label className="flex items-center gap-2 mb-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={formData.is_recurring || false}
+          onChange={(e) => handleChange({ is_recurring: e.target.checked })}
+          className="h-4 w-4"
+        />
+        <span className="text-sm font-medium text-gray-700">Repeat</span>
+      </label>
+    </div>
+  );
+
+  return (
+    <div className="p-4 space-y-6 max-h-[70vh] overflow-y-auto">
+      {/* Patient search / selection */}
+      {patientSection}
+
+      <hr className="border-gray-200" />
+
+      {/* Provider + Office on same row */}
+      <div className="grid grid-cols-2 gap-4">
+        {providerSection}
+        {officeSection}
+      </div>
+
+      {/* Date / Time / Repeat toggle row */}
+      {dateTimeRow}
+
+      {/* Repeat configuration section, directly under date/time row */}
+      {formData.is_recurring && (
+        <RepeatSection
+          enabled={!!formData.is_recurring}
+          formData={formData}
+          onToggle={(checked) => handleChange({ is_recurring: checked })}
+          onChange={(patch) => handleChange(patch)}
+          hideHeaderToggle={true}
+        />
+      )}
+
+      {/* Appointment type */}
       <AppointmentTypeSelect
         appointmentTypes={appointmentTypes}
         value={formData.appointment_type}
@@ -314,30 +403,6 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
           onChange={(e) => handleChange({ chief_complaint: e.target.value })}
         />
       </div>
-
-      {/* Repeat section — only for new appointments */}
-      <RepeatSection
-        enabled={!!formData.is_recurring}
-        formData={formData}
-        onToggle={(checked) => handleChange({ is_recurring: checked })}
-        onChange={(patch) => handleChange(patch)}
-      />
-    </>
-  );
-
-  return (
-    <div className="max-h-[70vh] overflow-y-auto p-4">
-      {patientSection}
-
-      <hr className="my-6 border-gray-200" />
-
-      <AppointmentFormBase
-        formData={formData}
-        onChange={handleChange}
-        providerSection={providerSection}
-        extraFields={extraFields}
-        onCancel={onCancel}
-      />
     </div>
   );
 };

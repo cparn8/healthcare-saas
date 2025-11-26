@@ -14,12 +14,16 @@ import {
   Provider,
 } from "../../../providers/services/providersApi";
 
-import { toastPromise, toastError } from "../../../../utils";
+import { toastPromise, toastError, toastSuccess } from "../../../../utils";
 import ConfirmDialog from "../../../../components/common/ConfirmDialog";
 
 import AppointmentFormBase from "./forms/common/AppointmentFormBase";
 import AppointmentTypeSelect from "./forms/common/AppointmentTypeSelect";
 import DateTimeFields from "./forms/common/DateTimeFields";
+import {
+  handleOverlapDuringSave,
+  detectOverlapError,
+} from "../../logic/detectConflict";
 
 interface EditAppointmentModalProps {
   appointment: Appointment;
@@ -30,6 +34,7 @@ interface EditAppointmentModalProps {
     default_duration: number;
     color_code: string;
   }>;
+  requestConfirm?: (message: string) => Promise<boolean>;
 }
 
 const EditAppointmentModal: React.FC<EditAppointmentModalProps> = ({
@@ -37,6 +42,7 @@ const EditAppointmentModal: React.FC<EditAppointmentModalProps> = ({
   onClose,
   onUpdated,
   appointmentTypes = [],
+  requestConfirm,
 }) => {
   // ------------------ State ------------------
   const [formData, setFormData] = useState<AppointmentPayload>({
@@ -77,17 +83,46 @@ const EditAppointmentModal: React.FC<EditAppointmentModalProps> = ({
 
   // ------------------ Save ------------------
   const handleSave = async () => {
+    setIsSaving(true);
     try {
-      setIsSaving(true);
-      await toastPromise(appointmentsApi.update(appointment.id!, formData), {
-        loading: "Saving...",
-        success: "Updated successfully!",
-        error: "Failed to update appointment.",
-      });
-      onUpdated();
-      onClose();
-    } catch (err) {
-      console.error(err);
+      // First attempt
+      try {
+        await appointmentsApi.update(appointment.id!, formData);
+        toastSuccess("Updated successfully!");
+        onUpdated();
+        onClose();
+        return;
+      } catch (err) {
+        console.error("❌ Appointment update failed (first attempt):", err);
+
+        const allowed = await handleOverlapDuringSave(
+          err,
+          formData.office,
+          requestConfirm
+        );
+        const overlapInfo = detectOverlapError(err);
+
+        if (!allowed) {
+          if (!overlapInfo.isOverlap) {
+            toastError("Unexpected error.");
+          }
+          // If overlap but user canceled, no additional toast.
+          return;
+        }
+
+        // User approved overlap → retry with allow_overlap = true
+        const overlapPayload: AppointmentPayload = {
+          ...formData,
+          allow_overlap: true,
+        };
+
+        await appointmentsApi.update(appointment.id!, overlapPayload);
+        toastSuccess("Updated successfully (overlap allowed).");
+        onUpdated();
+        onClose();
+      }
+    } catch (finalErr) {
+      console.error("❌ Appointment update failed (final):", finalErr);
       toastError("Unexpected error.");
     } finally {
       setIsSaving(false);
@@ -100,11 +135,8 @@ const EditAppointmentModal: React.FC<EditAppointmentModalProps> = ({
     setIsDeleting(true);
 
     try {
-      await toastPromise(appointmentsApi.delete(appointment.id!), {
-        loading: "Deleting...",
-        success: "Deleted.",
-        error: "Failed to delete appointment.",
-      });
+      await appointmentsApi.delete(appointment.id!);
+      toastSuccess("Deleted.");
       onUpdated();
       onClose();
     } catch (err) {

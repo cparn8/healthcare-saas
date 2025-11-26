@@ -78,6 +78,7 @@ export default function DayViewGrid({
     [appointments, date]
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { positioned, clusters } = usePositionedAppointments(dayAppointments);
 
   /* ------------------------------ Cluster Modal ----------------------------- */
@@ -214,27 +215,9 @@ export default function DayViewGrid({
     const end = parseLocalDate(date.toISOString().split("T")[0]);
     end.setHours(Math.floor(endMinutes / 60), endMinutes % 60, 0, 0);
 
-    const overlaps = positioned.some((x) => {
-      const s = x.startMinutes;
-      const e = x.endMinutes;
-      return (
-        x.provider === providerId &&
-        x.date === start.toISOString().split("T")[0] &&
-        s < endMinutes &&
-        e > startMinutes
-      );
-    });
-
-    const finalize = (allow = false) => onSelectEmptySlot?.(start, end, allow);
-
-    if (overlaps && requestConfirm) {
-      requestConfirm(
-        "This time overlaps with another appointment for the same provider. Continue?",
-        () => finalize(true)
-      );
-    } else {
-      finalize(false);
-    }
+    // IMPORTANT: do NOT pre-authorize overlap here.
+    // Always start with allowOverlap = false; the modal will handle conflicts.
+    onSelectEmptySlot?.(start, end, false);
 
     resetSelection();
   };

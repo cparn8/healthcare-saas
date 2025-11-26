@@ -1,4 +1,4 @@
-// frontend/src/features/schedule/components/WeekViewGrid.tsx
+// frontend/src/features/schedule/components/grid/WeekViewGrid.tsx
 
 import React, { useMemo, useState } from "react";
 import { addDays, format, isSameDay } from "date-fns";
@@ -234,35 +234,8 @@ export default function WeekViewGrid({
     const end = parseLocalDate(selDay.toISOString().split("T")[0]);
     end.setHours(Math.floor(endMinutes / 60), endMinutes % 60, 0, 0);
 
-    const todays = (appointments ?? []).filter(
-      (a) => a.date && isSameLocalDay(a.date, selDay)
-    );
-
-    const overlaps = todays.some((x) => {
-      const s =
-        parseInt((x.start_time ?? "00:00").slice(0, 2)) * 60 +
-        parseInt((x.start_time ?? "00:00").slice(3));
-      const e =
-        parseInt((x.end_time ?? "00:00").slice(0, 2)) * 60 +
-        parseInt((x.end_time ?? "00:00").slice(3));
-      return (
-        x.provider === providerId &&
-        x.date === start.toISOString().split("T")[0] &&
-        s < endMinutes &&
-        e > startMinutes
-      );
-    });
-
-    const finalize = (allow = false) => onSelectEmptySlot?.(start, end, allow);
-
-    if (overlaps && requestConfirm) {
-      requestConfirm(
-        "This time overlaps with another appointment for the same provider. Continue?",
-        () => finalize(true)
-      );
-    } else {
-      finalize(false);
-    }
+    // IMPORTANT: do NOT pre-authorize overlap here either.
+    onSelectEmptySlot?.(start, end, false);
 
     resetSelection();
   };

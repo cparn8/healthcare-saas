@@ -18,7 +18,7 @@ export function useVisibleAppointments({
   visibleEnd,
 }: Options): Appointment[] {
   return useMemo(() => {
-    const inRange = (d: Date) => d >= visibleStart && d <= visibleEnd;
+    const inRange = (d: Date) => d >= visibleStart && d < visibleEnd;
 
     // Filter strictly to visible window
     const windowed = allAppointments.filter((a) => {

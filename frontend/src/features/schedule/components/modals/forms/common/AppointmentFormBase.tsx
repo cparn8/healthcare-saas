@@ -9,7 +9,6 @@ import DateTimeFields from "./DateTimeFields";
 interface AppointmentFormBaseProps {
   formData: AppointmentPayload;
   onChange: (patch: Partial<AppointmentPayload>) => void;
-  onCancel?: () => void;
 
   /** Custom sections injected by the parent */
   providerSection?: React.ReactNode;
@@ -26,7 +25,6 @@ interface AppointmentFormBaseProps {
 const AppointmentFormBase: React.FC<AppointmentFormBaseProps> = ({
   formData,
   onChange,
-  onCancel,
   providerSection,
   officeSection,
   dateTimeSection,
@@ -55,18 +53,6 @@ const AppointmentFormBase: React.FC<AppointmentFormBaseProps> = ({
 
       {/* ---------------- Extra Fields ---------------- */}
       {extraFields ? <div className="space-y-4">{extraFields}</div> : null}
-
-      {/* ---------------- Optional Cancel Button ---------------- */}
-      {onCancel && (
-        <div className="pt-2 flex justify-end">
-          <button
-            onClick={onCancel}
-            className="px-3 py-1.5 border rounded-md text-sm hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-        </div>
-      )}
     </div>
   );
 };
