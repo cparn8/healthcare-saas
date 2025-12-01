@@ -12,14 +12,14 @@ export interface AppointmentTypeDef {
 
 // Appointment status definitions (aligned with backend)
 export const STATUS_DEFS = [
-  { key: "pending", label: "Pending", color: "#6b7280" },
-  { key: "arrived", label: "Arrived", color: "#22c55e" },
-  { key: "in_room", label: "In Room", color: "#3b82f6" },
-  { key: "in_lobby", label: "In Lobby", color: "#0ea5e9" },
-  { key: "seen", label: "Seen", color: "#16a34a" },
-  { key: "no_show", label: "No Show", color: "#f97316" },
-  { key: "cancelled", label: "Cancelled", color: "#ef4444" },
-  { key: "tentative", label: "Tentative", color: "#a855f7" },
+  { key: "pending", label: "Pending" },
+  { key: "arrived", label: "Arrived" },
+  { key: "in_room", label: "In Room" },
+  { key: "in_lobby", label: "In Lobby" },
+  { key: "seen", label: "Seen" },
+  { key: "no_show", label: "No Show" },
+  { key: "cancelled", label: "Cancelled" },
+  { key: "tentative", label: "Tentative" },
 ] as const;
 
 export type AppointmentStatus = (typeof STATUS_DEFS)[number]["key"];

@@ -160,6 +160,20 @@ const SchedulePage: React.FC = () => {
   // Filters + provider list in one place
   const { filters, setFilters, providersList } = useScheduleFilters(providerId);
 
+  // ------------------------------------------------------------------
+  // One-time sync: ensure activeTab matches persisted defaultView
+  // ------------------------------------------------------------------
+  const hasSyncedDefaultView = useRef(false);
+
+  useEffect(() => {
+    if (hasSyncedDefaultView.current) return;
+
+    if (activeTab === "day" && filters.defaultView !== "day") {
+      hasSyncedDefaultView.current = true;
+      setActiveTab(filters.defaultView);
+    }
+  }, [filters.defaultView, activeTab]);
+
   /* ----------------------------- Modal State -------------------------- */
 
   const [showNewAppointment, setShowNewAppointment] = useState(false);
@@ -489,6 +503,7 @@ const SchedulePage: React.FC = () => {
               date={cursorDate}
               loading={loadingAppts}
               loadAppointments={reloadAppointments}
+              selectedOffices={selectedOffices}
             />
           )}
 

@@ -44,7 +44,9 @@ export function filterAppointments({
     /* ------------------------------------------------------------------
      * APPOINTMENT TYPE FILTER
      * ------------------------------------------------------------------ */
-    if (filters.types.length > 0) {
+    const isBlockAppt = appt.is_block === true;
+
+    if (!isBlockAppt && filters.types.length > 0) {
       if (
         !appt.appointment_type ||
         !filters.types.includes(appt.appointment_type)
@@ -56,7 +58,7 @@ export function filterAppointments({
     /* ------------------------------------------------------------------
      * STATUS FILTER
      * ------------------------------------------------------------------ */
-    if (filters.statuses.length > 0) {
+    if (!isBlockAppt && filters.statuses.length > 0) {
       if (!appt.status || !filters.statuses.includes(appt.status as any)) {
         return false;
       }

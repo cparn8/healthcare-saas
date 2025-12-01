@@ -208,7 +208,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
 
       // First attempt — no overlap override beyond what payload already has.
       try {
-        //const created = await appointmentsApi.create(payload);
+        await appointmentsApi.create(payload);
         toastSuccess("✅ Appointment saved successfully!");
         await createRecurrencesIfNeeded(payload, safeDate);
         onSaved();
@@ -240,7 +240,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
           allow_overlap: true,
         };
 
-        //const created = await appointmentsApi.create(overlapPayload);
+        await appointmentsApi.create(overlapPayload);
         toastSuccess("✅ Appointment saved successfully (overlap allowed).");
         await createRecurrencesIfNeeded(overlapPayload, safeDate);
         onSaved();

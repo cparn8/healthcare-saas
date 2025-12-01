@@ -30,6 +30,7 @@ interface AppointmentsTableProps {
   date: Date;
   loading: boolean;
   loadAppointments: () => void;
+  selectedOffices: string[];
 }
 
 interface RowState {
@@ -72,6 +73,7 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
   date,
   loading,
   loadAppointments,
+  selectedOffices,
 }) => {
   const [timeSortAsc, setTimeSortAsc] = useState(true);
 
@@ -89,8 +91,8 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
   const roomInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const dayStr = useMemo(() => date.toISOString().split("T")[0], [date]);
-
   const safeRefresh = () => setRefreshQueued(true);
+  const showLocationColumn = selectedOffices.length > 1;
 
   /* ---------------------------------------------------------------------- */
   /* NOTE SAVING                                                            */
@@ -461,6 +463,9 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
         <thead className="bg-gray-100">
           <tr className="border-b">
             <th className="px-2 py-2 text-left w-10">Note</th>
+            {showLocationColumn && (
+              <th className="px-2 py-2 text-left">Location</th>
+            )}
             <th className="px-2 py-2 text-left w-40">Status</th>
             <th className="px-2 py-2 text-left">Patient</th>
             <th className="px-2 py-2 text-left w-32">
@@ -555,6 +560,13 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
                     />
                   )}
                 </td>
+
+                {/* LOCATION */}
+                {showLocationColumn && (
+                  <td className="capitalize px-2 py-2 align-top">
+                    {appt.office}
+                  </td>
+                )}
 
                 {/* STATUS CELL */}
                 <td className="px-2 py-2 align-top relative">

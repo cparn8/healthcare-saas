@@ -1,6 +1,8 @@
 // src/features/schedule/components/ScheduleFilters.tsx
 import React, { useEffect, useState, useCallback } from "react";
-import { AppointmentTypeDef, ScheduleFilters, STATUS_DEFS } from "../../types";
+import { AppointmentTypeDef, ScheduleFilters } from "../../types";
+import { STATUS_OPTIONS } from "../../logic/appointmentStatus";
+
 import { Provider } from "../../../providers/services/providersApi";
 
 interface ScheduleFiltersProps {
@@ -18,67 +20,40 @@ const ScheduleFiltersComponent: React.FC<ScheduleFiltersProps> = ({
   currentFilters,
   onUpdateFilters,
 }) => {
-  const [localFilters, setLocalFilters] =
-    useState<ScheduleFilters>(currentFilters);
-
-  /* ------------------------------------------------------------------ */
-  /* Persistence (load + save)                                          */
-  /* ------------------------------------------------------------------ */
-
-  useEffect(() => {
-    if (!providerId) return;
-
-    const saved = localStorage.getItem(`scheduleFilters_${providerId}`);
-    if (saved) {
-      try {
-        setLocalFilters(JSON.parse(saved));
-      } catch {
-        // corrupt localStorage, ignore
-      }
-    }
-  }, [providerId]);
-
-  useEffect(() => {
-    onUpdateFilters(localFilters);
-
-    if (providerId) {
-      localStorage.setItem(
-        `scheduleFilters_${providerId}`,
-        JSON.stringify(localFilters)
-      );
-    }
-  }, [localFilters, onUpdateFilters, providerId]);
-
   /* ------------------------------------------------------------------ */
   /* Small helpers                                                      */
   /* ------------------------------------------------------------------ */
 
-  // Generic toggle for multi-select arrays
-  const toggleMulti = useCallback(
-    <T,>(field: keyof ScheduleFilters, value: T) => {
-      setLocalFilters((prev) => {
-        const arr = prev[field] as T[];
-        const next = arr.includes(value)
-          ? arr.filter((x) => x !== value)
-          : [...arr, value];
+  // Generic toggle for multi-select arrays (providers, types, statuses)
+  const toggleMulti = <T,>(field: keyof ScheduleFilters, value: T) => {
+    const arr = currentFilters[field] as T[];
+    const next = arr.includes(value)
+      ? arr.filter((x) => x !== value)
+      : [...arr, value];
 
-        return { ...prev, [field]: next };
-      });
-    },
-    []
-  );
+    onUpdateFilters({
+      ...currentFilters,
+      [field]: next,
+    });
+  };
 
   const areAllSelected = <T,>(field: keyof ScheduleFilters, full: T[]) => {
-    const arr = localFilters[field] as T[];
+    const arr = currentFilters[field] as T[];
     return arr.length === full.length;
   };
 
   const selectAll = <T,>(field: keyof ScheduleFilters, full: T[]) => {
-    setLocalFilters((prev) => ({ ...prev, [field]: [...full] }));
+    onUpdateFilters({
+      ...currentFilters,
+      [field]: [...full],
+    });
   };
 
   const clearAll = (field: keyof ScheduleFilters) => {
-    setLocalFilters((prev) => ({ ...prev, [field]: [] }));
+    onUpdateFilters({
+      ...currentFilters,
+      [field]: [],
+    });
   };
 
   /* ------------------------------------------------------------------ */
@@ -119,40 +94,10 @@ const ScheduleFiltersComponent: React.FC<ScheduleFiltersProps> = ({
             <label key={p.id} className="flex items-center gap-2">
               <input
                 type="checkbox"
-                checked={localFilters.providers.includes(p.id!)}
+                checked={currentFilters.providers.includes(p.id!)}
                 onChange={() => toggleMulti("providers", p.id!)}
               />
               <span>{`${p.first_name} ${p.last_name}`}</span>
-            </label>
-          ))}
-        </div>
-      </details>
-
-      {/* ---------------- Offices ---------------- */}
-      <details open>
-        <summary className="cursor-pointer font-medium">Offices</summary>
-        <div className="mt-2 space-y-1">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={areAllSelected("offices", ["north", "south"])}
-              onChange={(e) =>
-                e.target.checked
-                  ? selectAll("offices", ["north", "south"])
-                  : clearAll("offices")
-              }
-            />
-            <span>All Offices</span>
-          </label>
-
-          {["north", "south"].map((office) => (
-            <label key={office} className="flex items-center gap-2 capitalize">
-              <input
-                type="checkbox"
-                checked={localFilters.offices.includes(office)}
-                onChange={() => toggleMulti("offices", office)}
-              />
-              <span>{office} Office</span>
             </label>
           ))}
         </div>
@@ -187,7 +132,7 @@ const ScheduleFiltersComponent: React.FC<ScheduleFiltersProps> = ({
             <label key={t.name} className="flex items-center gap-2">
               <input
                 type="checkbox"
-                checked={localFilters.types.includes(t.name)}
+                checked={currentFilters.types.includes(t.name)}
                 onChange={() => toggleMulti("types", t.name)}
               />
               <span>{t.name}</span>
@@ -207,13 +152,13 @@ const ScheduleFiltersComponent: React.FC<ScheduleFiltersProps> = ({
               type="checkbox"
               checked={areAllSelected(
                 "statuses",
-                STATUS_DEFS.map((s) => s.key)
+                STATUS_OPTIONS.map((s) => s.key)
               )}
               onChange={(e) =>
                 e.target.checked
                   ? selectAll(
                       "statuses",
-                      STATUS_DEFS.map((s) => s.key)
+                      STATUS_OPTIONS.map((s) => s.key)
                     )
                   : clearAll("statuses")
               }
@@ -221,16 +166,15 @@ const ScheduleFiltersComponent: React.FC<ScheduleFiltersProps> = ({
             <span>All Statuses</span>
           </label>
 
-          {STATUS_DEFS.map((s) => (
+          {STATUS_OPTIONS.map((s) => (
             <label key={s.key} className="flex items-center gap-2">
               <input
                 type="checkbox"
-                checked={localFilters.statuses.includes(s.key)}
+                checked={currentFilters.statuses.includes(s.key)}
                 onChange={() => toggleMulti("statuses", s.key)}
               />
               <span
-                className="inline-block w-2 h-2 rounded-full mr-1"
-                style={{ backgroundColor: s.color }}
+                className={`inline-block w-2 h-2 rounded-full mr-1 ${s.dotClass}`}
               />
               <span>{s.label}</span>
             </label>
@@ -248,12 +192,12 @@ const ScheduleFiltersComponent: React.FC<ScheduleFiltersProps> = ({
             <span className="text-xs text-gray-600">Default View:</span>
             <select
               className="mt-1 w-full border rounded p-1 text-sm"
-              value={localFilters.defaultView}
+              value={currentFilters.defaultView}
               onChange={(e) =>
-                setLocalFilters((prev) => ({
-                  ...prev,
+                onUpdateFilters({
+                  ...currentFilters,
                   defaultView: e.target.value as ScheduleFilters["defaultView"],
-                }))
+                })
               }
             >
               <option value="appointments">Appointments</option>
@@ -265,12 +209,12 @@ const ScheduleFiltersComponent: React.FC<ScheduleFiltersProps> = ({
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
-              checked={localFilters.includeBlockedTimes}
+              checked={currentFilters.includeBlockedTimes}
               onChange={(e) =>
-                setLocalFilters((prev) => ({
-                  ...prev,
+                onUpdateFilters({
+                  ...currentFilters,
                   includeBlockedTimes: e.target.checked,
-                }))
+                })
               }
             />
             <span>Include Blocked Times</span>
