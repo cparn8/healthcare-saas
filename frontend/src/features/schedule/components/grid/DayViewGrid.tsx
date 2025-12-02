@@ -12,7 +12,7 @@ import {
   computeClosedOverlays,
   buildDaySlots,
   formatTimeLabel,
-  formatOfficeLabel,
+  buildAppointmentTooltip,
 } from "./logic";
 
 interface DayViewGridProps {
@@ -88,13 +88,6 @@ export default function DayViewGrid({
     appointments: Appointment[];
   }>({ open: false, appointments: [] });
 
-  /* ----------------------------- Office Label ------------------------------- */
-
-  const officeLabel = useMemo(
-    () => formatOfficeLabel(officesForHours, office),
-    [officesForHours, office]
-  );
-
   /* ------------------------------- Render Appts ----------------------------- */
 
   const renderAppointments = () => {
@@ -135,11 +128,12 @@ export default function DayViewGrid({
             : appt.color_code || "#3B82F6";
 
         const isBlock = appt.is_block === true;
+        const title = isBlock ? undefined : buildAppointmentTooltip(appt);
 
         return (
           <div
             key={`${appt.id}-${appt.date}-${appt.start_time}`}
-            className="absolute rounded text-white text-xs p-1.5 shadow-sm hover:brightness-105 transition-all pointer-events-auto flex flex-col items-center justify-center text-center"
+            className="absolute rounded text-white text-xs p-1.5 shadow-sm hover:brightness-105 transition-all pointer-events-auto cursor-pointer flex flex-col items-center justify-center text-center"
             style={{
               top,
               height,
@@ -148,6 +142,7 @@ export default function DayViewGrid({
               backgroundColor: bg,
               zIndex: 10,
             }}
+            title={title}
             onClick={(e) => {
               e.stopPropagation();
               onEditAppointment?.(appt);
@@ -255,12 +250,13 @@ export default function DayViewGrid({
   return (
     <div className="border rounded overflow-hidden bg-white select-none relative">
       {/* Header */}
-      <div className="grid grid-cols-[120px_1fr] bg-gray-100 border-b text-sm font-semibold">
+      <div className="grid grid-cols-[120px_1fr] bg-gray-100 border-b text-sm">
         <div className="p-2 border-r text-gray-700 text-right pr-3 font-semibold">
           Time
         </div>
-        <div className="p-2">
-          {providerName} — {officeLabel}
+        <div className="p-2 text-gray-700">
+          Viewing appointments for{" "}
+          <span className="font-semibold">{providerName}</span>
         </div>
       </div>
 

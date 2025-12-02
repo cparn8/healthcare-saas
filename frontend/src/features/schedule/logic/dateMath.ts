@@ -1,10 +1,7 @@
 // src/features/schedule/logic/dateMath.ts
 
-import {
-  parseLocalDate,
-  formatYMDLocal,
-  safeDate,
-} from "../../../utils";
+import { parseLocalDate, formatYMDLocal, safeDate } from "../../../utils";
+import { addDays } from "date-fns";
 
 /**
  * Given any date string (YYYY-MM-DD) or Date,
@@ -29,18 +26,31 @@ export function formatWeekRange(input: string | Date): string {
   const end = safeDate(formatYMDLocal(localStart));
   end.setDate(localStart.getDate() + 4); // Mon → Fri
 
-  const sameMonth = localStart.getMonth() === end.getMonth();
-
   const startFmt = new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
   }).format(localStart);
 
   const endFmt = new Intl.DateTimeFormat("en-US", {
-    month: sameMonth ? undefined : "short",
+    month: "short",
     day: "numeric",
     year: "numeric",
   }).format(end);
 
   return `${startFmt} – ${endFmt}`;
+}
+
+export function computeOpenRangeForWeek(
+  weekStart: Date,
+  isDayOpen: (day: Date) => boolean
+) {
+  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const openDays = days.filter(isDayOpen);
+
+  if (openDays.length === 0) return null;
+
+  return {
+    first: openDays[0],
+    last: openDays[openDays.length - 1],
+  };
 }

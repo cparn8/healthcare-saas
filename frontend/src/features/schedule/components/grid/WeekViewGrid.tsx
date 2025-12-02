@@ -13,7 +13,7 @@ import {
   computeClusterBoxes,
   computeClosedOverlays,
   computeSlotsPerDay,
-  formatOfficeLabel,
+  buildAppointmentTooltip,
   formatTimeLabel,
 } from "./logic";
 
@@ -75,13 +75,6 @@ export default function WeekViewGrid({
   const openDays = useMemo(
     () => weekDays.filter((d) => isDayOpen(d)),
     [weekDays, isDayOpen]
-  );
-
-  /* ------------------------------ Office Label ------------------------------ */
-
-  const officeLabel = useMemo(
-    () => formatOfficeLabel(officesForHours, office),
-    [officesForHours, office]
   );
 
   /* ------------------------ Cluster Modal Handling -------------------------- */
@@ -157,13 +150,7 @@ export default function WeekViewGrid({
               minWidth: 0,
             }}
             onClick={() => onEditAppointment?.(appt)}
-            title={
-              isBlock
-                ? undefined
-                : `${appt.patient_name || "(No Patient)"} — ${
-                    appt.appointment_type
-                  }`
-            }
+            title={isBlock ? undefined : buildAppointmentTooltip(appt)}
           >
             {isBlock ? (
               <div className="w-full text-center">
@@ -262,9 +249,10 @@ export default function WeekViewGrid({
         ))}
       </div>
 
-      {/* Office Label */}
-      <div className="px-4 py-2 text-sm text-gray-600 border-b bg-gray-50">
-        Offices: {officeLabel}
+      {/* Provider Label */}
+      <div className="px-4 py-2 text-sm text-gray-700 border-b bg-gray-50">
+        Viewing appointments for{" "}
+        <span className="font-semibold">{providerName}</span>
       </div>
 
       {loading ? (

@@ -3,7 +3,6 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { addDays } from "date-fns";
-
 import { AppointmentsTable } from "../components/appointments-table";
 import { DayViewGrid, WeekViewGrid } from "../components/grid";
 import {
@@ -14,30 +13,29 @@ import SettingsPanel from "../components/SettingsPanel";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
 import { ScheduleFilters } from "../components/filters";
 import DatePickerPopover from "../components/DatePickerPopover";
-
 import { filterAppointments } from "../utils";
 import {
   useVisibleAppointments,
+  useBusinessHours,
   useScheduleData,
   useScheduleFilters,
   useOfficePersistence,
   OfficeKey,
 } from "../hooks";
-
 import { Appointment } from "../services/appointmentsApi";
 import { providersApi, Provider } from "../../providers/services/providersApi";
-
 import {
   formatShortDate,
   formatYMDLocal,
   safeDate,
 } from "../../../utils/dateUtils";
-
 import {
   formatWeekRange,
   findNextOpenDay,
   normalizeToWeekStart,
+  computeOpenRangeForWeek,
 } from "../logic";
+import { formatProviderLabel } from "../components/grid/logic";
 
 /* ------------------------------------------------------------------ */
 /* Types & constants                                                   */
@@ -151,6 +149,7 @@ const SchedulePage: React.FC = () => {
   /* ----------------------------- Data State --------------------------- */
 
   const [providerId, setProviderId] = useState<number | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [provider, setProvider] = useState<Provider | null>(null);
 
   // Office + multi-office selection, persisted per provider
@@ -173,6 +172,8 @@ const SchedulePage: React.FC = () => {
       setActiveTab(filters.defaultView);
     }
   }, [filters.defaultView, activeTab]);
+
+  const providerLabel = formatProviderLabel(providersList, filters.providers);
 
   /* ----------------------------- Modal State -------------------------- */
 
@@ -223,6 +224,8 @@ const SchedulePage: React.FC = () => {
 
   /* ----------------------------- Derived Values ----------------------- */
 
+  const { isDayOpen } = useBusinessHours(scheduleSettings, selectedOffices);
+
   const visibleRange = useMemo(() => {
     if (activeTab === "week") {
       const start = normalizeToWeekStart(cursorDate);
@@ -250,13 +253,30 @@ const SchedulePage: React.FC = () => {
     [visibleAppointments, filters, selectedOffices]
   );
 
-  const leftLabel = useMemo(
-    () =>
-      activeTab === "week"
-        ? formatWeekRange(cursorDate)
-        : formatShortDate(cursorDate),
-    [cursorDate, activeTab]
-  );
+  /* --------------------------- Left Label (Header) --------------------------- */
+
+  const leftLabel = useMemo(() => {
+    if (activeTab !== "week") {
+      return formatShortDate(cursorDate);
+    }
+
+    const weekStart = normalizeToWeekStart(cursorDate);
+    const range = computeOpenRangeForWeek(weekStart, isDayOpen);
+
+    if (!range) {
+      // no open days → fall back to standard Mon–Fri label
+      return formatWeekRange(cursorDate);
+    }
+
+    const fmt = (d: Date) =>
+      new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }).format(d);
+
+    return `${fmt(range.first)} – ${fmt(range.last)}`;
+  }, [activeTab, cursorDate, isDayOpen]);
 
   /* ----------------------------- Effects: provider -------------------- */
 
@@ -511,11 +531,7 @@ const SchedulePage: React.FC = () => {
             <DayViewGrid
               office={office}
               selectedOffices={selectedOffices}
-              providerName={
-                provider
-                  ? `${provider.first_name} ${provider.last_name}`
-                  : "Loading..."
-              }
+              providerName={providerLabel}
               scheduleSettings={scheduleSettings}
               slotMinutes={slotSize}
               appointments={filteredAppointments}
@@ -538,11 +554,7 @@ const SchedulePage: React.FC = () => {
               baseDate={cursorDate}
               office={office}
               selectedOffices={selectedOffices}
-              providerName={
-                provider
-                  ? `${provider.first_name} ${provider.last_name}`
-                  : "Loading..."
-              }
+              providerName={providerLabel}
               scheduleSettings={scheduleSettings}
               slotMinutes={slotSize}
               appointments={filteredAppointments}
