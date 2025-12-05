@@ -11,6 +11,12 @@ export interface Provider {
   specialty?: string;
   profile_picture?: string;
   created_at?: string;
+  username?: string;
+  password?: string;
+  confirm_password?: string;
+  is_admin?: boolean;
+  is_staff?: boolean;
+  is_superuser?: boolean;
 }
 
 /**

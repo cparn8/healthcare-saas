@@ -1,6 +1,10 @@
+/* src/app/index.css */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 [data-sonner-toast] {
   @apply animate-toast-enter;
 }
+
+@import "../features/schedule/components/appointments-table/print.css";

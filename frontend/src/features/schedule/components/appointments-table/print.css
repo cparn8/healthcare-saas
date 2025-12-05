@@ -1,0 +1,59 @@
+/* src/features/schedule/components/appointments-table/print.css */
+
+/* Print-only rules for the AppointmentTable "Print day" flow */
+@media print {
+  /* Hint to browsers to use landscape where supported */
+  @page {
+    size: landscape;
+    margin: 0.5in;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Hide everything by default */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Only show the print root and its contents */
+  #print-day-root,
+  #print-day-root * {
+    visibility: visible !important;
+  }
+
+  #print-day-root {
+    position: absolute !important;
+    inset: 0;
+    margin: 1rem;
+    background: #ffffff;
+    margin: 0 !important;
+  }
+
+  /* Centered date header above the table */
+  #print-day-root .print-day-header {
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+
+  /* Ensure strong table gridlines in print */
+  #print-day-root table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  #print-day-root th,
+  #print-day-root td {
+    border: 1px solid #000 !important;
+    padding: 0.25rem 0.4rem;
+  }
+
+  /* Utility if you ever need to explicitly hide something from print */
+  .no-print {
+    display: none !important;
+  }
+}

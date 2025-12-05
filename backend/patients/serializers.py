@@ -14,8 +14,10 @@ class PatientSerializer(serializers.ModelSerializer):
             "full_name",
             "prn",
             "date_of_birth",
+            "gender",       
             "phone",
             "email",
+            "address",      
         ]
 
     def get_full_name(self, obj):

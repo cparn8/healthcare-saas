@@ -162,35 +162,52 @@ healthcare-saas
 │  │  │  │  ├─ components
 │  │  │  │  │  ├─ appointments-table
 │  │  │  │  │  │  ├─ AppointmentsTable.tsx
-│  │  │  │  │  │  ├─ IntakeDropdown.tsx
-│  │  │  │  │  │  ├─ NoteModal.tsx
-│  │  │  │  │  │  ├─ RoomModal.tsx
-│  │  │  │  │  │  └─ StatusDropdown.tsx
+│  │  │  │  │  │  ├─ index.ts
+│  │  │  │  │  │  ├─ print.css
+│  │  │  │  │  │  └─ _components
+│  │  │  │  │  │     ├─ index.ts
+│  │  │  │  │  │     ├─ IntakeDropdown.tsx
+│  │  │  │  │  │     ├─ NoteModal.tsx
+│  │  │  │  │  │     ├─ RoomModal.tsx
+│  │  │  │  │  │     └─ StatusDropdown.tsx
 │  │  │  │  │  ├─ DatePickerPopover.tsx
 │  │  │  │  │  ├─ filters
+│  │  │  │  │  │  ├─ index.ts
 │  │  │  │  │  │  └─ ScheduleFilters.tsx
 │  │  │  │  │  ├─ grid
 │  │  │  │  │  │  ├─ DayViewGrid.tsx
+│  │  │  │  │  │  ├─ index.ts
 │  │  │  │  │  │  ├─ logic
 │  │  │  │  │  │  │  ├─ daySlots.ts
 │  │  │  │  │  │  │  ├─ gridCore.ts
+│  │  │  │  │  │  │  ├─ index.ts
 │  │  │  │  │  │  │  ├─ labels.ts
 │  │  │  │  │  │  │  ├─ timeFormatting.ts
 │  │  │  │  │  │  │  └─ weekSlots.ts
 │  │  │  │  │  │  └─ WeekViewGrid.tsx
 │  │  │  │  │  ├─ modals
-│  │  │  │  │  │  ├─ BlockTimeForm.tsx
 │  │  │  │  │  │  ├─ EditAppointmentModal.tsx
+│  │  │  │  │  │  ├─ forms
+│  │  │  │  │  │  │  ├─ BlockTimeForm.tsx
+│  │  │  │  │  │  │  ├─ common
+│  │  │  │  │  │  │  │  ├─ AppointmentFormBase.tsx
+│  │  │  │  │  │  │  │  ├─ AppointmentTypeSelect.tsx
+│  │  │  │  │  │  │  │  ├─ DateTimeFields.tsx
+│  │  │  │  │  │  │  │  ├─ OfficeSelect.tsx
+│  │  │  │  │  │  │  │  ├─ ProviderSelect.tsx
+│  │  │  │  │  │  │  │  └─ RepeatSection.tsx
+│  │  │  │  │  │  │  └─ WithPatientForm.tsx
+│  │  │  │  │  │  ├─ index.ts
 │  │  │  │  │  │  ├─ MultiSlotModal.tsx
-│  │  │  │  │  │  ├─ NewAppointmentModal.tsx
-│  │  │  │  │  │  └─ WithPatientForm.tsx
+│  │  │  │  │  │  └─ NewAppointmentModal.tsx
 │  │  │  │  │  └─ SettingsPanel.tsx
 │  │  │  │  ├─ hooks
+│  │  │  │  │  ├─ index.ts
 │  │  │  │  │  ├─ useBusinessHours.ts
 │  │  │  │  │  ├─ useBusinessHoursFilter.ts
 │  │  │  │  │  ├─ useOfficePersistence.ts
 │  │  │  │  │  ├─ usePatientSearch.ts
-│  │  │  │  │  ├─ usePositionedApointments.ts
+│  │  │  │  │  ├─ usePositionedAppointments.ts
 │  │  │  │  │  ├─ usePrefilledAppointmentFields.ts
 │  │  │  │  │  ├─ useScheduleData.ts
 │  │  │  │  │  ├─ useScheduleFilters.ts
@@ -203,17 +220,22 @@ healthcare-saas
 │  │  │  │  │  ├─ businessHours.ts
 │  │  │  │  │  ├─ clusterCalculations.ts
 │  │  │  │  │  ├─ dateMath.ts
-│  │  │  │  │  └─ dateNavigation.ts
+│  │  │  │  │  ├─ dateNavigation.ts
+│  │  │  │  │  ├─ detectConflict.ts
+│  │  │  │  │  └─ index.ts
 │  │  │  │  ├─ pages
+│  │  │  │  │  ├─ index.ts
 │  │  │  │  │  └─ Schedule.tsx
 │  │  │  │  ├─ services
 │  │  │  │  │  ├─ appointmentsApi.ts
+│  │  │  │  │  ├─ index.ts
 │  │  │  │  │  └─ scheduleSettingsApi.ts
 │  │  │  │  ├─ types
 │  │  │  │  │  ├─ index.ts
 │  │  │  │  │  └─ scheduleSettings.ts
 │  │  │  │  └─ utils
-│  │  │  │     └─ filterAppointments.ts
+│  │  │  │     ├─ filterAppointments.ts
+│  │  │  │     └─ index.ts
 │  │  │  └─ tasks
 │  │  │     └─ pages
 │  │  │        └─ Tasks.tsx
@@ -225,13 +247,15 @@ healthcare-saas
 │  │  ├─ react-app-env.d.ts
 │  │  ├─ reportWebVitals.ts
 │  │  ├─ services
-│  │  │  └─ api.ts
+│  │  │  ├─ api.ts
+│  │  │  └─ index.ts
 │  │  ├─ setupTests.ts
 │  │  ├─ types
 │  │  │  └─ lucide-react.d.ts
 │  │  └─ utils
 │  │     ├─ apiErrors.ts
 │  │     ├─ dateUtils.ts
+│  │     ├─ index.ts
 │  │     ├─ toastUtils.ts
 │  │     ├─ validation.ts
 │  │     └─ weekdays.ts

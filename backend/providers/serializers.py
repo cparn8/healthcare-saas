@@ -22,6 +22,9 @@ class ProviderSerializer(serializers.ModelSerializer):
     username = serializers.CharField(read_only=True)
     password = serializers.CharField(write_only=True, required=False, min_length=8)
     confirm_password = serializers.CharField(write_only=True, required=False)
+    is_staff = serializers.SerializerMethodField()
+    is_superuser = serializers.SerializerMethodField()
+    is_admin = serializers.SerializerMethodField()
 
     class Meta:
         model = Provider
@@ -37,8 +40,22 @@ class ProviderSerializer(serializers.ModelSerializer):
             "password",
             "confirm_password",
             "created_at",
+            "is_staff",
+            "is_superuser",
+            "is_admin",
         ]
-        read_only_fields = ["id", "username", "created_at"]
+        read_only_fields = ["id", "username", "created_at", "is_staff", "is_superuser", "is_admin"]
+
+    def get_is_staff(self, obj):
+        return obj.user.is_staff if obj.user else False
+
+    def get_is_superuser(self, obj):
+        return obj.user.is_superuser if obj.user else False
+    
+    def get_is_admin(self, obj):
+        if not obj.user:
+            return False
+        return obj.user.is_staff or obj.user.is_superuser
 
     def validate(self, data):
         """

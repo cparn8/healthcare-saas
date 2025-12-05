@@ -1,60 +1,153 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import API from "../../../services/api";
+import React, { useEffect, useMemo, useState } from "react";
 import Skeleton from "../../../components/Skeleton";
-import Dropdown from "../../../components/ui/Dropdown";
-
-interface Provider {
-  id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  specialty?: string;
-  profile_picture?: string;
-}
+import ConfirmDialog from "../../../components/common/ConfirmDialog";
+import { toastError, toastSuccess } from "../../../utils/toastUtils";
+import { providersApi, Provider } from "../services/providersApi";
+import { useCurrentProvider } from "../hooks/useCurrentProvider";
+import ProvidersTable from "../components/table/ProvidersTable";
+import AddProviderModal from "../components/modals/AddProviderModal";
+import ChangePasswordModal from "../components/modals/ChangePasswordModal";
+import ProviderProfileModal from "../components/modals/ViewProviderModal";
 
 const ProvidersList: React.FC = () => {
+  const { provider: currentProvider, isAdmin } = useCurrentProvider();
+
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const navigate = useNavigate();
 
+  const [search, setSearch] = useState("");
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<Provider | null>(null);
+
+  // Modals
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
+    null
+  );
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [passwordTarget, setPasswordTarget] = useState<Provider | null>(null);
+
+  const canEdit = (p: Provider): boolean => {
+    if (!currentProvider) return false;
+    if (isAdmin) return true;
+    return currentProvider.id === p.id;
+  };
+
+  const canDelete = (p: Provider): boolean => {
+    if (!currentProvider) return false;
+    return isAdmin; // only admin can delete any provider
+  };
+
+  const canChangePassword = (p: Provider): boolean => {
+    if (!currentProvider) return false;
+    if (isAdmin) return true;
+    return currentProvider.id === p.id;
+  };
+
+  // Fetch providers (with search)
   useEffect(() => {
+    let active = true;
+
     const fetchProviders = async () => {
       setLoading(true);
       try {
-        const res = await API.get("/providers/");
-
-        // Normalize the response
-        const data = res.data;
-        const providerArray = Array.isArray(data) ? data : data.results || [];
-        setProviders(providerArray);
+        const list = await providersApi.list(search || undefined);
+        if (!active) return;
+        setProviders(Array.isArray(list) ? list : []);
       } catch (error) {
         console.error("Error fetching providers:", error);
+        if (active) toastError("Failed to load providers.");
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
-    fetchProviders();
-  }, []);
+    // simple debounce
+    const id = setTimeout(fetchProviders, 250);
+    return () => {
+      active = false;
+      clearTimeout(id);
+    };
+  }, [search]);
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this provider?"))
+  const handleOpenProfile = (p: Provider) => {
+    setSelectedProvider(p);
+    setProfileModalOpen(true);
+  };
+
+  const handleOpenPasswordModal = (p: Provider) => {
+    if (!canChangePassword(p)) {
+      toastError("You do not have permission to change this password.");
       return;
-    setDeletingId(id);
+    }
+    setPasswordTarget(p);
+    setPasswordModalOpen(true);
+  };
+
+  const requestDelete = (p: Provider) => {
+    if (!canDelete(p)) {
+      toastError("You do not have permission to delete providers.");
+      return;
+    }
+    setPendingDelete(p);
+    setConfirmDeleteOpen(true);
+  };
+
+  const performDelete = async () => {
+    if (!pendingDelete?.id) return;
+
+    setConfirmDeleteOpen(false);
+    setDeletingId(pendingDelete.id);
+
     try {
-      await API.delete(`/providers/${id}/`);
-      setProviders((prev) => prev.filter((p) => p.id !== id));
+      await providersApi.delete(pendingDelete.id);
+      setProviders((prev) => prev.filter((pr) => pr.id !== pendingDelete.id));
+      toastSuccess("Provider deleted.");
     } catch (error) {
       console.error("Error deleting provider:", error);
+      toastError("Failed to delete provider.");
     } finally {
       setDeletingId(null);
+      setPendingDelete(null);
     }
   };
 
-  if (loading) {
+  // handle add modal open with guard
+  const handleOpenAddModal = () => {
+    if (!isAdmin) {
+      toastError("You do not have permission to add providers.");
+      return;
+    }
+    setAddModalOpen(true);
+  };
+
+  const handleProviderCreated = (p: Provider) => {
+    setProviders((prev) => [...prev, p]);
+  };
+
+  const handleProviderUpdated = (updated: Provider) => {
+    setProviders((prev) =>
+      prev.map((p) => (p.id === updated.id ? updated : p))
+    );
+  };
+
+  const sortedProviders = useMemo(
+    () =>
+      [...providers].sort((a, b) => {
+        const la = (a.last_name || "").toLowerCase();
+        const lb = (b.last_name || "").toLowerCase();
+        if (la < lb) return -1;
+        if (la > lb) return 1;
+        const fa = (a.first_name || "").toLowerCase();
+        const fb = (b.first_name || "").toLowerCase();
+        return fa.localeCompare(fb);
+      }),
+    [providers]
+  );
+
+  if (loading && !providers.length) {
     return (
       <div className="p-6">
         <Skeleton className="h-6 w-40 mb-4" />
@@ -64,17 +157,20 @@ const ProvidersList: React.FC = () => {
     );
   }
 
-  if (!providers.length) {
-    return <p className="p-6 text-gray-600">No providers found.</p>;
-  }
-
   return (
     <div className="p-6">
-      {/* Header + Add button */}
+      {/* Header: Search + Add */}
+      <h1 className="text-xl font-bold mb-4">Providers</h1>
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold">Providers</h1>
+        <input
+          type="text"
+          placeholder="Search providers by name, specialty, or email..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="border p-2 w-full max-w-md rounded"
+        />
         <button
-          onClick={() => navigate("/doctor/manage-users/providers/new")}
+          onClick={handleOpenAddModal}
           className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
         >
           + Add Provider
@@ -82,74 +178,63 @@ const ProvidersList: React.FC = () => {
       </div>
 
       {/* Providers Table */}
-      <table className="w-full border border-gray-200 rounded-md overflow-hidden">
-        <thead>
-          <tr className="bg-gray-100 text-left">
-            <th className="p-2">Photo</th>
-            <th className="p-2">Name</th>
-            <th className="p-2">Specialty</th>
-            <th className="p-2">Contact</th>
-            <th className="p-2">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {providers.map((p) => (
-            <tr key={p.id} className="border-t hover:bg-gray-50">
-              <td className="p-2">
-                <img
-                  src={p.profile_picture || "/images/provider-placeholder.png"}
-                  alt="profile"
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-              </td>
-              <td
-                className="p-2 text-blue-600 cursor-pointer hover:underline"
-                onClick={() =>
-                  navigate(`/doctor/manage-users/providers/${p.id}`)
-                }
-              >
-                {p.first_name} {p.last_name}
-              </td>
-              <td className="p-2">{p.specialty || "—"}</td>
-              <td className="p-2">
-                {p.phone}
-                <br />
-                <small className="text-gray-500">{p.email}</small>
-              </td>
-              <td className="p-2">
-                <Dropdown
-                  trigger={({ toggle }) => (
-                    <button
-                      onClick={toggle}
-                      className="px-2 text-gray-600 hover:text-black"
-                    >
-                      ⋮
-                    </button>
-                  )}
-                >
-                  <button
-                    onClick={() =>
-                      navigate(
-                        `/doctor/manage-users/providers/${p.id}?edit=true`
-                      )
-                    }
-                    className="block w-full text-left px-4 py-2 hover:bg-gray-100"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(p.id)}
-                    disabled={deletingId === p.id}
-                    className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
-                  >
-                    {deletingId === p.id ? "Deleting…" : "Delete"}
-                  </button>
-                </Dropdown>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="bg-white border rounded-lg shadow-sm">
+        <ProvidersTable
+          providers={sortedProviders}
+          loading={loading}
+          deletingId={deletingId}
+          onOpenProfile={handleOpenProfile}
+          onOpenPasswordModal={handleOpenPasswordModal}
+          onRequestDelete={requestDelete}
+          canEdit={canEdit}
+          canDelete={canDelete}
+          canChangePassword={canChangePassword}
+        />
+      </div>
+
+      {/* Confirm delete dialog */}
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        title="Delete Provider"
+        message={
+          pendingDelete
+            ? `Are you sure you want to delete ${pendingDelete.first_name} ${pendingDelete.last_name}?`
+            : "Are you sure you want to delete this provider?"
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={performDelete}
+        onCancel={() => {
+          setConfirmDeleteOpen(false);
+          setPendingDelete(null);
+        }}
+      />
+
+      {/* Add Provider Modal */}
+      <AddProviderModal
+        open={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onCreated={handleProviderCreated}
+        isAdmin={isAdmin}
+      />
+
+      {/* Provider Profile Modal */}
+      <ProviderProfileModal
+        open={profileModalOpen}
+        provider={selectedProvider}
+        currentProvider={currentProvider}
+        onClose={() => setProfileModalOpen(false)}
+        onUpdated={handleProviderUpdated}
+        onChangePassword={(target) => handleOpenPasswordModal(target)}
+      />
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        open={passwordModalOpen}
+        onClose={() => setPasswordModalOpen(false)}
+        targetProvider={passwordTarget}
+        currentProvider={currentProvider}
+      />
     </div>
   );
 };

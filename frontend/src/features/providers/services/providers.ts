@@ -1,19 +1,11 @@
-import API from '../../../services/api';
-import { normalizeDRFErrors } from '../../../utils/apiErrors';
-
-export interface Provider {
-  id?: number;
-  first_name: string;
-  last_name: string;
-  email?: string;
-  phone?: string;
-  specialty?: string;
-  created_at?: string;
-}
+// frontend/src/features/providers/services/providers.ts
+import API from "../../../services/api";
+import { normalizeDRFErrors } from "../../../utils/apiErrors";
+import type { Provider } from "./providersApi";
 
 export const getProviders = async (search?: string): Promise<Provider[]> => {
   const params = search ? { search } : {};
-  const res = await API.get('providers/', { params });
+  const res = await API.get("providers/", { params });
   return res.data.results ?? res.data;
 };
 
@@ -26,7 +18,7 @@ export const createProvider = async (
   data: Partial<Provider>
 ): Promise<Provider> => {
   try {
-    const res = await API.post('providers/', data);
+    const res = await API.post("providers/", data);
     return res.data;
   } catch (err: any) {
     if (err.response?.data) throw normalizeDRFErrors(err.response.data);

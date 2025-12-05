@@ -370,6 +370,15 @@ const SchedulePage: React.FC = () => {
     setPrefill(prefillSlot);
     setShowNewAppointment(true);
   };
+
+  /* ----------------------------- Handlers: print ------------------------- */
+
+  const handlePrintDay = () => {
+    // Only meaningful on the Appointments tab, but safe to guard anyway
+    if (activeTab !== "appointments") return;
+    window.print();
+  };
+
   /* ----------------------------- Render ------------------------------- */
 
   return (
@@ -433,16 +442,16 @@ const SchedulePage: React.FC = () => {
             {activeTab === "appointments" ? (
               <button
                 className="px-3 py-1.5 border rounded bg-gray-800 text-white hover:bg-gray-900"
-                onClick={() => window.print()}
+                onClick={handlePrintDay}
               >
-                Print day
+                Print Day
               </button>
             ) : (
               <button
                 className="px-3 py-1.5 border rounded bg-green-600 text-white hover:bg-green-700"
                 onClick={() => setShowNewAppointment(true)}
               >
-                + Add appointment
+                + Add Appointment
               </button>
             )}
           </div>
@@ -518,13 +527,20 @@ const SchedulePage: React.FC = () => {
         {/* Main Content */}
         <div className={`flex-1 p-4 ${showFilters ? "w-5/6" : "w-full"}`}>
           {activeTab === "appointments" && (
-            <AppointmentsTable
-              appointments={filteredAppointments}
-              date={cursorDate}
-              loading={loadingAppts}
-              loadAppointments={reloadAppointments}
-              selectedOffices={selectedOffices}
-            />
+            <div id="print-day-root">
+              {/* Print-only date header (hidden on screen, shows in print) */}
+              <div className="print-day-header hidden print:block text-center text-sm font-medium mb-2">
+                {leftLabel}
+              </div>
+
+              <AppointmentsTable
+                appointments={filteredAppointments}
+                date={cursorDate}
+                loading={loadingAppts}
+                loadAppointments={reloadAppointments}
+                selectedOffices={selectedOffices}
+              />
+            </div>
           )}
 
           {activeTab === "day" && (
