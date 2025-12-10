@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "appointments",
     "authapp",
     "schedule",
+    "locations",
 ]
 
 # -------------------------------------------------

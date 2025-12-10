@@ -1,24 +1,25 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import API, { setAuthToken, handleLogout } from '../services/api';
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import API, { setAuthToken, handleLogout } from "../services/api";
 
-import Login from '../features/auth/pages/Login';
-import DoctorLayout from '../components/layout/DoctorLayout';
+import Login from "../features/auth/pages/Login";
+import DoctorLayout from "../components/layout/DoctorLayout";
 
-import Schedule from '../features/schedule/pages/Schedule';
-import Charts from '../features/charts/pages/Charts';
-import PatientChart from '../features/charts/pages/PatientChart';
-import Messaging from '../features/messaging/pages/Messaging';
-import PatientsList from '../features/patients/pages/PatientsList';
-import PatientProfile from '../features/patients/pages/PatientProfile';
-import ProvidersList from '../features/providers/pages/ProvidersList';
-import ProviderProfile from '../features/providers/pages/ProviderProfile';
-import CreateProvider from '../features/providers/pages/CreateProvider';
-import EditInfo from '../features/providers/pages/EditInfo';
-import ProviderOptions from '../features/providers/pages/ProviderOptions';
-import ManageUsers from '../features/providers/pages/ManageUsers';
-import Notifications from '../features/providers/pages/Notifications';
-import Tasks from '../features/tasks/pages/Tasks';
+import Schedule from "../features/schedule/pages/Schedule";
+import Charts from "../features/charts/pages/Charts";
+import PatientChart from "../features/charts/pages/PatientChart";
+import Messaging from "../features/messaging/pages/Messaging";
+import PatientsList from "../features/patients/pages/PatientsList";
+import PatientProfile from "../features/patients/pages/PatientProfile";
+import ProvidersList from "../features/providers/pages/ProvidersList";
+import ProviderProfile from "../features/providers/pages/ProviderProfile";
+import CreateProvider from "../features/providers/pages/CreateProvider";
+import EditInfo from "../features/providers/pages/EditInfo";
+import ProviderOptions from "../features/providers/pages/ProviderOptions";
+import ManageUsers from "../features/settings/pages/SettingsPage";
+import BusinessSettingsPage from "../features/locations/pages/BusinessSettingsPage";
+import Notifications from "../features/providers/pages/Notifications";
+import Tasks from "../features/tasks/pages/Tasks";
 
 const App: React.FC = () => {
   const [token, setToken] = useState<string | null>(null);
@@ -28,7 +29,7 @@ const App: React.FC = () => {
   useEffect(() => {
     const verifyToken = async () => {
       const savedToken =
-        localStorage.getItem('token') || sessionStorage.getItem('token');
+        localStorage.getItem("token") || sessionStorage.getItem("token");
 
       if (!savedToken) {
         setToken(null);
@@ -38,7 +39,7 @@ const App: React.FC = () => {
 
       try {
         setAuthToken(savedToken);
-        await API.post('/auth/verify/', { token: savedToken });
+        await API.post("/auth/verify/", { token: savedToken });
         setToken(savedToken);
       } catch {
         handleLogout(); // clears storage and sends to /login
@@ -57,11 +58,11 @@ const App: React.FC = () => {
     remember: boolean
   ) => {
     if (remember) {
-      localStorage.setItem('token', newAccess);
-      localStorage.setItem('refresh', newRefresh);
+      localStorage.setItem("token", newAccess);
+      localStorage.setItem("refresh", newRefresh);
     } else {
-      sessionStorage.setItem('token', newAccess);
-      sessionStorage.setItem('refresh', newRefresh);
+      sessionStorage.setItem("token", newAccess);
+      sessionStorage.setItem("refresh", newRefresh);
     }
     setAuthToken(newAccess);
     setToken(newAccess);
@@ -74,8 +75,8 @@ const App: React.FC = () => {
 
   if (checkingAuth) {
     return (
-      <div className='flex items-center justify-center h-screen'>
-        <p className='text-gray-600 text-lg font-medium'>
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-gray-600 text-lg font-medium">
           Checking authentication…
         </p>
       </div>
@@ -87,8 +88,8 @@ const App: React.FC = () => {
       {/* Public routes */}
       {!token && (
         <>
-          <Route path='/login' element={<Login onLogin={handleLogin} />} />
-          <Route path='*' element={<Navigate to='/login' replace />} />
+          <Route path="/login" element={<Login onLogin={handleLogin} />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </>
       )}
 
@@ -96,45 +97,50 @@ const App: React.FC = () => {
       {token && (
         <>
           <Route
-            path='/'
-            element={<Navigate to='/doctor/schedule' replace />}
+            path="/"
+            element={<Navigate to="/doctor/schedule" replace />}
           />
           <Route
-            path='/login'
-            element={<Navigate to='/doctor/schedule' replace />}
+            path="/login"
+            element={<Navigate to="/doctor/schedule" replace />}
           />
           <Route
-            path='/doctor'
+            path="/doctor"
             element={<DoctorLayout onLogout={handleLogoutClick} />}
           >
-            <Route index element={<Navigate to='schedule' replace />} />
-            <Route path='schedule' element={<Schedule />} />
-            <Route path='tasks' element={<Tasks />} />
-            <Route path='charts' element={<Charts />} />
-            <Route path='messaging' element={<Messaging />} />
-            <Route path='edit-info' element={<EditInfo />} />
-            <Route path='provider-options' element={<ProviderOptions />} />
-            <Route path='notifications' element={<Notifications />} />
-            <Route path='manage-users' element={<ManageUsers />} />
-            <Route path='manage-users/patients' element={<PatientsList />} />
-            <Route path='manage-users/providers' element={<ProvidersList />} />
+            <Route index element={<Navigate to="schedule" replace />} />
+            <Route path="schedule" element={<Schedule />} />
+            <Route path="tasks" element={<Tasks />} />
+            <Route path="charts" element={<Charts />} />
+            <Route path="messaging" element={<Messaging />} />
+            <Route path="edit-info" element={<EditInfo />} />
+            <Route path="provider-options" element={<ProviderOptions />} />
+            <Route path="notifications" element={<Notifications />} />
+            <Route path="manage-users" element={<ManageUsers />} />
+            <Route path="manage-users/patients" element={<PatientsList />} />
+            <Route path="manage-users/providers" element={<ProvidersList />} />
             <Route
-              path='manage-users/providers/new'
+              path="manage-users/providers/new"
               element={<CreateProvider />}
             />
-            <Route path='charts/:id' element={<PatientChart />} />
+            <Route path="charts/:id" element={<PatientChart />} />
             <Route
-              path='manage-users/patients/:id'
+              path="manage-users/patients/:id"
               element={<PatientProfile />}
             />
             <Route
-              path='manage-users/providers/:id'
+              path="manage-users/providers/:id"
               element={<ProviderProfile />}
             />
+            <Route
+              path="settings/business"
+              element={<BusinessSettingsPage />}
+            />
           </Route>
+
           <Route
-            path='*'
-            element={<Navigate to='/doctor/schedule' replace />}
+            path="*"
+            element={<Navigate to="/doctor/schedule" replace />}
           />
         </>
       )}

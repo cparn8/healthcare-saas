@@ -40,6 +40,8 @@ healthcare-saas
 │  │  └─ __init__.py
 │  ├─ Dockerfile
 │  ├─ manage.py
+│  ├─ organization
+│  │  └─ migrations
 │  ├─ patients
 │  │  ├─ admin.py
 │  │  ├─ apps.py
@@ -140,6 +142,18 @@ healthcare-saas
 │  │  │  │  └─ pages
 │  │  │  │     └─ Messaging.tsx
 │  │  │  ├─ patients
+│  │  │  │  ├─ components
+│  │  │  │  │  ├─ forms
+│  │  │  │  │  │  └─ PatientForm.tsx
+│  │  │  │  │  ├─ modals
+│  │  │  │  │  │  ├─ AddPatientModal.tsx
+│  │  │  │  │  │  ├─ EditPatientModal.tsx
+│  │  │  │  │  │  └─ ViewPatientModal.tsx
+│  │  │  │  │  └─ table
+│  │  │  │  │     └─ PatientsTable.tsx
+│  │  │  │  ├─ hooks
+│  │  │  │  │  └─ usePatientsList.ts
+│  │  │  │  ├─ logic
 │  │  │  │  ├─ pages
 │  │  │  │  │  ├─ PatientProfile.tsx
 │  │  │  │  │  └─ PatientsList.tsx
@@ -147,10 +161,22 @@ healthcare-saas
 │  │  │  │     ├─ patients.ts
 │  │  │  │     └─ patientsApi.ts
 │  │  │  ├─ providers
+│  │  │  │  ├─ components
+│  │  │  │  │  ├─ forms
+│  │  │  │  │  │  └─ ProviderForm.tsx
+│  │  │  │  │  ├─ modals
+│  │  │  │  │  │  ├─ AddProviderModal.tsx
+│  │  │  │  │  │  ├─ ChangePasswordModal.tsx
+│  │  │  │  │  │  ├─ EditProviderModal.tsx
+│  │  │  │  │  │  └─ ViewProviderModal.tsx
+│  │  │  │  │  └─ table
+│  │  │  │  │     └─ ProvidersTable.tsx
+│  │  │  │  ├─ hooks
+│  │  │  │  │  ├─ useCurrentProvider.ts
+│  │  │  │  │  └─ useProvidersList.tsx
 │  │  │  │  ├─ pages
 │  │  │  │  │  ├─ CreateProvider.tsx
 │  │  │  │  │  ├─ EditInfo.tsx
-│  │  │  │  │  ├─ ManageUsers.tsx
 │  │  │  │  │  ├─ Notifications.tsx
 │  │  │  │  │  ├─ ProviderOptions.tsx
 │  │  │  │  │  ├─ ProviderProfile.tsx
@@ -236,6 +262,15 @@ healthcare-saas
 │  │  │  │  └─ utils
 │  │  │  │     ├─ filterAppointments.ts
 │  │  │  │     └─ index.ts
+│  │  │  ├─ settings
+│  │  │  │  ├─ components
+│  │  │  │  │  └─ AppointmentTypesModal.tsx
+│  │  │  │  ├─ organization
+│  │  │  │  │  ├─ components
+│  │  │  │  │  ├─ services
+│  │  │  │  │  └─ types
+│  │  │  │  └─ pages
+│  │  │  │     └─ SettingsPage.tsx
 │  │  │  └─ tasks
 │  │  │     └─ pages
 │  │  │        └─ Tasks.tsx

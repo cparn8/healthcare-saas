@@ -14,7 +14,7 @@ import {
   Provider,
 } from "../../../providers/services/providersApi";
 
-import { toastPromise, toastError, toastSuccess } from "../../../../utils";
+import { toastError, toastSuccess } from "../../../../utils";
 import ConfirmDialog from "../../../../components/common/ConfirmDialog";
 
 import AppointmentFormBase from "./forms/common/AppointmentFormBase";
