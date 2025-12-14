@@ -3,13 +3,14 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { addDays } from "date-fns";
+import DynamicOfficeDropdown from "../components/DynamicOfficeDropdown";
+import { useLocations } from "../../locations/hooks/useLocations";
 import { AppointmentsTable } from "../components/appointments-table";
 import { DayViewGrid, WeekViewGrid } from "../components/grid";
 import {
   NewAppointmentModal,
   EditAppointmentModal,
 } from "../components/modals";
-import SettingsPanel from "../components/SettingsPanel";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
 import { ScheduleFilters } from "../components/filters";
 import DatePickerPopover from "../components/DatePickerPopover";
@@ -20,7 +21,6 @@ import {
   useScheduleData,
   useScheduleFilters,
   useOfficePersistence,
-  OfficeKey,
 } from "../hooks";
 import { Appointment } from "../services/appointmentsApi";
 import { providersApi, Provider } from "../../providers/services/providersApi";
@@ -48,83 +48,9 @@ const TABS = [
   { key: "appointments", label: "Appointments" },
   { key: "day", label: "Day" },
   { key: "week", label: "Week" },
-  { key: "settings", label: "Settings" },
 ] as const;
 
 const SLOT_OPTIONS: SlotSize[] = [15, 30, 60];
-
-/* ------------------------------------------------------------------ */
-/* Simple multi-office dropdown                                       */
-/* ------------------------------------------------------------------ */
-
-function MultiOfficeDropdown({
-  selectedOffices,
-  onChange,
-}: {
-  selectedOffices: OfficeKey[];
-  onChange: (offices: OfficeKey[]) => void;
-}) {
-  const [open, setOpen] = useState(false);
-
-  const labelsMap: Record<OfficeKey, string> = {
-    north: "North Office",
-    south: "South Office",
-  };
-
-  const displayLabel =
-    selectedOffices.length === 0
-      ? "No Office Selected"
-      : selectedOffices.map((k) => labelsMap[k]).join(", ");
-
-  return (
-    <div className="relative inline-block">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="px-3 py-1.5 border rounded bg-white min-w-[180px] text-left"
-      >
-        {displayLabel}
-      </button>
-
-      {open && (
-        <div className="absolute mt-1 w-48 bg-white border rounded shadow-lg z-30 p-2">
-          {/* All Offices */}
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={selectedOffices.length === 2}
-              onChange={(e) =>
-                onChange(e.target.checked ? ["north", "south"] : [])
-              }
-            />
-            <span>All Offices</span>
-          </label>
-
-          {/* Individual toggles */}
-          {(["north", "south"] as OfficeKey[]).map((office) => (
-            <label
-              key={office}
-              className="flex items-center gap-2 capitalize cursor-pointer mt-1"
-            >
-              <input
-                type="checkbox"
-                checked={selectedOffices.includes(office)}
-                onChange={() => {
-                  if (selectedOffices.includes(office)) {
-                    onChange(selectedOffices.filter((o) => o !== office));
-                  } else {
-                    onChange([...selectedOffices, office]);
-                  }
-                }}
-              />
-              <span>{labelsMap[office]}</span>
-            </label>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 /* Component                                                           */
@@ -132,6 +58,10 @@ function MultiOfficeDropdown({
 
 const SchedulePage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  // Dynamic locations for the office selector
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { locations, loading: loadingLocations } = useLocations();
+
   const datePickerWrapperRef = useRef<HTMLDivElement | null>(null);
 
   /* ----------------------------- UI State ----------------------------- */
@@ -153,8 +83,11 @@ const SchedulePage: React.FC = () => {
   const [provider, setProvider] = useState<Provider | null>(null);
 
   // Office + multi-office selection, persisted per provider
-  const { office, selectedOffices, setSelectedOffices } =
+  const { primaryOffice, selectedOffices, setSelectedOffices } =
     useOfficePersistence(providerId);
+
+  const primaryOfficeSlug =
+    selectedOffices && selectedOffices.length > 0 ? selectedOffices[0] : null;
 
   // Filters + provider list in one place
   const { filters, setFilters, providersList } = useScheduleFilters(providerId);
@@ -331,8 +264,9 @@ const SchedulePage: React.FC = () => {
     if (activeTab === "week") {
       setCursorDate((prev) => addDays(prev, -7));
     } else {
+      if (!primaryOffice) return;
       setCursorDate((prev) =>
-        findNextOpenDay(prev, -1, scheduleSettings, office)
+        findNextOpenDay(prev, -1, scheduleSettings, primaryOffice)
       );
     }
   };
@@ -341,8 +275,9 @@ const SchedulePage: React.FC = () => {
     if (activeTab === "week") {
       setCursorDate((prev) => addDays(prev, 7));
     } else {
+      if (!primaryOffice) return;
       setCursorDate((prev) =>
-        findNextOpenDay(prev, 1, scheduleSettings, office)
+        findNextOpenDay(prev, 1, scheduleSettings, primaryOffice)
       );
     }
   };
@@ -362,7 +297,7 @@ const SchedulePage: React.FC = () => {
       date: start.toISOString().split("T")[0],
       start_time: start.toTimeString().slice(0, 5),
       end_time: end.toTimeString().slice(0, 5),
-      office,
+      office: primaryOfficeSlug,
       allow_overlap: allowOverlap,
     };
 
@@ -433,8 +368,9 @@ const SchedulePage: React.FC = () => {
                 Refresh
               </button>
 
-              <MultiOfficeDropdown
-                selectedOffices={selectedOffices}
+              <DynamicOfficeDropdown
+                locations={locations}
+                selected={selectedOffices as string[]}
                 onChange={setSelectedOffices}
               />
             </div>
@@ -545,7 +481,7 @@ const SchedulePage: React.FC = () => {
 
           {activeTab === "day" && (
             <DayViewGrid
-              office={office}
+              primaryOfficeSlug={primaryOfficeSlug}
               selectedOffices={selectedOffices}
               providerName={providerLabel}
               scheduleSettings={scheduleSettings}
@@ -568,7 +504,7 @@ const SchedulePage: React.FC = () => {
           {activeTab === "week" && (
             <WeekViewGrid
               baseDate={cursorDate}
-              office={office}
+              primaryOfficeSlug={primaryOfficeSlug}
               selectedOffices={selectedOffices}
               providerName={providerLabel}
               scheduleSettings={scheduleSettings}
@@ -585,8 +521,6 @@ const SchedulePage: React.FC = () => {
               }
             />
           )}
-
-          {activeTab === "settings" && <SettingsPanel />}
         </div>
       </div>
 
@@ -608,7 +542,8 @@ const SchedulePage: React.FC = () => {
             setInitialPatient(null);
           }}
           providerId={providerId}
-          defaultOffice={office}
+          locations={locations}
+          primaryOfficeSlug={primaryOffice}
           initialDate={
             prefill?.date ? new Date(prefill.date + "T00:00") : undefined
           }

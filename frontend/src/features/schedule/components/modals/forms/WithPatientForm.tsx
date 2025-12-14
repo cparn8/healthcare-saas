@@ -13,8 +13,8 @@ import {
 
 import { AppointmentPayload } from "../../../services";
 import { usePrefilledAppointmentFields } from "../../../hooks";
+import { LocationDTO } from "../../../../locations/services/locationApi";
 
-/** Common Modular Components */
 import ProviderSelect from "./common/ProviderSelect";
 import AppointmentTypeSelect from "./common/AppointmentTypeSelect";
 import RepeatSection from "./common/RepeatSection";
@@ -37,7 +37,8 @@ interface WithPatientFormProps {
   initialDate?: string;
   initialStartTime?: string;
   initialEndTime?: string;
-  defaultOffice?: string;
+  primaryOfficeSlug?: string | null;
+  locations: LocationDTO[];
   initialPatient?: any;
   appointmentTypes?: {
     id?: number;
@@ -54,7 +55,8 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
   initialDate,
   initialStartTime,
   initialEndTime,
-  defaultOffice,
+  primaryOfficeSlug,
+  locations,
   initialPatient,
   appointmentTypes = [],
 }) => {
@@ -88,7 +90,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
   const [formData, setFormData] = useState<AppointmentPayload>({
     patient: initialPatient?.id ?? null,
     provider: providerId ?? null,
-    office: defaultOffice ?? "north",
+    office: primaryOfficeSlug ?? "",
     appointment_type: appointmentTypes[0]?.name ?? "",
     color_code: appointmentTypes[0]?.color_code ?? "#FF6B6B",
     chief_complaint: "",
@@ -128,6 +130,20 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!primaryOfficeSlug) return;
+
+    setFormData((prev) => {
+      // Only auto-set if the user hasn’t manually changed it
+      if (prev.office && prev.office !== primaryOfficeSlug) return prev;
+
+      return {
+        ...prev,
+        office: primaryOfficeSlug,
+      };
+    });
+  }, [primaryOfficeSlug]);
 
   /** Prefill from initial slot */
   useEffect(() => {
@@ -291,6 +307,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
   const officeSection = (
     <OfficeSelect
       value={formData.office}
+      locations={locations}
       onChange={(office: string) => handleChange({ office })}
     />
   );

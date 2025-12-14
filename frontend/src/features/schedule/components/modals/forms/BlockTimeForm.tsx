@@ -6,6 +6,8 @@ import {
 } from "../../../../providers/services/providersApi";
 import { AppointmentPayload } from "../../../services";
 import { usePrefilledAppointmentFields } from "../../../hooks";
+import { LocationDTO } from "../../../../locations/services/locationApi";
+import OfficeSelect from "./common/OfficeSelect";
 
 interface BlockTimeFormProps {
   onGetFormData?: (data: AppointmentPayload) => void;
@@ -21,7 +23,8 @@ interface BlockTimeFormProps {
   initialDate?: string;
   initialStartTime?: string;
   initialEndTime?: string;
-  defaultOffice?: string;
+  primaryOfficeSlug?: string | null;
+  locations: LocationDTO[];
 }
 
 const BlockTimeForm: React.FC<BlockTimeFormProps> = ({
@@ -33,7 +36,8 @@ const BlockTimeForm: React.FC<BlockTimeFormProps> = ({
   initialDate,
   initialStartTime,
   initialEndTime,
-  defaultOffice,
+  primaryOfficeSlug,
+  locations,
 }) => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [providersLoading, setProvidersLoading] = useState(false);
@@ -48,7 +52,7 @@ const BlockTimeForm: React.FC<BlockTimeFormProps> = ({
 
   const [formData, setFormData] = useState<AppointmentPayload>({
     provider: providerId ?? null,
-    office: defaultOffice ?? "north",
+    office: primaryOfficeSlug ?? "",
     appointment_type: "Block Time",
     date: prefilled.date,
     start_time: prefilled.start_time,
@@ -86,6 +90,20 @@ const BlockTimeForm: React.FC<BlockTimeFormProps> = ({
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!primaryOfficeSlug) return;
+
+    setFormData((prev) => {
+      // Respect manual user changes
+      if (prev.office && prev.office !== primaryOfficeSlug) return prev;
+
+      return {
+        ...prev,
+        office: primaryOfficeSlug,
+      };
+    });
+  }, [primaryOfficeSlug]);
 
   // Bubble data up safely (prevent infinite loops)
   useEffect(() => {
@@ -188,20 +206,11 @@ const BlockTimeForm: React.FC<BlockTimeFormProps> = ({
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Facility
-          </label>
-          <select
-            name="office"
-            value={formData.office}
-            onChange={handleChange}
-            className="w-full border rounded p-2"
-          >
-            <option value="north">North Office</option>
-            <option value="south">South Office</option>
-          </select>
-        </div>
+        <OfficeSelect
+          value={formData.office}
+          locations={locations}
+          onChange={(office) => setFormData((prev) => ({ ...prev, office }))}
+        />
       </div>
 
       {/* --- Date & Time --- */}

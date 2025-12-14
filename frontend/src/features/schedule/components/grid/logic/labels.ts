@@ -11,12 +11,7 @@ export function formatOfficeLabel(
   offices: string[],
   fallbackOffice: string
 ): string {
-  const toLabel = (k: string) =>
-    k === "south" ? "South Office" : k === "north" ? "North Office" : k;
-
-  return offices.length > 1
-    ? offices.map(toLabel).join(", ")
-    : toLabel(fallbackOffice);
+  return offices.length > 1 ? offices.join(", ") : fallbackOffice;
 }
 
 export function formatProviderLabel(
@@ -58,13 +53,7 @@ export function buildAppointmentTooltip(appt: Appointment): string | undefined {
   }
 
   if (appt.office) {
-    const officeLabel =
-      appt.office === "north"
-        ? "North Office"
-        : appt.office === "south"
-        ? "South Office"
-        : appt.office;
-    meta.push(`Office: ${officeLabel}`);
+    meta.push(`Office: ${appt.office}`);
   }
 
   if (meta.length > 0) {

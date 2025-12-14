@@ -1,7 +1,6 @@
 // src/features/schedule/types/index.ts
 
 export * from "./scheduleSettings";
-export * from "./index";
 
 // Type for appointment types (linked to views in schedule)
 export interface AppointmentTypeDef {

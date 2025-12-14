@@ -1,96 +1,63 @@
-// frontend/src/features/schedule/hooks/useOfficePersistence.ts
-
 import { useEffect, useState } from "react";
 
-export type OfficeKey = "north" | "south";
+const STORAGE_KEY_PREFIX = "selectedLocations";
 
 interface UseOfficePersistenceResult {
-  office: OfficeKey;
-  selectedOffices: OfficeKey[];
-  setOffice: React.Dispatch<React.SetStateAction<OfficeKey>>;
-  setSelectedOffices: React.Dispatch<React.SetStateAction<OfficeKey[]>>;
-}
-
-function isOfficeKey(value: unknown): value is OfficeKey {
-  return value === "north" || value === "south";
+  primaryOffice: string | null;
+  selectedOffices: string[];
+  setSelectedOffices: (slugs: string[]) => void;
 }
 
 /**
  * Encapsulates:
- * - Loading last office per provider from localStorage
- * - Loading multi-select offices per provider
+ * - Loading selected location slugs per provider from localStorage
  * - Persisting changes
- * - Keeping legacy `office` in sync with first selected office
+ * - Deriving a primary office from the first selected location
  */
 export function useOfficePersistence(
-  providerId: number | null,
-  initialOffice: OfficeKey = "north"
+  providerId: number | null
 ): UseOfficePersistenceResult {
-  const [office, setOffice] = useState<OfficeKey>(initialOffice);
-  const [selectedOffices, setSelectedOffices] = useState<OfficeKey[]>([
-    initialOffice,
-  ]);
+  const [selectedOffices, setSelectedOfficesState] = useState<string[]>([]);
 
   // Restore from localStorage when providerId changes
   useEffect(() => {
     if (!providerId || typeof window === "undefined") return;
 
-    // Base office
-    const officeKey = `lastOffice_${providerId}`;
-    const storedOffice = window.localStorage.getItem(officeKey);
-    let baseOffice: OfficeKey = initialOffice;
+    const key = `${STORAGE_KEY_PREFIX}_${providerId}`;
+    const raw = window.localStorage.getItem(key);
 
-    if (isOfficeKey(storedOffice)) {
-      baseOffice = storedOffice;
+    if (!raw) {
+      setSelectedOfficesState([]);
+      return;
     }
 
-    setOffice(baseOffice);
-
-    // Selected offices
-    const selectedKey = `selectedOffices_${providerId}`;
-    const raw = window.localStorage.getItem(selectedKey);
-
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          const valid = parsed.filter(isOfficeKey);
-          if (valid.length > 0) {
-            setSelectedOffices(valid);
-            return;
-          }
-        }
-      } catch {
-        // ignore malformed data
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setSelectedOfficesState(parsed.filter((v) => typeof v === "string"));
+      } else {
+        setSelectedOfficesState([]);
       }
+    } catch {
+      // ignore malformed data
+      setSelectedOfficesState([]);
     }
-
-    // Fallback: just the base office
-    setSelectedOffices([baseOffice]);
-  }, [providerId, initialOffice]);
-
-  // Persist office
-  useEffect(() => {
-    if (!providerId || typeof window === "undefined") return;
-    const key = `lastOffice_${providerId}`;
-    window.localStorage.setItem(key, office);
-  }, [providerId, office]);
+  }, [providerId]);
 
   // Persist selected offices
-  useEffect(() => {
+  const setSelectedOffices = (slugs: string[]) => {
+    setSelectedOfficesState(slugs);
+
     if (!providerId || typeof window === "undefined") return;
-    const key = `selectedOffices_${providerId}`;
-    window.localStorage.setItem(key, JSON.stringify(selectedOffices));
-  }, [providerId, selectedOffices]);
+    const key = `${STORAGE_KEY_PREFIX}_${providerId}`;
+    window.localStorage.setItem(key, JSON.stringify(slugs));
+  };
 
-  // Keep legacy `office` aligned with first selected office
-  useEffect(() => {
-    if (selectedOffices.length === 0) return;
-    const first = selectedOffices[0];
-    if (first !== office) {
-      setOffice(first);
-    }
-  }, [selectedOffices, office]);
+  const primaryOffice = selectedOffices.length > 0 ? selectedOffices[0] : null;
 
-  return { office, selectedOffices, setOffice, setSelectedOffices };
+  return {
+    primaryOffice,
+    selectedOffices,
+    setSelectedOffices,
+  };
 }

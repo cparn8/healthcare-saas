@@ -19,8 +19,9 @@ import {
 
 interface WeekViewGridProps {
   providerName: string;
-  office: string;
-  selectedOffices?: string[];
+
+  primaryOfficeSlug: string | null;
+  selectedOffices: string[];
 
   slotMinutes: number;
   appointments?: Appointment[];
@@ -38,7 +39,7 @@ interface WeekViewGridProps {
 
 export default function WeekViewGrid({
   providerName,
-  office,
+  primaryOfficeSlug,
   selectedOffices,
   slotMinutes,
   appointments = [],
@@ -52,13 +53,11 @@ export default function WeekViewGrid({
 }: WeekViewGridProps) {
   /* ------------------------------ Office Logic ------------------------------ */
 
-  const officesForHours = useMemo(
-    () =>
-      selectedOffices && selectedOffices.length > 0
-        ? selectedOffices
-        : [office],
-    [office, selectedOffices]
-  );
+  const officesForHours = useMemo(() => {
+    if (selectedOffices.length > 0) return selectedOffices;
+    if (primaryOfficeSlug) return [primaryOfficeSlug];
+    return [];
+  }, [selectedOffices, primaryOfficeSlug]);
 
   const { isDayOpen, getOpenRange } = useBusinessHours(
     scheduleSettings,

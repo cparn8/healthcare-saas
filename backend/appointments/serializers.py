@@ -4,7 +4,7 @@ from .models import Appointment
 from django.db.models import Q
 from datetime import datetime, time
 from django.utils import timezone
-from providers.models import Provider  # needed for PrimaryKeyRelatedField
+from providers.models import Provider
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
@@ -13,14 +13,14 @@ class AppointmentSerializer(serializers.ModelSerializer):
     Handles both patient-linked and 'block time' appointments.
     """
 
-    # Optional read-only display fields
     patient_name = serializers.SerializerMethodField()
-    provider_name = serializers.CharField(source="provider.__str__", read_only=True)
-    office_display = serializers.CharField(source="get_office_display", read_only=True)
+    provider_name = serializers.SerializerMethodField()
+
+    # NOTE: office_display removed because Appointment.office is a slug CharField
+    # and no get_office_display exists.
 
     allow_overlap = serializers.BooleanField(write_only=True, required=False, default=False)
 
-    # --- IMPORTANT FIXES ---
     provider = serializers.PrimaryKeyRelatedField(
         queryset=Provider.objects.all(),
         required=True
@@ -29,7 +29,6 @@ class AppointmentSerializer(serializers.ModelSerializer):
     status = serializers.CharField(required=False)
     room = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     intake_status = serializers.CharField(required=False)
-
     notes = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     class Meta:
@@ -39,7 +38,6 @@ class AppointmentSerializer(serializers.ModelSerializer):
             "patient",
             "provider",
             "office",
-            "office_display",
             "appointment_type",
             "is_block",
             "status",
@@ -65,28 +63,32 @@ class AppointmentSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
-    # ---- Derived Display Fields ----
     def get_patient_name(self, obj):
-        """Return the patient's string representation or None."""
         return str(obj.patient) if obj.patient else None
+
+    def get_provider_name(self, obj):
+        return str(obj.provider) if obj.provider else None
+
 
     # ---- Validation Rules ----
     def validate(self, data):
-        """
-        Ensure logical appointment rules:
-        - End time must be after start time.
-        - Patient required unless it's a block time.
-        - Optionally allow overlapping appointments if allow_overlap=True.
-        """
         start = data.get("start_time")
         end = data.get("end_time")
         patient = data.get("patient")
 
+        # ---- Office required + normalize ----
+        office = data.get("office")
+        if office is None:
+            office = self.initial_data.get("office")
+
+        if not office or not isinstance(office, str) or not office.strip():
+            raise serializers.ValidationError({"office": "Office/location is required."})
+
+        data["office"] = office.strip()
+
         # --- Time validation ---
         if start and end and end <= start:
-            raise serializers.ValidationError(
-                {"end_time": "End time must be after start time."}
-            )
+            raise serializers.ValidationError({"end_time": "End time must be after start time."})
 
         # --- Patient validation ---
         appointment_type = (data.get("appointment_type") or "").lower()

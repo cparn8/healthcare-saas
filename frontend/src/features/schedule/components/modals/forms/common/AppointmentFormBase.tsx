@@ -3,7 +3,6 @@
 import React from "react";
 import { AppointmentPayload } from "../../../../services";
 
-import OfficeSelect from "./OfficeSelect";
 import DateTimeFields from "./DateTimeFields";
 
 interface AppointmentFormBaseProps {
@@ -19,8 +18,7 @@ interface AppointmentFormBaseProps {
 
 /**
  * Shared layout wrapper for appointment workflows.
- * Neutral, minimal, and responsible only for structure.
- * Parents inject actual content.
+ * Structural only. No data assumptions.
  */
 const AppointmentFormBase: React.FC<AppointmentFormBaseProps> = ({
   formData,
@@ -35,13 +33,8 @@ const AppointmentFormBase: React.FC<AppointmentFormBaseProps> = ({
       {/* ---------------- Provider (optional) ---------------- */}
       {providerSection && <div>{providerSection}</div>}
 
-      {/* ---------------- Office ---------------- */}
-      {officeSection ?? (
-        <OfficeSelect
-          value={formData.office}
-          onChange={(office) => onChange({ office })}
-        />
-      )}
+      {/* ---------------- Office (MUST be injected) ---------------- */}
+      {officeSection && <div>{officeSection}</div>}
 
       {/* ---------------- Date + Time ---------------- */}
       {dateTimeSection ?? (

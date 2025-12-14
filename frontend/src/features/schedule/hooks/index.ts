@@ -1,5 +1,4 @@
 export * from "./useBusinessHours";
-export * from "./useBusinessHoursFilter";
 export * from "./useOfficePersistence";
 export * from "./usePatientSearch";
 export * from "./usePositionedAppointments";

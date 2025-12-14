@@ -16,8 +16,8 @@ import {
 } from "./logic";
 
 interface DayViewGridProps {
-  office: string;
-  selectedOffices?: string[];
+  primaryOfficeSlug: string | null;
+  selectedOffices: string[];
   providerName: string;
   slotMinutes: number;
   appointments?: Appointment[];
@@ -32,7 +32,7 @@ interface DayViewGridProps {
 }
 
 export default function DayViewGrid({
-  office,
+  primaryOfficeSlug,
   selectedOffices,
   providerName,
   slotMinutes,
@@ -47,13 +47,11 @@ export default function DayViewGrid({
 }: DayViewGridProps) {
   /* ------------------------------ Hours Logic ------------------------------ */
 
-  const officesForHours = useMemo(
-    () =>
-      selectedOffices && selectedOffices.length > 0
-        ? selectedOffices
-        : [office],
-    [office, selectedOffices]
-  );
+  const officesForHours = useMemo(() => {
+    if (selectedOffices.length > 0) return selectedOffices;
+    if (primaryOfficeSlug) return [primaryOfficeSlug];
+    return [];
+  }, [selectedOffices, primaryOfficeSlug]);
 
   const { isDayOpen, getOpenRange } = useBusinessHours(
     scheduleSettings,
@@ -231,7 +229,7 @@ export default function DayViewGrid({
     return (
       <div className="border rounded overflow-hidden bg-white select-none relative">
         <div className="p-6 text-center text-gray-500 italic">
-          Office closed on {date.toLocaleDateString()}
+          No selected location is open on {date.toLocaleDateString()}
         </div>
 
         {clusterModal.open && (

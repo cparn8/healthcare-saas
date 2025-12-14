@@ -1,39 +1,27 @@
+# backend/schedule/serializers.py
 from rest_framework import serializers
-from .models import ScheduleSettings, default_business_hours, default_week
+from .models import ScheduleSettings
+import re
 
-WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 
-def normalize_settings(payload: dict) -> dict:
+def normalize_appointment_types(payload: dict) -> list:
     """
-    Deep-normalize incoming settings so DB always stays valid.
+    Normalize appointment_types only.
+    We intentionally do NOT normalize or validate business_hours here because
+    LocationHours is the source of truth for hours.
     """
     data = payload or {}
-
-    # --- business_hours ---
-    bh = data.get("business_hours") or {}
-    # ensure offices
-    for office in ("north", "south"):
-        if office not in bh or not isinstance(bh.get(office), dict):
-            bh[office] = default_week()
-        else:
-            # ensure weekdays
-            for d in WEEKDAYS:
-                if d not in bh[office] or not isinstance(bh[office][d], dict):
-                    bh[office][d] = {"open": True, "start": "08:00", "end": "17:00"}
-                else:
-                    # coerce fields
-                    day = bh[office][d]
-                    day["open"] = bool(day.get("open", True))
-                    day["start"] = str(day.get("start", "08:00"))
-                    day["end"] = str(day.get("end", "17:00"))
-    data["business_hours"] = bh
-
-    # --- appointment_types ---
     types = data.get("appointment_types")
+    HEX_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
+
     if not isinstance(types, list):
         types = []
+
     normalized_types = []
     for t in types:
+        if not isinstance(t, dict):
+            t = {}
+
         name = (t.get("name") or "").strip()
         if not name:
             name = "Untitled"
@@ -47,35 +35,34 @@ def normalize_settings(payload: dict) -> dict:
             dur = 30
 
         color = t.get("color_code") or "#000000"
-        if not isinstance(color, str) or len(color) != 7 or color[0] != "#":
+        if not isinstance(color, str) or not HEX_RE.match(color):
             color = "#000000"
-        # (Optionally tighten hex validation)
+
         normalized_types.append(
             {"name": name, "default_duration": dur, "color_code": color}
         )
-    data["appointment_types"] = normalized_types
 
-    return data
+    return normalized_types
 
 
 class ScheduleSettingsSerializer(serializers.ModelSerializer):
+    """
+    ScheduleSettings stores non-hour schedule configuration.
+    Location hours are authoritative via LocationHours and are injected
+    dynamically by the ViewSet on reads.
+
+    On writes, accept appointment_types (normalized) and ignore business_hours.
+    """
+
     class Meta:
         model = ScheduleSettings
-        fields = ["id", "business_hours", "appointment_types", "updated_at"]
+        fields = ["id", "appointment_types", "updated_at"]
         read_only_fields = ["id", "updated_at"]
 
     def to_internal_value(self, data):
-        # Normalize BEFORE validation so .validate() receives a correct shape
-        normalized = normalize_settings(dict(data))
-        return super().to_internal_value(normalized)
-
-    def validate(self, attrs):
-        # Final sanity: ensure business_hours shape has both offices & weekdays
-        bh = attrs.get("business_hours") or {}
-        for office in ("north", "south"):
-            if office not in bh:
-                raise serializers.ValidationError({"business_hours": f"Missing '{office}'"})
-            for d in WEEKDAYS:
-                if d not in bh[office]:
-                    raise serializers.ValidationError({"business_hours": f"Missing day '{d}' in '{office}'"})
-        return attrs
+        # Normalize appointment_types BEFORE validation.
+        incoming = dict(data)
+        incoming["appointment_types"] = normalize_appointment_types(incoming)
+        # Intentionally drop any business_hours passed from frontend (if any).
+        incoming.pop("business_hours", None)
+        return super().to_internal_value(incoming)

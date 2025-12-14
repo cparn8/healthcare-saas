@@ -14,6 +14,7 @@ healthcare-saas
 │  │  │  ├─ 0005_appointment_is_block.py
 │  │  │  ├─ 0006_appointment_intake_status_appointment_notes_and_more.py
 │  │  │  ├─ 0007_alter_appointment_room.py
+│  │  │  ├─ 0008_alter_appointment_chief_complaint_and_more.py
 │  │  │  └─ __init__.py
 │  │  ├─ models.py
 │  │  ├─ serializers.py
@@ -39,6 +40,19 @@ healthcare-saas
 │  │  ├─ wsgi.py
 │  │  └─ __init__.py
 │  ├─ Dockerfile
+│  ├─ locations
+│  │  ├─ admin.py
+│  │  ├─ apps.py
+│  │  ├─ migrations
+│  │  │  ├─ 0001_initial.py
+│  │  │  ├─ 0002_seed_locations_from_schedule.py
+│  │  │  └─ __init__.py
+│  │  ├─ models.py
+│  │  ├─ serializers.py
+│  │  ├─ tests.py
+│  │  ├─ urls.py
+│  │  ├─ views.py
+│  │  └─ __init__.py
 │  ├─ manage.py
 │  ├─ organization
 │  │  └─ migrations
@@ -138,6 +152,25 @@ healthcare-saas
 │  │  │  │  └─ pages
 │  │  │  │     ├─ Charts.tsx
 │  │  │  │     └─ PatientChart.tsx
+│  │  │  ├─ locations
+│  │  │  │  ├─ components
+│  │  │  │  │  ├─ AddLocationModal.tsx
+│  │  │  │  │  ├─ BusinessNameModal.tsx
+│  │  │  │  │  ├─ ConfirmDeleteLocationModal.tsx
+│  │  │  │  │  ├─ EditLocationHoursModal.tsx
+│  │  │  │  │  ├─ EditLocationModal.tsx
+│  │  │  │  │  └─ LocationHoursEditor.tsx
+│  │  │  │  ├─ hooks
+│  │  │  │  │  ├─ index.ts
+│  │  │  │  │  ├─ useBusinessSettings.ts
+│  │  │  │  │  └─ useLocations.ts
+│  │  │  │  ├─ pages
+│  │  │  │  │  └─ BusinessSettingsPage.tsx
+│  │  │  │  ├─ services
+│  │  │  │  │  ├─ index.ts
+│  │  │  │  │  └─ locationApi.ts
+│  │  │  │  └─ utils
+│  │  │  │     └─ formatHours.ts
 │  │  │  ├─ messaging
 │  │  │  │  └─ pages
 │  │  │  │     └─ Messaging.tsx
@@ -197,6 +230,7 @@ healthcare-saas
 │  │  │  │  │  │     ├─ RoomModal.tsx
 │  │  │  │  │  │     └─ StatusDropdown.tsx
 │  │  │  │  │  ├─ DatePickerPopover.tsx
+│  │  │  │  │  ├─ DynamicOfficeDropdown.tsx
 │  │  │  │  │  ├─ filters
 │  │  │  │  │  │  ├─ index.ts
 │  │  │  │  │  │  └─ ScheduleFilters.tsx

@@ -48,23 +48,12 @@ export function detectOverlapError(error: unknown): OverlapErrorInfo {
 /**
  * Build the styled confirm message for the popup.
  */
-export function buildOverlapConfirmMessage(officeCode?: string): string {
-  let officeName: string;
-
-  switch (officeCode) {
-    case "north":
-      officeName = "North Office";
-      break;
-    case "south":
-      officeName = "South Office";
-      break;
-    default:
-      officeName = officeCode || "this office";
-  }
-
+export function buildOverlapConfirmMessage(office?: string): string {
   return (
     `Double Booking Detected\n\n` +
-    `An existing appointment for this provider already occupies this time range in ${officeName}.\n\n` +
+    `An existing appointment already occupies this time range${
+      office ? ` in ${office}` : ""
+    }.\n\n` +
     `Do you want to allow this overlap and continue?`
   );
 }

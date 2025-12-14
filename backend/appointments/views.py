@@ -19,32 +19,15 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """
-        Ensure every appointment gets a valid provider, respecting the ID sent from frontend.
+        Create appointment using validated serializer data only.
+        Provider must be provided by the client payload (source of truth).
+        Applies appointment type defaults from ScheduleSettings.appointment_types.
         """
-        from providers.models import Provider
-        from schedule.models import ScheduleSettings
-
-        # Try normal serializer behavior first
         provider = serializer.validated_data.get("provider")
-
-        # Fallback to raw ID in request data if DRF stripped it
         if not provider:
-            provider_id = self.request.data.get("provider")
-            if provider_id:
-                try:
-                    provider = Provider.objects.get(pk=int(provider_id))
-                except (Provider.DoesNotExist, ValueError):
-                    raise ValidationError({"provider": f"Invalid provider ID: {provider_id}"})
+            raise ValidationError({"provider": "Provider is required."})
 
-        # Still no provider? fallback to logged-in provider
-        if not provider and hasattr(self.request.user, "provider"):
-            provider = self.request.user.provider
-
-        if not provider:
-            raise ValidationError({"provider": "No provider found for this user."})
-
-        # Apply appointment type defaults
-        appt_type = serializer.validated_data.get("appointment_type", "")
+        appt_type = serializer.validated_data.get("appointment_type", "") or ""
         color = serializer.validated_data.get("color_code") or "#3B82F6"
         duration = serializer.validated_data.get("duration") or 30
 
@@ -55,7 +38,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                 color = match.get("color_code", color)
                 duration = match.get("default_duration", duration)
 
-        serializer.save(provider=provider, color_code=color, duration=duration)
+        serializer.save(color_code=color, duration=duration)
 
     def get_queryset(self):
         qs = super().get_queryset()

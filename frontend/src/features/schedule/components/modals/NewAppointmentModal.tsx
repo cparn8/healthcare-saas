@@ -5,6 +5,7 @@ import X from "lucide-react/dist/esm/icons/x";
 import WithPatientForm from "./forms/WithPatientForm";
 import BlockTimeForm from "./forms/BlockTimeForm";
 import { appointmentsApi, AppointmentPayload } from "../../services";
+import { LocationDTO } from "../../../locations/services/locationApi";
 import {
   toastError,
   toastSuccess,
@@ -20,10 +21,13 @@ interface NewAppointmentModalProps {
   onClose: () => void;
   onSaved: () => void;
   providerId?: number | null;
+
+  primaryOfficeSlug?: string | null;
+
   initialDate?: Date;
   initialStartTime?: Date;
   initialEndTime?: Date;
-  defaultOffice?: string;
+
   initialPatient?: any;
   appointmentTypes?: {
     id?: number;
@@ -32,6 +36,7 @@ interface NewAppointmentModalProps {
     color_code: string;
   }[];
   scheduleSettings?: any;
+  locations: LocationDTO[];
   requestConfirm?: (message: string) => Promise<boolean>;
 }
 
@@ -42,10 +47,11 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
   initialDate,
   initialStartTime,
   initialEndTime,
-  defaultOffice,
+  primaryOfficeSlug,
   initialPatient,
   appointmentTypes,
   scheduleSettings,
+  locations,
   requestConfirm,
 }) => {
   const [activeTab, setActiveTab] = useState<"withPatient" | "blockTime">(
@@ -182,16 +188,23 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
           : rawDate;
 
       const safeDate = safeDateValue as string;
+      const resolvedOffice =
+        slot?.office ?? formData.office ?? primaryOfficeSlug;
+
+      if (!resolvedOffice) {
+        toastError("No location selected for this appointment.");
+        setIsSubmitting(false);
+        return;
+      }
 
       let payload: AppointmentPayload = {
         ...formData,
         provider: formData.provider ?? providerId ?? 1,
-        office: formData.office ?? defaultOffice ?? "north",
+        office: resolvedOffice,
         repeat_end_date: formData.repeat_end_date || null,
         date: safeDate,
         start_time: slot?.start_time || formData.start_time,
         end_time: slot?.end_time || formData.end_time,
-        // existing behavior: slot-level allow_overlap (e.g. “force overlap” from grid)
         allow_overlap: !!slot?.allow_overlap || !!formData.allow_overlap,
       };
 
@@ -300,6 +313,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
           {activeTab === "withPatient" ? (
             <WithPatientForm
               providerId={providerId}
+              locations={locations}
               onGetFormData={(data: AppointmentPayload) => setFormData(data)}
               initialDate={
                 initialDate ? initialDate.toISOString().split("T")[0] : ""
@@ -307,12 +321,13 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
               initialStartTime={normalizeToTimeString(initialStartTime)}
               initialEndTime={normalizeToTimeString(initialEndTime)}
               initialPatient={initialPatient}
+              primaryOfficeSlug={primaryOfficeSlug ?? null}
               appointmentTypes={appointmentTypes}
-              defaultOffice={defaultOffice}
             />
           ) : (
             <BlockTimeForm
               providerId={providerId}
+              locations={locations}
               appointmentTypes={appointmentTypes}
               scheduleSettings={scheduleSettings}
               onGetFormData={(data: AppointmentPayload) => setFormData(data)}
@@ -322,7 +337,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
               }
               initialStartTime={normalizeToTimeString(initialStartTime)}
               initialEndTime={normalizeToTimeString(initialEndTime)}
-              defaultOffice={defaultOffice}
+              primaryOfficeSlug={primaryOfficeSlug ?? null}
             />
           )}
         </div>
