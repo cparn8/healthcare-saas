@@ -16,7 +16,8 @@ import {
 
 import { toastError, toastSuccess } from "../../../../utils";
 import ConfirmDialog from "../../../../components/common/ConfirmDialog";
-
+import OfficeSelect from "./forms/common/OfficeSelect";
+import { LocationDTO } from "../../../locations/services/locationApi";
 import AppointmentFormBase from "./forms/common/AppointmentFormBase";
 import AppointmentTypeSelect from "./forms/common/AppointmentTypeSelect";
 import DateTimeFields from "./forms/common/DateTimeFields";
@@ -29,6 +30,7 @@ interface EditAppointmentModalProps {
   appointment: Appointment;
   onClose: () => void;
   onUpdated: () => void;
+  locations: LocationDTO[];
   appointmentTypes?: Array<{
     name: string;
     default_duration: number;
@@ -41,14 +43,26 @@ const EditAppointmentModal: React.FC<EditAppointmentModalProps> = ({
   appointment,
   onClose,
   onUpdated,
+  locations,
   appointmentTypes = [],
   requestConfirm,
 }) => {
   // ------------------ State ------------------
   const [formData, setFormData] = useState<AppointmentPayload>({
     ...appointment,
+    office: appointment.office,
     repeat_days: appointment.repeat_days || [],
   });
+
+  const officeSection = (
+    <OfficeSelect
+      value={formData.office}
+      locations={locations}
+      onChange={(office: string) =>
+        setFormData((prev) => ({ ...prev, office }))
+      }
+    />
+  );
 
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -84,6 +98,12 @@ const EditAppointmentModal: React.FC<EditAppointmentModalProps> = ({
   // ------------------ Save ------------------
   const handleSave = async () => {
     setIsSaving(true);
+    if (!formData.office) {
+      toastError("Appointment location is missing.");
+      setIsSaving(false);
+      return;
+    }
+
     try {
       // First attempt
       try {
@@ -243,6 +263,7 @@ const EditAppointmentModal: React.FC<EditAppointmentModalProps> = ({
             formData={formData}
             onChange={(patch) => setFormData({ ...formData, ...patch })}
             providerSection={providerSection}
+            officeSection={officeSection}
             dateTimeSection={dateTimeSection}
             extraFields={extraFields}
           />

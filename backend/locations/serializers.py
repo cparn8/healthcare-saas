@@ -27,12 +27,6 @@ class LocationHoursSerializer(serializers.ModelSerializer):
 
 
 class LocationSerializer(serializers.ModelSerializer):
-    """
-    Location + nested hours.
-    'hours' will be serialized as a list for now; Phase 2 can reshape to
-    a map { 'mon': {...}, ... } if needed on the API boundary.
-    """
-
     hours = LocationHoursSerializer(many=True, read_only=True)
 
     class Meta:
@@ -47,3 +41,6 @@ class LocationSerializer(serializers.ModelSerializer):
             "is_active",
             "hours",
         ]
+        extra_kwargs = {
+            "slug": {"required": False, "allow_blank": True},
+        }

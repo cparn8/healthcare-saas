@@ -2,7 +2,6 @@
 
 import React from "react";
 import { AppointmentPayload } from "../../../../services";
-
 import DateTimeFields from "./DateTimeFields";
 
 interface AppointmentFormBaseProps {

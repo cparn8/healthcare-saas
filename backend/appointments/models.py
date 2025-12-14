@@ -2,6 +2,7 @@
 
 from django.db import models
 from django.utils import timezone
+from locations.models import Location
 from patients.models import Patient
 from providers.models import Provider
 
@@ -45,7 +46,19 @@ class Appointment(models.Model):
     )
 
     # ---------------------------
-    # Location (dynamic)
+    # Location (normalized)
+    # ---------------------------
+    location = models.ForeignKey(
+        Location,
+        on_delete=models.PROTECT,
+        related_name="appointments",
+        help_text="Normalized location reference for this appointment.",
+        null=True,          # TEMPORARY
+        blank=True,         # TEMPORARY
+    )
+
+    # ---------------------------
+    # Location (legacy / slug)
     # ---------------------------
     office = models.CharField(
         max_length=64,

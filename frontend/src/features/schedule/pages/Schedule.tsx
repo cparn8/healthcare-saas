@@ -572,6 +572,7 @@ const SchedulePage: React.FC = () => {
               ...editingAppt,
               repeat_days: editingAppt.repeat_days || [],
             }}
+            locations={locations}
             onClose={() => setEditingAppt(null)}
             onUpdated={reloadAppointments}
             appointmentTypes={appointmentTypes}

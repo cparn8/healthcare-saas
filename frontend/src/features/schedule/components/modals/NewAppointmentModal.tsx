@@ -188,8 +188,8 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
           : rawDate;
 
       const safeDate = safeDateValue as string;
-      const resolvedOffice =
-        slot?.office ?? formData.office ?? primaryOfficeSlug;
+      const chosenOffice = (formData.office ?? "").trim();
+      const resolvedOffice = chosenOffice || slot?.office || primaryOfficeSlug;
 
       if (!resolvedOffice) {
         toastError("No location selected for this appointment.");

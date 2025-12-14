@@ -244,11 +244,11 @@ const BusinessSettingsPage: React.FC = () => {
                         Key: <span className="font-mono">{loc.slug}</span>
                       </p>
 
-                      <p className="text-xs text-gray-600 mt-3 space-y-0.5">
+                      <div className="text-xs text-gray-600 mt-3 space-y-0.5">
                         {summary.map((line, idx) => (
                           <div key={idx}>{line}</div>
                         ))}
-                      </p>
+                      </div>
                     </div>
                   </div>
 

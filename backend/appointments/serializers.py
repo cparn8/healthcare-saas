@@ -1,6 +1,7 @@
 # backend/appointments/serializers.py
 from rest_framework import serializers
 from .models import Appointment
+from locations.models import Location
 from django.db.models import Q
 from datetime import datetime, time
 from django.utils import timezone
@@ -178,6 +179,16 @@ class AppointmentSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data.pop("allow_overlap", None)
 
+        # Resolve office slug → Location FK
+        office = validated_data.get("office")
+        if office:
+            try:
+                validated_data["location"] = Location.objects.get(slug=office)
+            except Location.DoesNotExist:
+                raise serializers.ValidationError({
+                    "office": f"Invalid location '{office}'."
+                })
+
         # Automatically assign gray color for block times
         appt_type = (validated_data.get("appointment_type") or "").lower()
         if appt_type in ["block time", "out of office", "meeting", "surgery", "lunch", "other"]:
@@ -186,6 +197,16 @@ class AppointmentSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
+        # Resolve office slug → Location FK (if changed or present)
+        office = validated_data.get("office")
+        if office:
+            try:
+                validated_data["location"] = Location.objects.get(slug=office)
+            except Location.DoesNotExist:
+                raise serializers.ValidationError({
+                    "office": f"Invalid location '{office}'."
+                })
+
         # --- Status rule: clear room on "seen" ---
         new_status = validated_data.get("status", instance.status)
         if new_status == "seen":

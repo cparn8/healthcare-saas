@@ -32,7 +32,7 @@ class Location(models.Model):
     """
 
     name = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=50, unique=True)
+    slug = models.SlugField(max_length=50, unique=True, blank=True)
 
     phone = models.CharField(max_length=50, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
@@ -73,17 +73,19 @@ class Location(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug and self.name:
-            base = slugify(self.name)
-            candidate = base or "location"
+            base = slugify(self.name) or "location"
+            candidate = base
             idx = 1
+
             while Location.objects.filter(slug=candidate).exclude(pk=self.pk).exists():
                 idx += 1
                 candidate = f"{base}-{idx}"
+
             self.slug = candidate
 
         super().save(*args, **kwargs)
 
-        # After saving, ensure hours exist.
+        # After saving, ensure hours exist (idempotent)
         self.ensure_default_hours()
 
 
