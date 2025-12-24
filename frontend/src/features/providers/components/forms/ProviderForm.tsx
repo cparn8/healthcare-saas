@@ -37,6 +37,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
         <FormField
           type="text"
           label="First Name"
+          className="border border-mBorder dark:border-border-dark rounded p-2 bg-input dark:bg-surface-dark "
           value={values.first_name}
           error={errors.first_name}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -46,6 +47,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
         <FormField
           type="text"
           label="Last Name"
+          className="border border-mBorder dark:border-border-dark rounded p-2 bg-input dark:bg-surface-dark"
           value={values.last_name}
           error={errors.last_name}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -59,6 +61,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
         <FormField
           type="email"
           label="Email"
+          className="border border-mBorder dark:border-border-dark rounded p-2 bg-input dark:bg-surface-dark"
           value={values.email}
           error={errors.email}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -68,6 +71,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
         <FormField
           type="text"
           label="Phone"
+          className="border border-mBorder dark:border-border-dark rounded p-2 bg-input dark:bg-surface-dark"
           value={values.phone ?? ""}
           error={errors.phone}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -80,6 +84,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
       <FormField
         type="text"
         label="Specialty"
+        className="border border-mBorder dark:border-border-dark rounded p-2 bg-input dark:bg-surface-dark"
         value={values.specialty ?? ""}
         error={errors.specialty}
         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -93,6 +98,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
           <FormField
             type="password"
             label="Password"
+            className="border border-mBorder dark:border-border-dark rounded p-2 bg-input dark:bg-surface-dark"
             value={values.password ?? ""}
             error={errors.password}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -102,6 +108,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
           <FormField
             type="password"
             label="Confirm Password"
+            className="border border-mBorder dark:border-border-dark rounded p-2 bg-input dark:bg-surface-dark"
             value={values.confirm_password ?? ""}
             error={errors.confirm_password}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>

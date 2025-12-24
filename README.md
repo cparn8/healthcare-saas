@@ -15,6 +15,8 @@ healthcare-saas
 │  │  │  ├─ 0006_appointment_intake_status_appointment_notes_and_more.py
 │  │  │  ├─ 0007_alter_appointment_room.py
 │  │  │  ├─ 0008_alter_appointment_chief_complaint_and_more.py
+│  │  │  ├─ 0009_appointment_location.py
+│  │  │  ├─ 0010_backfill_location_from_office.py
 │  │  │  └─ __init__.py
 │  │  ├─ models.py
 │  │  ├─ serializers.py
@@ -46,6 +48,7 @@ healthcare-saas
 │  │  ├─ migrations
 │  │  │  ├─ 0001_initial.py
 │  │  │  ├─ 0002_seed_locations_from_schedule.py
+│  │  │  ├─ 0003_alter_location_slug.py
 │  │  │  └─ __init__.py
 │  │  ├─ models.py
 │  │  ├─ serializers.py
@@ -54,8 +57,6 @@ healthcare-saas
 │  │  ├─ views.py
 │  │  └─ __init__.py
 │  ├─ manage.py
-│  ├─ organization
-│  │  └─ migrations
 │  ├─ patients
 │  │  ├─ admin.py
 │  │  ├─ apps.py
@@ -245,26 +246,24 @@ healthcare-saas
 │  │  │  │  │  │  │  ├─ timeFormatting.ts
 │  │  │  │  │  │  │  └─ weekSlots.ts
 │  │  │  │  │  │  └─ WeekViewGrid.tsx
-│  │  │  │  │  ├─ modals
-│  │  │  │  │  │  ├─ EditAppointmentModal.tsx
-│  │  │  │  │  │  ├─ forms
-│  │  │  │  │  │  │  ├─ BlockTimeForm.tsx
-│  │  │  │  │  │  │  ├─ common
-│  │  │  │  │  │  │  │  ├─ AppointmentFormBase.tsx
-│  │  │  │  │  │  │  │  ├─ AppointmentTypeSelect.tsx
-│  │  │  │  │  │  │  │  ├─ DateTimeFields.tsx
-│  │  │  │  │  │  │  │  ├─ OfficeSelect.tsx
-│  │  │  │  │  │  │  │  ├─ ProviderSelect.tsx
-│  │  │  │  │  │  │  │  └─ RepeatSection.tsx
-│  │  │  │  │  │  │  └─ WithPatientForm.tsx
-│  │  │  │  │  │  ├─ index.ts
-│  │  │  │  │  │  ├─ MultiSlotModal.tsx
-│  │  │  │  │  │  └─ NewAppointmentModal.tsx
-│  │  │  │  │  └─ SettingsPanel.tsx
+│  │  │  │  │  └─ modals
+│  │  │  │  │     ├─ EditAppointmentModal.tsx
+│  │  │  │  │     ├─ forms
+│  │  │  │  │     │  ├─ BlockTimeForm.tsx
+│  │  │  │  │     │  ├─ common
+│  │  │  │  │     │  │  ├─ AppointmentFormBase.tsx
+│  │  │  │  │     │  │  ├─ AppointmentTypeSelect.tsx
+│  │  │  │  │     │  │  ├─ DateTimeFields.tsx
+│  │  │  │  │     │  │  ├─ OfficeSelect.tsx
+│  │  │  │  │     │  │  ├─ ProviderSelect.tsx
+│  │  │  │  │     │  │  └─ RepeatSection.tsx
+│  │  │  │  │     │  └─ WithPatientForm.tsx
+│  │  │  │  │     ├─ index.ts
+│  │  │  │  │     ├─ MultiSlotModal.tsx
+│  │  │  │  │     └─ NewAppointmentModal.tsx
 │  │  │  │  ├─ hooks
 │  │  │  │  │  ├─ index.ts
 │  │  │  │  │  ├─ useBusinessHours.ts
-│  │  │  │  │  ├─ useBusinessHoursFilter.ts
 │  │  │  │  │  ├─ useOfficePersistence.ts
 │  │  │  │  │  ├─ usePatientSearch.ts
 │  │  │  │  │  ├─ usePositionedAppointments.ts

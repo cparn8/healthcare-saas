@@ -32,13 +32,13 @@ const BusinessNameModal: React.FC<BusinessNameModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+    <div className="fixed inset left-0 right-0 bottom-0 top-4 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-bg dark:bg-bg-dark rounded-lg shadow-xl w-full max-w-md">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-bg dark:border-bg-dark">
           <h2 className="text-lg font-semibold">Edit Business Name</h2>
           <button
-            className="text-gray-500 hover:text-gray-700"
+            className="text-text-muted dark:text-text-darkMuted hover:text-text-primary hover:dark:text-text-darkPrimary"
             onClick={onClose}
           >
             <X size={20} />
@@ -49,12 +49,12 @@ const BusinessNameModal: React.FC<BusinessNameModalProps> = ({
         <div className="p-6 space-y-4">
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-text-primary dark:text-text-darkPrimary mb-1">
               Business Name
             </label>
             <input
               type="text"
-              className="w-full border rounded p-2"
+              className="w-full bg-surface dark:bg-surface-dark  border border-border dark:border-border-dark rounded p-2"
               placeholder="Enter business name"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -69,16 +69,16 @@ const BusinessNameModal: React.FC<BusinessNameModalProps> = ({
               onChange={(e) => setShowName(e.target.checked)}
               className="h-4 w-4"
             />
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-text-primary dark:text-text-darkPrimary">
               Show in navigation bar
             </span>
           </label>
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end items-center px-6 py-4 border-t bg-gray-50 gap-3">
+        <div className="flex justify-end items-center px-6 py-4 border-t border-bg dark:border-bg-dark gap-3">
           <button
-            className="px-4 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-100"
+            className="px-4 py-2 rounded border border-mBorder dark:border-dButton-mborder text-text-primary dark:text-text-darkPrimary bg-side dark:bg-dButton-mbg hover:bg-top hover:dark:bg-dButton-mhover transition"
             onClick={onClose}
             disabled={saving}
           >
@@ -86,10 +86,10 @@ const BusinessNameModal: React.FC<BusinessNameModalProps> = ({
           </button>
 
           <button
-            className={`px-4 py-2 rounded text-white transition ${
+            className={`px-4 py-2 rounded text-input-lighter transition ${
               saving
                 ? "bg-gray-400 cursor-wait"
-                : "bg-blue-600 hover:bg-blue-700"
+                : "bg-primary hover:bg-primary-hover"
             }`}
             onClick={handleSubmit}
             disabled={saving}

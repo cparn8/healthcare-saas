@@ -9,17 +9,8 @@ const SettingsPage: React.FC = () => {
   const { isAdmin } = useCurrentProvider();
   const [appointmentTypesOpen, setAppointmentTypesOpen] = useState(false);
 
-  // Local theme toggle skeleton (we'll wire real theming later)
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-
-  const handleThemeToggle = () => {
-    setTheme((prev) => (prev === "light" ? "dark" : "light"));
-    // TODO: hook into global theme (Tailwind class on <html> or context)
-  };
-
   const handleOpenBusinessSettings = () => {
     if (!isAdmin) return;
-    // TODO: ensure this route exists when we implement BusinessSettingsPage
     navigate("/doctor/settings/business");
   };
 
@@ -29,26 +20,26 @@ const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 bg-bg dark:bg-bg-dark text-text-primary dark:text-text-darkPrimary min-h-full">
       {/* Page heading */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-1">
-          Configure users, business settings, appointment types, and appearance.
+        <h1 className="text-2xl font-bold">Settings</h1>
+        <p className="text-text-secondary dark:text-text-darkSecondary mt-1">
+          Configure users, business settings, appointment types, and demo data.
         </p>
       </div>
 
       {/* Grid of settings cards */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* User Management */}
-        <section className="bg-white border rounded-xl shadow-sm p-5 flex flex-col gap-4">
+        <section className="bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-sm p-5">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-text-primary dark:text-text-darkPrimary">
                 User Management
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
-                Manage patients and providers for your practice.
+              <p className="text-sm text-text-secondary dark:text-text-darkSecondary mt-1">
+                Manage patients and providers.
               </p>
             </div>
           </div>
@@ -57,38 +48,40 @@ const SettingsPage: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate("/doctor/manage-users/patients")}
-              className="w-full inline-flex items-center justify-between px-4 py-2 rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 text-sm font-medium text-gray-800 transition"
+              className="w-full inline-flex items-center justify-between bg-bg dark:bg-dButton px-4 py-2 rounded-lg border border-border dark:border-dButton-border hover:border-primary-light hover:bg-primary-lighter hover:dark:bg-primary-dlight text-sm font-medium text-text-primary dark:text-text-darkPrimary transition"
             >
               <span>Manage Patients</span>
-              <span className="text-xs text-gray-500">View & edit</span>
+              <span className="text-xs text-text-secondary dark:text-text-darkSecondary">
+                View & edit
+              </span>
             </button>
 
             <button
               type="button"
               onClick={() => navigate("/doctor/manage-users/providers")}
-              className="w-full inline-flex items-center justify-between px-4 py-2 rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 text-sm font-medium text-gray-800 transition"
+              className="w-full inline-flex items-center justify-between bg-bg dark:bg-dButton px-4 py-2 rounded-lg border border-border dark:border-dButton-border hover:border-primary-light hover:bg-primary-lighter hover:dark:bg-primary-dlight text-sm font-medium text-text-primary dark:text-text-darkPrimary transition"
             >
               <span>Manage Providers</span>
-              <span className="text-xs text-gray-500">
-                View list, edit own profile
+              <span className="text-xs text-text-secondary dark:text-text-darkSecondary">
+                Profiles & access
               </span>
             </button>
           </div>
         </section>
 
         {/* Business & Locations */}
-        <section className="bg-white border rounded-xl shadow-sm p-5 flex flex-col gap-4">
+        <section className="bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-sm p-5 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-text-primary dark:text-text-darkPrimary">
                 Business & Locations
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
-                Set your business name, locations, and office hours.
+              <p className="text-sm text-text-secondary dark:text-text-darkSecondary mt-1">
+                View & edit business name, locations, and office hours.
               </p>
             </div>
             {isAdmin ? (
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-100">
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-grncon-light text-text-primary border border-grncon-hover">
                 Admin
               </span>
             ) : (
@@ -104,32 +97,27 @@ const SettingsPage: React.FC = () => {
             disabled={!isAdmin}
             className={`mt-2 inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition ${
               isAdmin
-                ? "bg-blue-600 text-white hover:bg-blue-700"
+                ? "bg-primary text-input-lighter hover:bg-primary-hover"
                 : "bg-gray-200 text-gray-500 cursor-not-allowed"
             }`}
           >
             Open Business Settings
           </button>
-
-          <p className="text-xs text-gray-500">
-            Includes business name visibility in the header and per-location
-            contact info and business hours.
-          </p>
         </section>
 
         {/* Appointment Types */}
-        <section className="bg-white border rounded-xl shadow-sm p-5 flex flex-col gap-4">
+        <section className="bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-sm p-5 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-text-primary dark:text-text-darkPrimary">
                 Appointment Types
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
-                Configure appointment types, colors, and default durations.
+              <p className="text-sm text-text-secondary dark:text-text-darkSecondary mt-1">
+                Configure appointment types, colors, and suggested durations.
               </p>
             </div>
             {isAdmin ? (
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-100">
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-grncon-light text-text-primary border border-grncon-hover">
                 Admin
               </span>
             ) : (
@@ -145,51 +133,31 @@ const SettingsPage: React.FC = () => {
             disabled={!isAdmin}
             className={`mt-2 inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition ${
               isAdmin
-                ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                ? "bg-primary text-input-lighter hover:bg-primary-hover"
                 : "bg-gray-200 text-gray-500 cursor-not-allowed"
             }`}
           >
             Manage Appointment Types
           </button>
-
-          <p className="text-xs text-gray-500">
-            We will reuse the existing Schedule Settings appointment type
-            configuration here in a modal.
-          </p>
         </section>
 
-        {/* Appearance / Theme */}
-        <section className="bg-white border rounded-xl shadow-sm p-5 flex flex-col gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Appearance</h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Switch between light and dark themes for the dashboard.
-            </p>
-          </div>
+        {/* Demo Data Reset (placeholder) */}
+        <section className="bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-sm p-5">
+          <h2 className="text-lg font-semibold">Demo Data</h2>
+          <p className="text-sm text-text-secondary dark:text-text-darkSecondary mt-1">
+            Reset the application to its original demo state.
+          </p>
 
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-sm text-gray-700">
-              Theme:{" "}
-              <span className="font-medium capitalize">
-                {theme === "light" ? "Light" : "Dark"}
-              </span>
-            </span>
-            <button
-              type="button"
-              onClick={handleThemeToggle}
-              className="relative inline-flex items-center h-6 rounded-full w-11 border border-gray-300 bg-gray-100 transition"
-            >
-              <span
-                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition ${
-                  theme === "dark" ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
-            </button>
-          </div>
+          <button
+            disabled
+            className="mt-4 w-full px-4 py-2 rounded-lg border border-dashed border-border dark:border-dButton-border text-sm text-text-muted dark:text-text-darkMuted cursor-not-allowed"
+          >
+            Reset Demo Data (Coming Soon)
+          </button>
 
-          <p className="text-xs text-gray-500">
-            This toggle is currently local to the Settings page; we&apos;ll wire
-            it into a global theme context in a later step.
+          <p className="text-xs text-text-muted dark:text-text-darkMuted mt-2">
+            This will eventually delete and recreate demo providers, patients,
+            locations, appointments, and types.
           </p>
         </section>
       </div>
@@ -198,8 +166,6 @@ const SettingsPage: React.FC = () => {
           open={appointmentTypesOpen}
           onClose={() => setAppointmentTypesOpen(false)}
           onSaved={() => {
-            // Optional: if future features depend on updated settings
-            // may refresh context here.
             setAppointmentTypesOpen(false);
           }}
         />

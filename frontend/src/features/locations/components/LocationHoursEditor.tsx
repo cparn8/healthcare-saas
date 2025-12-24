@@ -33,10 +33,10 @@ const LocationHoursEditor: React.FC<Props> = ({ hours, onChange }) => {
       {hours.map((h) => (
         <div
           key={h.weekday}
-          className="grid grid-cols-12 items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-200"
+          className="grid grid-cols-12 items-center gap-4 bg-surface dark:bg-surface-dark p-3 rounded-lg border border-border dark:border-border-dark"
         >
           {/* Weekday */}
-          <div className="col-span-3 font-medium text-gray-800">
+          <div className="col-span-3 font-medium text-text-primary dark:text-text-darkPrimary">
             {WEEKDAY_LABELS[h.weekday]}
           </div>
 
@@ -49,7 +49,9 @@ const LocationHoursEditor: React.FC<Props> = ({ hours, onChange }) => {
                 handleChange(h.weekday, "open", e.target.checked)
               }
             />
-            <span className="text-sm text-gray-700">Open</span>
+            <span className="text-sm text-text-secondary dark:text-text-darkSecondary">
+              Open
+            </span>
           </div>
 
           {/* Start Time */}
@@ -58,7 +60,7 @@ const LocationHoursEditor: React.FC<Props> = ({ hours, onChange }) => {
               type="time"
               step={900}
               disabled={!h.open}
-              className="w-full border rounded p-2 disabled:bg-gray-100"
+              className="w-full border bg-input-lighter dark:bg-input-dark border-mBorder-lighter dark:border-mBorder-dark rounded p-2 disabled:bg-side disabled:dark:bg-side-dark"
               value={h.start}
               onChange={(e) => handleChange(h.weekday, "start", e.target.value)}
             />
@@ -70,7 +72,7 @@ const LocationHoursEditor: React.FC<Props> = ({ hours, onChange }) => {
               type="time"
               step={900}
               disabled={!h.open}
-              className="w-full border rounded p-2 disabled:bg-gray-100"
+              className="w-full border bg-input-lighter dark:bg-input-dark border-mBorder-lighter dark:border-mBorder-dark rounded p-2 disabled:bg-side disabled:dark:bg-side-dark"
               value={h.end}
               onChange={(e) => handleChange(h.weekday, "end", e.target.value)}
             />

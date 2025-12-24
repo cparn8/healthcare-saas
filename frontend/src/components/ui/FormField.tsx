@@ -1,10 +1,10 @@
-import React from 'react';
+import React from "react";
 
 type BaseProps = {
   label?: string;
   error?: string;
   className?: string;
-  as?: 'input' | 'select';
+  as?: "input" | "select";
 };
 
 const FormField: React.FC<
@@ -13,18 +13,20 @@ const FormField: React.FC<
     | React.SelectHTMLAttributes<HTMLSelectElement>
   ) &
     BaseProps
-> = ({ label, error, className, as = 'input', children, ...props }) => {
+> = ({ label, error, className, as = "input", children, ...props }) => {
   return (
-    <label className='block'>
+    <label className="block">
       {label && (
-        <span className='block text-sm text-gray-700 mb-1'>{label}</span>
+        <span className="block text-sm text-text-primary dark:text-text-darkPrimary mb-1">
+          {label}
+        </span>
       )}
-      {as === 'select' ? (
+      {as === "select" ? (
         <select
           {...(props as React.SelectHTMLAttributes<HTMLSelectElement>)}
           className={`border p-2 w-full rounded ${
-            error ? 'border-red-500' : 'border-gray-300'
-          } ${className ?? ''}`}
+            error ? "border-red-500" : "border-gray-300"
+          } ${className ?? ""}`}
         >
           {children}
         </select>
@@ -32,11 +34,11 @@ const FormField: React.FC<
         <input
           {...(props as React.InputHTMLAttributes<HTMLInputElement>)}
           className={`border p-2 w-full rounded ${
-            error ? 'border-red-500' : 'border-gray-300'
-          } ${className ?? ''}`}
+            error ? "border-red-500" : "border-gray-300"
+          } ${className ?? ""}`}
         />
       )}
-      {error && <p className='text-red-500 text-sm mt-1'>{error}</p>}
+      {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
     </label>
   );
 };

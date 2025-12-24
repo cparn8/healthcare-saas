@@ -406,33 +406,46 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
 
   const renderPatientInfo = (appt: Appointment) => {
     const anyAppt = appt as any;
-    const dob: string | undefined = anyAppt.patient_dob;
-    const genderRaw: string | undefined = anyAppt.patient_gender;
-    const phone: string | undefined = anyAppt.patient_phone;
 
-    const genderMap = (value?: string) => {
+    const dobRaw: string | undefined = anyAppt.patient_dob;
+    const genderRaw: string | undefined = anyAppt.patient_gender;
+
+    const formatGender = (value?: string) => {
       if (!value) return "";
       const v = value.toLowerCase();
       if (v.startsWith("m")) return "M";
       if (v.startsWith("f")) return "F";
       if (v.startsWith("non")) return "NB";
       if (v.startsWith("other")) return "O";
-      if (v.includes("prefer")) return "NA";
-      return value.toUpperCase().slice(0, 2);
+      return "";
     };
 
-    const genderAbbr = genderMap(genderRaw);
+    const gender = formatGender(genderRaw);
+
+    const dob = dobRaw
+      ? (() => {
+          try {
+            return format(new Date(dobRaw), "MM/dd/yyyy");
+          } catch {
+            return "";
+          }
+        })()
+      : "";
+
+    const meta =
+      gender || dob ? `${gender}${gender && dob ? " " : ""}${dob}` : null;
 
     return (
       <div className="flex flex-col">
-        <div className="text-sm font-medium text-blue-700 hover:underline cursor-pointer">
+        <div className="text-sm font-medium text-text-primary dark:text-text-darkPrimary hover:underline cursor-pointer">
           {appt.patient_name || "(No Patient)"}
         </div>
-        <div className="text-xs text-gray-600 flex flex-wrap gap-1">
-          {dob && <span>{dob}</span>}
-          {genderAbbr && <span>• {genderAbbr}</span>}
-          {phone && <span>• {phone}</span>}
-        </div>
+
+        {meta && (
+          <div className="text-xs text-text-secondary dark:text-text-darkSecondary">
+            {meta}
+          </div>
+        )}
       </div>
     );
   };
@@ -443,7 +456,7 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
 
   if (loading) {
     return (
-      <div className="p-6 text-center text-gray-500 italic">
+      <div className="p-6 text-center text-text-secondary dark:text-text-darkSecondary italic">
         Loading appointments…
       </div>
     );
@@ -451,7 +464,7 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
 
   if (!sortedAppointments.length) {
     return (
-      <div className="p-6 text-center text-gray-500 italic">
+      <div className="p-6 text-center text-text-secondary dark:text-text-darkSecondary italic">
         No appointments for {format(date, "MMM d, yyyy")}.
       </div>
     );
@@ -459,19 +472,19 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
 
   return (
     <div className="relative">
-      <table className="w-full text-sm border-collapse">
-        <thead className="bg-gray-100">
-          <tr className="border-b">
-            <th className="px-2 py-2 text-left w-10">Note</th>
+      <table className="w-full text-sm border border-grid-border dark:border-grid-dborder">
+        <thead className="bg-grid-top dark:bg-grid-dtop">
+          <tr className="border-b border-grid-border dark:border-grid-dborder">
+            <th className="px-2 py-2 text-left">Note</th>
             {showLocationColumn && (
               <th className="px-2 py-2 text-left">Location</th>
             )}
-            <th className="px-2 py-2 text-left w-40">Status</th>
+            <th className="px-2 py-2 text-left">Status</th>
             <th className="px-2 py-2 text-left">Patient</th>
-            <th className="px-2 py-2 text-left w-32">
+            <th className="px-2 py-2 text-left">
               <button
                 type="button"
-                className="inline-flex items-center gap-1 hover:text-blue-600"
+                className="inline-flex items-center gap-1 hover:text-primary"
                 onClick={toggleTimeSort}
               >
                 Time
@@ -482,10 +495,10 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
                 )}
               </button>
             </th>
-            <th className="px-2 py-2 text-left w-40">Provider</th>
-            <th className="px-2 py-2 text-left w-40">Type</th>
+            <th className="px-2 py-2 text-left">Provider</th>
+            <th className="px-2 py-2 text-left">Type</th>
             <th className="px-2 py-2 text-left">Chief Complaint</th>
-            <th className="px-2 py-2 text-left w-40">Intake Form</th>
+            <th className="px-2 py-2 text-left">Intake Form</th>
           </tr>
         </thead>
 
@@ -509,24 +522,26 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
 
             const isSeen = state.status === "seen";
             const baseRowColor = isBlock
-              ? "bg-gray-200"
+              ? "bg-grid-block dark:bg-grid-dblock"
               : isSeen
-              ? "bg-gray-50"
-              : "bg-white";
+              ? "bg-grid-top dark:bg-grid-dark"
+              : "bg-surface dark:bg-surface-dark";
 
-            const hoverClass = isBlock ? "" : " hover:bg-gray-50";
+            const hoverClass = isBlock
+              ? ""
+              : " hover:bg-bg dark:hover:bg-bg-dark";
 
             return (
               <tr
                 key={appt.id}
-                className={`border-b ${baseRowColor}${hoverClass} transition-colors`}
+                className={`border-b border-grid-border dark:border-grid-dborder ${baseRowColor}${hoverClass} transition-colors`}
               >
                 {/* NOTE CELL */}
                 <td className="px-2 py-2 align-top">
                   <div className="relative flex items-center">
                     <button
                       type="button"
-                      className="p-1 rounded hover:bg-gray-100 group"
+                      className="p-1 rounded hover:bg-grid-slot dark:hover:bg-grid-dslot group"
                       onClick={() => {
                         if (editingNoteId === appt.id) {
                           setEditingNoteId(null);
@@ -536,13 +551,16 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
                         setEditingNoteId(appt.id);
                       }}
                     >
-                      <Pin size={14} className="text-gray-600" />
+                      <Pin
+                        size={14}
+                        className="text-text-primary dark:text-text-darkPrimary"
+                      />
                       {state.note && (
                         <span className="ml-1 inline-block h-2 w-2 rounded-full bg-orange-500" />
                       )}
 
                       {state.note && (
-                        <div className="absolute left-6 top-0 z-20 hidden min-w-[200px] max-w-xs rounded border bg-white p-2 text-xs text-gray-800 shadow-md group-hover:block">
+                        <div className="absolute left-6 top-0 z-20 hidden min-w-[200px] max-w-xs rounded border border-input-light dark:border-input-dborder bg-input-lighter dark:bg-input-dlight p-2 text-xs text-text-primary dark:text-text-darkPrimary shadow-md group-hover:block">
                           {state.note}
                         </div>
                       )}
@@ -613,7 +631,7 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
 
                 {/* PATIENT */}
                 <td className="px-2 py-2 align-top">
-                  {isBlock ? null : renderPatientInfo(appt)}
+                  {isBlock ? "BLOCK TIME" : renderPatientInfo(appt)}
                 </td>
 
                 {/* TIME */}

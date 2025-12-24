@@ -28,23 +28,25 @@ const ProviderSelect: React.FC<ProviderSelectProps> = ({
   return (
     <div className="space-y-1">
       {/* Label */}
-      <label className="block text-sm font-medium text-gray-700">{label}</label>
+      <label className="block text-sm font-medium text-text-primary dark:text-text-darkPrimary">
+        {label}
+      </label>
 
       {/* Loading */}
       {loading && (
-        <div className="flex items-center gap-2 border rounded p-2 bg-gray-50 text-gray-600">
-          <Spinner className="h-4 w-4 text-gray-400" />
+        <div className="flex items-center gap-2 border border-border dark:border-border-dark rounded p-2 bg-input dark:bg-input-dark text-text-secondary dark:text-text-darkSecondary">
+          <Spinner className="h-4 w-4 text-text-secondary dark:text-text-darkSecondary" />
           Loading providers…
         </div>
       )}
 
       {/* Error */}
-      {!loading && error && <div className="text-red-600 text-sm">{error}</div>}
+      {!loading && error && <div className="text-reddel text-sm">{error}</div>}
 
       {/* Select */}
       {!loading && !error && (
         <select
-          className="w-full border rounded p-2"
+          className="w-full border border-border dark:border-top-dborder bg-grid-slot dark:bg-input-dlight rounded p-2"
           value={value ?? ""}
           onChange={(e) => {
             const v = e.target.value;

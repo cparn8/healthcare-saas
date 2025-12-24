@@ -100,7 +100,7 @@ export default function DayViewGrid({
         return [
           <div
             key={`cluster-${date.toISOString()}-${clusterIndex}`}
-            className="absolute rounded text-white text-xs p-1.5 shadow-sm hover:brightness-105 transition-all pointer-events-auto flex items-center justify-center text-center bg-orange-500"
+            className="absolute rounded text-text-darkPrimary text-xs p-1.5 shadow-sm hover:brightness-105 transition-all pointer-events-auto flex items-center justify-center text-center bg-orange-500"
             style={{
               top: collapsedBox.top,
               height: collapsedBox.height,
@@ -131,7 +131,7 @@ export default function DayViewGrid({
         return (
           <div
             key={`${appt.id}-${appt.date}-${appt.start_time}`}
-            className="absolute rounded text-white text-xs p-1.5 shadow-sm hover:brightness-105 transition-all pointer-events-auto cursor-pointer flex flex-col items-center justify-center text-center"
+            className="absolute rounded text-text-darkPrimary text-xs p-1.5 shadow-sm hover:brightness-105 transition-all pointer-events-auto cursor-pointer flex flex-col items-center justify-center text-center"
             style={{
               top,
               height,
@@ -227,8 +227,8 @@ export default function DayViewGrid({
 
   if (!open) {
     return (
-      <div className="border rounded overflow-hidden bg-white select-none relative">
-        <div className="p-6 text-center text-gray-500 italic">
+      <div className="border rounded overflow-hidden bg-grid-slot dark:bg-grid-dslot select-none relative">
+        <div className="p-6 text-center text-text-secondary dark:text-text-darkSecondary italic">
           No selected location is open on {date.toLocaleDateString()}
         </div>
 
@@ -246,20 +246,20 @@ export default function DayViewGrid({
   }
 
   return (
-    <div className="border rounded overflow-hidden bg-white select-none relative">
+    <div className="border border-grid-border dark:border-grid-dborder rounded overflow-hidden bg-grid-slot dark:bg-grid-dslot select-none relative">
       {/* Header */}
-      <div className="grid grid-cols-[120px_1fr] bg-gray-100 border-b text-sm">
-        <div className="p-2 border-r text-gray-700 text-right pr-3 font-semibold">
+      <div className="grid grid-cols-[120px_1fr] bg-grid-top dark:bg-grid-dtop border-b border-grid-border dark:border-grid-dborder text-sm">
+        <div className="p-2 border-r border-grid-border dark:border-grid-dborder text-text-primary dark:text-text-darkPrimary text-right pr-3 font-semibold">
           Time
         </div>
-        <div className="p-2 text-gray-700">
+        <div className="p-2 text-text-primary dark:text-text-darkPrimary">
           Viewing appointments for{" "}
           <span className="font-semibold">{providerName}</span>
         </div>
       </div>
 
       {loading ? (
-        <div className="p-6 text-center text-gray-500 italic">
+        <div className="p-6 text-center text-text-secondary dark:text-text-darkSecondary italic">
           Loading appointments…
         </div>
       ) : (
@@ -272,7 +272,11 @@ export default function DayViewGrid({
               return (
                 <div
                   key={t}
-                  className="border-r border-b p-2 text-gray-700 h-12 text-right pr-3 font-medium bg-gray-50"
+                  className={`border-r border-b border-grid-border dark:border-grid-dborder p-2 h-12 text-right pr-3 font-medium ${
+                    Math.floor(h) % 2 === 0
+                      ? "bg-grid dark:bg-grid-dark"
+                      : "bg-grid-top dark:bg-grid-dtop"
+                  }`}
                 >
                   {formatTimeLabel(h, m)}
                 </div>
@@ -282,7 +286,7 @@ export default function DayViewGrid({
 
           {/* Grid */}
           <div
-            className="relative border-l"
+            className="relative "
             onMouseUp={handleMouseUp}
             onMouseLeave={resetSelection}
           >
@@ -297,8 +301,10 @@ export default function DayViewGrid({
               return (
                 <div
                   key={idx}
-                  className={`border-b h-12 cursor-crosshair ${
-                    selected ? "bg-gray-300" : "hover:bg-gray-50"
+                  className={`border-b border-border dark:border-border-dark h-12 cursor-crosshair ${
+                    selected
+                      ? "bg-grid-hover dark:bg-grid-dhover"
+                      : "hover:bg-grid-hover hover:dark:bg-grid-dhover"
                   }`}
                   onMouseDown={() => handleMouseDown(idx)}
                   onMouseEnter={() => handleMouseEnter(idx)}
@@ -309,14 +315,14 @@ export default function DayViewGrid({
             {/* Closed-Hours Overlays */}
             {topOverlayHeightPx > 0 && (
               <div
-                className="absolute top-0 left-0 right-0 bg-gray-100 opacity-60 pointer-events-none"
+                className="absolute top-0 left-0 right-0 bg-side dark:bg-side-dark opacity-60 pointer-events-none"
                 style={{ height: `${topOverlayHeightPx}px` }}
               />
             )}
 
             {bottomOverlayTopPx !== null && (
               <div
-                className="absolute left-0 right-0 bg-gray-100 opacity-60 pointer-events-none"
+                className="absolute left-0 right-0 bg-side dark:bg-side-dark opacity-60 pointer-events-none"
                 style={{ top: `${bottomOverlayTopPx}px`, bottom: 0 }}
               />
             )}

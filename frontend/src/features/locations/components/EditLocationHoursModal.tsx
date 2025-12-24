@@ -66,15 +66,15 @@ const EditLocationHoursModal: React.FC<Props> = ({
   if (!open || !location) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
+    <div className="fixed inset left-0 right-0 bottom-0 top-4 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-bg dark:bg-bg-dark rounded-lg shadow-xl w-full max-w-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-bg dark:border-bg-dark">
           <h2 className="text-lg font-semibold">
             Edit Hours – {location.name}
           </h2>
           <button
-            className="text-gray-500 hover:text-gray-700"
+            className="text-text-muted dark:text-text-darkMuted hover:text-text-primary hover:dark:text-text-darkPrimary"
             onClick={onClose}
           >
             <X size={20} />
@@ -84,16 +84,18 @@ const EditLocationHoursModal: React.FC<Props> = ({
         {/* Body */}
         <div className="p-6">
           {loading ? (
-            <p className="text-gray-600">Loading hours…</p>
+            <p className="text-text-secondary dark:text-text-darkSecondary">
+              Loading hours…
+            </p>
           ) : (
             <LocationHoursEditor hours={hours} onChange={setHours} />
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end items-center px-6 py-4 border-t bg-gray-50 gap-3">
+        <div className="flex justify-end items-center px-6 py-4 border-t border-bg dark:border-bg-dark gap-3">
           <button
-            className="px-4 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-100"
+            className="px-4 py-2 rounded border border-mBorder dark:border-dButton-mborder text-text-primary dark:text-text-darkPrimary bg-side dark:bg-dButton-mbg hover:bg-top hover:dark:bg-dButton-mhover transition"
             onClick={onClose}
             disabled={saving}
           >
@@ -101,7 +103,7 @@ const EditLocationHoursModal: React.FC<Props> = ({
           </button>
 
           <button
-            className={`px-4 py-2 rounded text-white transition ${
+            className={`px-4 py-2 rounded text-input-lighter transition ${
               saving
                 ? "bg-blue-400 cursor-wait"
                 : "bg-blue-600 hover:bg-blue-700"

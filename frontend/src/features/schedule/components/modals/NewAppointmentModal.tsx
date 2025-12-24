@@ -271,26 +271,26 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
   // Render
   // -------------------------------
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset left-0 top-10 right-0 bottom-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-bg dark:bg-bg-dark rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b">
+        <div className="flex items-center justify-between px-6 py-3 border-b border-bg dark:border-bg-dark">
           <h2 className="text-xl font-semibold">New Appointment</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-text-secondary dark:text-text-darkSecondary hover:text-text-primary hover:dark:text-text-darkPrimary"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b text-sm font-medium">
+        <div className="flex border-b border-border dark:border-border-dark text-sm font-medium">
           <button
             className={`px-6 py-2 ${
               activeTab === "withPatient"
-                ? "border-b-2 border-blue-600 text-blue-600"
-                : "text-gray-600 hover:text-blue-600"
+                ? "border-b-2 border-primary text-primary"
+                : "hover:border-b-2 hover:border-text-primary dark:hover:border-text-darkPrimary text-text-secondary dark:text-text-darkSecondary hover:text-text-primary hover:dark:text-text-darkPrimary"
             }`}
             onClick={() => setActiveTab("withPatient")}
           >
@@ -299,8 +299,8 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
           <button
             className={`px-6 py-2 ${
               activeTab === "blockTime"
-                ? "border-b-2 border-blue-600 text-blue-600"
-                : "text-gray-600 hover:text-blue-600"
+                ? "border-b-2 border-primary text-primary"
+                : "hover:border-b-2 hover:border-text-primary dark:hover:border-text-darkPrimary text-text-secondary dark:text-text-darkSecondary hover:text-text-primary hover:dark:text-text-darkPrimary"
             }`}
             onClick={() => setActiveTab("blockTime")}
           >
@@ -309,7 +309,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto px-6 py-2">
           {activeTab === "withPatient" ? (
             <WithPatientForm
               providerId={providerId}
@@ -343,20 +343,20 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between px-6 py-4 border-t bg-gray-50">
+        <div className="flex justify-between px-6 py-4 border-t border-bg dark:border-bg-dark">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
+            className="px-4 py-2 rounded bg-side dark:bg-dButton-mbg border border-mBorder dark:border-dButton-mborder text-text-primary dark:text-text-darkPrimary hover:bg-top hover:dark:bg-dButton-mhover transition"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={isSubmitting}
-            className={`px-4 py-2 rounded text-white transition ${
+            className={`px-4 py-2 rounded text-input-lighter transition ${
               isSubmitting
                 ? "bg-gray-400 cursor-wait"
-                : "bg-green-600 hover:bg-green-700"
+                : "bg-grncon hover:bg-grncon-hover"
             }`}
           >
             {isSubmitting ? "Saving..." : "Save Appointment"}

@@ -217,7 +217,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     <div className="space-y-4">
       {!selectedPatient ? (
         <div className="relative">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-text-primary dark:text-text-darkPrimary mb-1">
             Search Patient
           </label>
           <div className="relative">
@@ -225,21 +225,23 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full border rounded p-2 pl-8"
+              className="w-full border border-border dark:border-border-dark bg-input-light dark:bg-input-dark rounded p-2 pl-8"
               placeholder="Search by name, phone, PRN, or DOB"
             />
             <Search
-              className="absolute left-2 top-2.5 text-gray-400"
+              className="absolute left-2 top-2.5 text-text-muted dark:text-text-darkMuted"
               size={18}
             />
           </div>
 
           {loading && (
-            <div className="text-xs text-gray-500 mt-1">Searching...</div>
+            <div className="text-xs text-text-secondary dark:text-text-darkSecondary mt-1">
+              Searching...
+            </div>
           )}
 
           {results.length > 0 && (
-            <div className="absolute bg-white border rounded w-full shadow-md mt-1 max-h-56 overflow-y-auto z-20">
+            <div className="absolute bg-input dark:bg-input-dark border border-border dark:border-border-dark rounded w-full shadow-md mt-1 max-h-56 overflow-y-auto z-20">
               {results.map((p) => (
                 <button
                   key={p.id}
@@ -248,12 +250,12 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
                     setQuery("");
                     setResults([]);
                   }}
-                  className="block w-full text-left px-3 py-2 hover:bg-blue-50 text-sm"
+                  className="block w-full text-left px-3 py-2 hover:bg-bg hover:dark:bg-bg-dark text-sm"
                 >
                   <div className="font-medium">
                     {p.first_name} {p.last_name}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-text-muted dark:text-text-darkMuted">
                     PRN: {p.prn} • DOB: {p.date_of_birth}
                   </div>
                 </button>
@@ -267,7 +269,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
               sessionStorage.setItem("prefillSlot", JSON.stringify(formData));
               navigate("/doctor/manage-users/patients");
             }}
-            className="mt-3 flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 transition"
+            className="mt-3 flex items-center gap-2 text-sm text-primary hover:text-primary-hover transition"
           >
             <UserPlus size={16} /> Add New Patient
           </button>
@@ -275,17 +277,17 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
       ) : (
         <div>
           <div className="flex justify-between items-center mb-1">
-            <div className="font-semibold text-gray-800 text-sm">
+            <div className="font-semibold text-text-primary dark:text-text-darkPrimary text-sm">
               {selectedPatient.first_name} {selectedPatient.last_name}
             </div>
             <button
               onClick={() => setSelectedPatient(null)}
-              className="text-red-500 hover:underline text-sm"
+              className="text-reddel hover:underline text-sm"
             >
               Remove
             </button>
           </div>
-          <div className="text-xs text-gray-600">
+          <div className="text-xs text-text-secondary dark:text-text-darkSecondary">
             PRN: {selectedPatient.prn} • DOB: {selectedPatient.date_of_birth}
             {selectedPatient.phone && <> • Phone: {selectedPatient.phone}</>}
           </div>
@@ -316,20 +318,20 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
     <div className="grid grid-cols-4 gap-4 items-end">
       {/* Date */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-text-primary dark:text-text-darkPrimary mb-1">
           Date
         </label>
         <input
           type="date"
           value={formData.date || ""}
           onChange={(e) => handleChange({ date: e.target.value })}
-          className="w-full border rounded p-2"
+          className="w-full border border-border dark:border-border-dark bg-input-light dark:bg-input-dark rounded p-2"
         />
       </div>
 
       {/* Start Time */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-text-primary dark:text-text-darkPrimary mb-1">
           Start Time
         </label>
         <input
@@ -337,13 +339,13 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
           step="60"
           value={formData.start_time || ""}
           onChange={(e) => handleChange({ start_time: e.target.value })}
-          className="w-full border rounded p-2"
+          className="w-full border border-border dark:border-border-dark bg-input-light dark:bg-input-dark rounded p-2"
         />
       </div>
 
       {/* End Time */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-text-primary dark:text-text-darkPrimary mb-1">
           End Time
         </label>
         <input
@@ -351,7 +353,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
           step="60"
           value={formData.end_time || ""}
           onChange={(e) => handleChange({ end_time: e.target.value })}
-          className="w-full border rounded p-2"
+          className="w-full border border-border dark:border-border-dark bg-input-light dark:bg-input-dark rounded p-2"
         />
       </div>
 
@@ -363,7 +365,9 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
           onChange={(e) => handleChange({ is_recurring: e.target.checked })}
           className="h-4 w-4"
         />
-        <span className="text-sm font-medium text-gray-700">Repeat</span>
+        <span className="text-sm font-medium text-text-primary dark:text-text-darkPrimary">
+          Repeat
+        </span>
       </label>
     </div>
   );
@@ -373,7 +377,7 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
       {/* Patient search / selection */}
       {patientSection}
 
-      <hr className="border-gray-200" />
+      <hr className="border-border dark:border-border-dark" />
 
       {/* Provider + Office on same row */}
       <div className="grid grid-cols-2 gap-4">
@@ -410,11 +414,11 @@ const WithPatientForm: React.FC<WithPatientFormProps> = ({
 
       {/* Chief Complaint */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-text-primary dark:text-text-darkPrimary mb-1">
           Chief Complaint
         </label>
         <textarea
-          className="w-full border rounded p-2"
+          className="w-full border border-border dark:border-border-dark bg-input-light dark:bg-input-dark rounded p-2"
           rows={2}
           value={formData.chief_complaint ?? ""}
           onChange={(e) => handleChange({ chief_complaint: e.target.value })}

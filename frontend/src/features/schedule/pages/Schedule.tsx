@@ -3,6 +3,8 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { addDays } from "date-fns";
+import ArrowRight from "lucide-react/dist/esm/icons/arrow-right";
+import ArrowLeft from "lucide-react/dist/esm/icons/arrow-left";
 import DynamicOfficeDropdown from "../components/DynamicOfficeDropdown";
 import { useLocations } from "../../locations/hooks/useLocations";
 import { AppointmentsTable } from "../components/appointments-table";
@@ -321,23 +323,25 @@ const SchedulePage: React.FC = () => {
       {/* Header */}
       <div className="flex items-baseline justify-between">
         <div className="flex items-baseline gap-3">
-          <h1 className="text-2xl font-semibold">Schedule</h1>
-          <span className="text-sm text-gray-500">
+          <h1 className="text-2xl font-semibold text-text-primary dark:text-text-darkPrimary">
+            Schedule
+          </h1>
+          <span className="text-sm text-text-muted dark:text-text-darkMuted">
             {filteredAppointments.length} appointments
           </span>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b">
+      <div className="flex gap-2 border-b border-border dark:border-border-dark">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => changeTab(t.key)}
             className={`px-4 py-2 -mb-px border-b-2 ${
               activeTab === t.key
-                ? "border-blue-600 text-blue-600 font-medium"
-                : "border-transparent text-gray-600 hover:text-black"
+                ? "border-primary text-primary font-medium "
+                : "border-transparent hover:border-text-secondary hover:dark:border-text-darkSecondary text-text-secondary dark:text-text-darkSecondary hover:text-text-primary hover:dark:text-text-darkMuted"
             }`}
           >
             {t.label}
@@ -353,8 +357,10 @@ const SchedulePage: React.FC = () => {
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <button
-                className={`px-3 py-1.5 border rounded hover:bg-gray-50 ${
-                  showFilters ? "bg-blue-50 border-blue-600 text-blue-600" : ""
+                className={`px-3 py-1.5 rounded ${
+                  showFilters
+                    ? "bg-primary-lighter dark:bg-primary-dlighter border border-primary dark:border-primary-hover text-primary-ddarker"
+                    : "border border-top-border dark:border-top-dborder hover:bg-bg-hover dark:hover:bg-bg-dhover"
                 }`}
                 onClick={() => setShowFilters((prev) => !prev)}
               >
@@ -362,7 +368,7 @@ const SchedulePage: React.FC = () => {
               </button>
 
               <button
-                className="px-3 py-1.5 border rounded hover:bg-gray-50"
+                className="px-3 py-1.5 border rounded border-top-border dark:border-top-dborder hover:bg-bg-hover dark:hover:bg-bg-dhover"
                 onClick={reloadAppointments}
               >
                 Refresh
@@ -377,14 +383,14 @@ const SchedulePage: React.FC = () => {
 
             {activeTab === "appointments" ? (
               <button
-                className="px-3 py-1.5 border rounded bg-gray-800 text-white hover:bg-gray-900"
+                className="px-3 py-1.5 rounded bg-side dark:bg-dButton-mbg border border-mBorder dark:border-dButton-mborder text-text-primary dark:text-text-darkPrimary hover:bg-top hover:dark:bg-dButton-mhover transition"
                 onClick={handlePrintDay}
               >
                 Print Day
               </button>
             ) : (
               <button
-                className="px-3 py-1.5 border rounded bg-green-600 text-white hover:bg-green-700"
+                className="px-3 py-1.5 rounded bg-grncon text-input-lighter hover:bg-grncon-hover"
                 onClick={() => setShowNewAppointment(true)}
               >
                 + Add Appointment
@@ -392,11 +398,13 @@ const SchedulePage: React.FC = () => {
             )}
           </div>
 
-          <hr className="border-gray-200" />
+          <hr className="border-border dark:border-border-dark" />
 
           {/* Date Navigation */}
           <div className="flex items-center justify-between gap-2">
-            <div className="text-sm text-gray-700">{leftLabel}</div>
+            <div className="text-sm text-text-primary dark:text-text-darkPrimary">
+              {leftLabel}
+            </div>
             <div className="flex items-center gap-2">
               <div className="flex items-center" ref={datePickerWrapperRef}>
                 <DatePickerPopover
@@ -405,29 +413,29 @@ const SchedulePage: React.FC = () => {
                 />
 
                 <button
-                  className="px-3 py-1.5 border border-l-0 hover:bg-gray-50"
+                  className="px-3 py-1.5 bg-surface dark:bg-surface-dark border border-l-0 border-border dark:border-border-dark hover:bg-surface-hover dark:hover:bg-surface-dhover"
                   onClick={goPrev}
                 >
-                  ←
+                  <ArrowLeft className="text-text-primary dark:text-text-darkPrimary" />
                 </button>
 
-                <div className="px-3 py-1.5 border-t border-b">
+                <div className="px-3 py-1.5 bg-surface dark:bg-surface-dark border-t border-b border-border dark:border-border-dark">
                   {cursorDate.toLocaleDateString()}
                 </div>
 
                 <button
-                  className="px-3 py-1.5 border rounded-r hover:bg-gray-50"
+                  className="px-3 py-1.5 bg-surface dark:bg-surface-dark border rounded-r border-border dark:border-border-dark hover:bg-surface-hover dark:hover:bg-surface-dhover"
                   onClick={goNext}
                 >
-                  →
+                  <ArrowRight className="text-text-primary dark:text-text-darkPrimary" />
                 </button>
               </div>
 
               <select
-                className={`px-3 py-1.5 border rounded ${
+                className={`px-3 py-1.5 border border-top-border dark:border-dButton-mborder rounded ${
                   activeTab === "appointments"
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : ""
+                    ? "bg-surface dark:bg-side-dark text-text-muted dark:text-text-darkMuted cursor-not-allowed"
+                    : "bg-side dark:bg-dButton-mbg hover:bg-top dark:hover:bg-dButton-mhover"
                 }`}
                 value={slotSize}
                 onChange={(e) =>
@@ -436,7 +444,11 @@ const SchedulePage: React.FC = () => {
                 disabled={activeTab === "appointments"}
               >
                 {SLOT_OPTIONS.map((s) => (
-                  <option key={s} value={s}>
+                  <option
+                    className="bg-surface dark:bg-side-dark hover:bg-surface-hover dark:hover:bg-top-dark"
+                    key={s}
+                    value={s}
+                  >
                     {s} min
                   </option>
                 ))}
@@ -444,11 +456,11 @@ const SchedulePage: React.FC = () => {
             </div>
           </div>
 
-          <hr className="border-gray-200" />
+          <hr className="border-border dark:border-border-dark" />
         </>
       )}
 
-      <div className="flex min-h-[400px] bg-white border rounded">
+      <div className="flex min-h-[400px] bg-bg dark:bg-bg-dark rounded">
         {/* Filters Sidebar */}
         {showFilters && (
           <ScheduleFilters

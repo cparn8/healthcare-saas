@@ -20,11 +20,11 @@ const NoteModal: React.FC<NoteModalProps> = ({
   return (
     <div
       ref={modalRef}
-      className="mt-2 rounded border bg-white p-2 shadow-md text-xs z-20 relative"
+      className="mt-2 rounded border border-grid-border dark:border-dButton-mborder bg-input dark:bg-input-dlight p-2 shadow-md text-xs z-20 relative"
     >
       <textarea
         ref={textareaRef}
-        className="w-full border rounded p-1 text-xs"
+        className="w-full border border-input-border dark:border-dButton-border bg-input-lighter dark:bg-dButton rounded p-1 text-xs"
         rows={3}
         value={draft}
         onChange={(e) => onChange(e.target.value)}
@@ -32,7 +32,7 @@ const NoteModal: React.FC<NoteModalProps> = ({
 
       <div className="mt-2 flex justify-end gap-2">
         <button
-          className="px-2 py-1 rounded bg-gray-200 text-gray-800 hover:bg-gray-300"
+          className="px-2 py-1 rounded bg-bg dark:bg-dButton-border border border-mBorder dark:border-toggle-dark text-text-primary dark:text-text-darkPrimary hover:bg-side hover:dark:bg-dButton-mhover transition"
           type="button"
           onClick={onCancel}
         >
@@ -40,7 +40,7 @@ const NoteModal: React.FC<NoteModalProps> = ({
         </button>
 
         <button
-          className="px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
+          className="px-2 py-1 rounded bg-primary text-input-lighter hover:bg-primary-hover transition"
           type="button"
           onClick={onSave}
         >

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Skeleton from "../../../components/Skeleton";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
 import { toastError, toastSuccess } from "../../../utils/toastUtils";
@@ -8,14 +9,15 @@ import ProvidersTable from "../components/table/ProvidersTable";
 import AddProviderModal from "../components/modals/AddProviderModal";
 import ChangePasswordModal from "../components/modals/ChangePasswordModal";
 import ProviderProfileModal from "../components/modals/ViewProviderModal";
+import EditProviderModal from "../components/modals/EditProviderModal";
 
 const ProvidersList: React.FC = () => {
+  const navigate = useNavigate();
   const { provider: currentProvider, isAdmin } = useCurrentProvider();
-
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-
+  const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
   const [search, setSearch] = useState("");
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Provider | null>(null);
@@ -33,6 +35,10 @@ const ProvidersList: React.FC = () => {
     if (!currentProvider) return false;
     if (isAdmin) return true;
     return currentProvider.id === p.id;
+  };
+
+  const handleEditProvider = (p: Provider) => {
+    setEditingProvider(p);
   };
 
   const canDelete = (p: Provider): boolean => {
@@ -159,31 +165,41 @@ const ProvidersList: React.FC = () => {
 
   return (
     <div className="p-6">
+      {/* Back */}
+      <button
+        onClick={() => navigate("/doctor/settings")}
+        className="mb-4 text-sm inline-flex items-center bg-primary border border-primary px-3 py-1.5 rounded-md text-text-darkPrimary hover:bg-primary-hover"
+      >
+        ← Back to Settings
+      </button>
       {/* Header: Search + Add */}
-      <h1 className="text-xl font-bold mb-4">Providers</h1>
+      <h1 className="text-xl text-text-primary dark:text-text-darkPrimary font-bold mb-4">
+        Providers
+      </h1>
       <div className="flex justify-between items-center mb-4">
         <input
           type="text"
           placeholder="Search providers by name, specialty, or email..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="border p-2 w-full max-w-md rounded"
+          className="border border-border dark:border-input-dborder bg-input-lighter dark:bg-input-dlight p-2 w-full max-w-md rounded"
         />
         <button
           onClick={handleOpenAddModal}
-          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
+          className="px-4 py-2 bg-grncon text-input-lighter rounded hover:bg-grncon-hover transition"
         >
           + Add Provider
         </button>
       </div>
 
       {/* Providers Table */}
-      <div className="bg-white border rounded-lg shadow-sm">
+      <div className="bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-lg shadow-sm">
         <ProvidersTable
           providers={sortedProviders}
           loading={loading}
           deletingId={deletingId}
           onOpenProfile={handleOpenProfile}
+          onEditProvider={handleEditProvider}
           onOpenPasswordModal={handleOpenPasswordModal}
           onRequestDelete={requestDelete}
           canEdit={canEdit}
@@ -218,13 +234,23 @@ const ProvidersList: React.FC = () => {
         isAdmin={isAdmin}
       />
 
+      <EditProviderModal
+        open={!!editingProvider}
+        provider={editingProvider}
+        onClose={() => setEditingProvider(null)}
+        onUpdated={handleProviderUpdated}
+      />
+
       {/* Provider Profile Modal */}
       <ProviderProfileModal
         open={profileModalOpen}
         provider={selectedProvider}
         currentProvider={currentProvider}
         onClose={() => setProfileModalOpen(false)}
-        onUpdated={handleProviderUpdated}
+        onEdit={(provider) => {
+          setProfileModalOpen(false);
+          setEditingProvider(provider);
+        }}
         onChangePassword={(target) => handleOpenPasswordModal(target)}
       />
 

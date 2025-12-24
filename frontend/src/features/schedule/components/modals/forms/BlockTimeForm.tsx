@@ -147,13 +147,13 @@ const BlockTimeForm: React.FC<BlockTimeFormProps> = ({
       {/* --- Provider & Office --- */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-text-primary dark:text-text-darkPrimary mb-1">
             Block Time For
           </label>
           {providersLoading ? (
-            <div className="flex items-center gap-2 border rounded p-2 text-gray-500 bg-gray-50">
+            <div className="flex items-center gap-2 border border-border dark:border-border-dark bg-input dark:bg-input-dark rounded p-2 text-text-secondary dark:text-text-darkSecondary">
               <svg
-                className="animate-spin h-4 w-4 text-gray-400"
+                className="animate-spin h-4 w-4 text-text-secondary dark:text-text-darkSecondary"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -177,7 +177,7 @@ const BlockTimeForm: React.FC<BlockTimeFormProps> = ({
           ) : (
             <select
               name="provider"
-              className="w-full border rounded p-2"
+              className="w-full border border-border dark:border-top-dborder bg-grid-slot dark:bg-input-dlight rounded p-2"
               value={allProviders ? "__ALL__" : formData.provider ?? ""}
               onChange={(e) => {
                 const v = e.target.value;
@@ -216,7 +216,7 @@ const BlockTimeForm: React.FC<BlockTimeFormProps> = ({
       {/* --- Date & Time --- */}
       <div className="grid grid-cols-4 gap-4 items-end">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-text-primary dark:text-text-darkPrimary mb-1">
             Date
           </label>
           <input
@@ -224,11 +224,11 @@ const BlockTimeForm: React.FC<BlockTimeFormProps> = ({
             name="date"
             value={formData.date}
             onChange={handleChange}
-            className="w-full border rounded p-2"
+            className="w-full border border-border dark:border-border-dark bg-input-light dark:bg-input-dark rounded p-2"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-text-primary dark:text-text-darkPrimary mb-1">
             Start Time
           </label>
           <input
@@ -237,11 +237,11 @@ const BlockTimeForm: React.FC<BlockTimeFormProps> = ({
             name="start_time"
             value={formData.start_time}
             onChange={handleChange}
-            className="w-full border rounded p-2"
+            className="w-full border border-border dark:border-border-dark bg-input-light dark:bg-input-dark rounded p-2"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-text-primary dark:text-text-darkPrimary mb-1">
             End Time
           </label>
           <input
@@ -250,7 +250,7 @@ const BlockTimeForm: React.FC<BlockTimeFormProps> = ({
             name="end_time"
             value={formData.end_time}
             onChange={handleChange}
-            className="w-full border rounded p-2"
+            className="w-full border border-border dark:border-border-dark bg-input-light dark:bg-input-dark rounded p-2"
           />
         </div>
 
@@ -268,7 +268,9 @@ const BlockTimeForm: React.FC<BlockTimeFormProps> = ({
             }}
             className="h-4 w-4"
           />
-          <span className="text-sm font-medium text-gray-700">Repeat</span>
+          <span className="text-sm font-medium text-text-primary dark:text-text-darkPrimary">
+            Repeat
+          </span>
         </label>
       </div>
 
@@ -276,7 +278,7 @@ const BlockTimeForm: React.FC<BlockTimeFormProps> = ({
       {repeatEnabled && (
         <div className="border-t pt-4 space-y-4">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="font-semibold text-gray-800 whitespace-nowrap">
+            <span className="font-semibold text-text-primary dark:text-text-darkPrimary whitespace-nowrap">
               Occurs On:
             </span>
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
@@ -301,12 +303,14 @@ const BlockTimeForm: React.FC<BlockTimeFormProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <span className="font-semibold text-gray-800">Every</span>
+            <span className="font-semibold text-text-primary dark:text-text-darkPrimary">
+              Every
+            </span>
             <select
               name="repeat_interval_weeks"
               value={formData.repeat_interval_weeks}
               onChange={handleChange}
-              className="border rounded px-2 py-1 text-sm w-20"
+              className="border border-border dark:border-top-dborder bg-grid-slot dark:bg-input-dlight rounded px-2 py-1 text-sm w-20"
             >
               {Array.from({ length: 9 }, (_, i) => i + 1).map((n) => (
                 <option key={n} value={n}>
@@ -314,41 +318,49 @@ const BlockTimeForm: React.FC<BlockTimeFormProps> = ({
                 </option>
               ))}
             </select>
-            <span className="text-gray-800">week(s)</span>
+            <span className="text-text-primary dark:text-text-darkPrimary">
+              week(s)
+            </span>
 
-            <span className="font-semibold text-gray-800 ml-4">Ends On</span>
+            <span className="font-semibold text-text-primary dark:text-text-darkPrimary ml-4">
+              Ends On
+            </span>
             <input
               type="date"
               name="repeat_end_date"
               value={formData.repeat_end_date ?? ""}
               onChange={handleChange}
-              className="border rounded px-2 py-1 text-sm"
+              className="border border-border dark:border-border-dark bg-input-light dark:bg-input-dark rounded px-2 py-1 text-sm"
             />
 
-            <span className="font-semibold text-gray-800 ml-4">after</span>
+            <span className="font-semibold text-text-primary dark:text-text-darkPrimary ml-4">
+              after
+            </span>
             <input
               type="number"
               name="repeat_occurrences"
               min={1}
               value={formData.repeat_occurrences ?? 1}
               onChange={handleChange}
-              className="border rounded w-20 px-2 py-1 text-sm"
+              className="border border-border dark:border-border-dark bg-input-light dark:bg-input-dark rounded w-20 px-2 py-1 text-sm"
             />
-            <span className="text-gray-800">occurrence(s)</span>
+            <span className="text-text-primary dark:text-text-darkPrimary">
+              occurrence(s)
+            </span>
           </div>
         </div>
       )}
 
       {/* --- Reason --- */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Reason <span className="text-red-500">*</span>
+        <label className="block text-sm font-medium text-text-primary dark:text-text-darkPrimary mb-1">
+          Reason <span className="text-reddel">*</span>
         </label>
         <select
           name="appointment_type"
           value={formData.appointment_type}
           onChange={handleChange}
-          className="w-full border rounded p-2"
+          className="w-full border border-border dark:border-top-dborder bg-grid-slot dark:bg-input-dlight rounded p-2"
           required
         >
           <option value="">Select reason</option>
@@ -362,7 +374,7 @@ const BlockTimeForm: React.FC<BlockTimeFormProps> = ({
 
       {/* --- Description --- */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-text-primary dark:text-text-darkPrimary mb-1">
           Description
         </label>
         <textarea
@@ -370,21 +382,21 @@ const BlockTimeForm: React.FC<BlockTimeFormProps> = ({
           rows={2}
           value={formData.chief_complaint || ""}
           onChange={handleChange}
-          className="w-full border rounded p-2"
+          className="w-full border border-border dark:border-border-dark bg-input-light dark:bg-input-dark rounded p-2"
           placeholder="Optional short description..."
         />
       </div>
 
       {/* --- Notes --- */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-text-primary dark:text-text-darkPrimary mb-1">
           Notes
         </label>
         <textarea
           name="notes"
           rows={2}
           onChange={handleChange}
-          className="w-full border rounded p-2"
+          className="w-full border border-border dark:border-border-dark bg-input-light dark:bg-input-dark rounded p-2"
           placeholder="Additional details (optional)"
         />
       </div>

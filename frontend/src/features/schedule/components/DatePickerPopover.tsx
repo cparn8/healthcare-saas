@@ -51,18 +51,18 @@ const DatePickerPopover: React.FC<DatePickerPopoverProps> = ({
       {/* Calendar icon button */}
       <button
         type="button"
-        className="px-2 py-1.5 border rounded-l hover:bg-gray-50 flex items-center"
+        className="px-2 py-1.5 bg-surface dark:bg-surface-dark border border-border dark:border-border-dark hover:bg-surface-hover dark:hover:bg-surface-dhover rounded-l flex items-center"
         onClick={() => setOpen((prev) => !prev)}
       >
-        <Calendar className="text-gray-600" />
+        <Calendar className="text-text-primary dark:text-text-darkPrimary" />
       </button>
 
       {/* Floating popover with native date input */}
       {open && (
-        <div className="absolute left-0 mt-1 z-50 bg-white border shadow-lg rounded p-2">
+        <div className="absolute left-0 mt-1 z-50 bg-surface dark:bg-surface-dark border border-border dark:border-top-dborder shadow-lg rounded p-2">
           <input
             type="date"
-            className="border rounded px-2 py-1 text-sm"
+            className="bg-surface dark:bg-surface-dark rounded text-sm"
             value={inputValue}
             onChange={handleChange}
           />

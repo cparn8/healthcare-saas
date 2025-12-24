@@ -46,7 +46,9 @@ const RepeatSection: React.FC<RepeatSectionProps> = ({
             onChange={(e) => onToggle(e.target.checked)}
             className="h-4 w-4"
           />
-          <span className="text-sm font-medium text-gray-700">Repeat</span>
+          <span className="text-sm font-medium text-text-primary dark:text-text-darkPrimary">
+            Repeat
+          </span>
         </label>
       )}
 
@@ -54,7 +56,9 @@ const RepeatSection: React.FC<RepeatSectionProps> = ({
         <div className="space-y-4 text-sm">
           {/* Weekday selection */}
           <div className="flex flex-wrap items-center gap-4">
-            <span className="font-semibold text-gray-800">Occurs On:</span>
+            <span className="font-semibold text-text-primary dark:text-text-darkPrimary">
+              Occurs On:
+            </span>
 
             {WEEKDAYS.map((day) => (
               <label
@@ -74,7 +78,9 @@ const RepeatSection: React.FC<RepeatSectionProps> = ({
 
           {/* Interval + Ending */}
           <div className="flex flex-wrap items-center gap-3">
-            <span className="font-semibold text-gray-800">Every</span>
+            <span className="font-semibold text-text-primary dark:text-text-darkPrimary">
+              Every
+            </span>
 
             <select
               value={formData.repeat_interval_weeks ?? 1}
@@ -83,7 +89,7 @@ const RepeatSection: React.FC<RepeatSectionProps> = ({
                   repeat_interval_weeks: Number(e.target.value),
                 })
               }
-              className="border rounded px-2 py-1 text-sm w-20"
+              className="border border-border dark:border-top-dborder bg-grid-slot dark:bg-input-dlight rounded px-2 py-1 text-sm w-20"
             >
               {Array.from({ length: 9 }, (_, i) => i + 1).map((n) => (
                 <option key={n} value={n}>
@@ -92,20 +98,26 @@ const RepeatSection: React.FC<RepeatSectionProps> = ({
               ))}
             </select>
 
-            <span className="text-gray-800">week(s)</span>
+            <span className="text-text-primary dark:text-text-darkPrimary">
+              week(s)
+            </span>
 
-            <div className="h-5 border-l border-gray-300 mx-2" />
+            <div className="h-5 border-l border-text-muted dark:border-text-darkMuted mx-2" />
 
             {/* End Date */}
-            <span className="font-semibold text-gray-800">Ends On</span>
+            <span className="font-semibold text-text-primary dark:text-text-darkPrimary">
+              Ends On
+            </span>
             <input
               type="date"
               value={formData.repeat_end_date || ""}
               onChange={(e) => onChange({ repeat_end_date: e.target.value })}
-              className="border rounded px-2 py-1 text-sm"
+              className="border rounded border-border dark:border-border-dark bg-input-light dark:bg-input-dark px-2 py-1 text-sm"
             />
 
-            <span className="font-semibold text-gray-800">after</span>
+            <span className="font-semibold text-text-primary dark:text-text-darkPrimary">
+              after
+            </span>
 
             {/* Occurrences */}
             <input
@@ -115,10 +127,12 @@ const RepeatSection: React.FC<RepeatSectionProps> = ({
               onChange={(e) =>
                 onChange({ repeat_occurrences: Number(e.target.value) })
               }
-              className="border rounded w-20 px-2 py-1 text-sm"
+              className="border border-border dark:border-border-dark bg-input-light dark:bg-input-dark rounded w-20 px-2 py-1 text-sm"
             />
 
-            <span className="text-gray-800">appointment(s)</span>
+            <span className="text-text-primary dark:text-text-darkPrimary">
+              appointment(s)
+            </span>
           </div>
         </div>
       )}

@@ -3,8 +3,47 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* -------------------- Global Theme Variables -------------------- */
+/* Light mode: soft grays */
+:root {
+  --bg: #f6f7f8;
+  --surface: #ffffff;
+  --border: #d1d5db;
+
+  --text-primary: #1f2937;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
+
+  --toast-bg: #ffffff;
+  --toast-text: #1f2937;
+}
+
+/* Dark mode: deep grays */
+.dark {
+  --bg: #0f172a;
+  --surface: #111827;
+  --border: #374151;
+
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+
+  --toast-bg: #111827;
+  --toast-text: #f9fafb;
+}
+
+/* -------------------- Base Element Defaults -------------------- */
+html,
+body {
+  background-color: var(--bg);
+  color: var(--text-primary);
+}
+
+/* -------------------- Toast Animation Hook -------------------- */
 [data-sonner-toast] {
   @apply animate-toast-enter;
 }
 
+/* -------------------- Print Styles -------------------- */
 @import "../features/schedule/components/appointments-table/print.css";

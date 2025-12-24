@@ -31,15 +31,16 @@ const ConfirmDeleteLocationModal: React.FC<ConfirmDeleteLocationModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+    <div className="fixed inset left-0 right-0 bottom-0 top-5 z-50 flex items-center justify-center bg-black/40">
+      <div
+        className="bg-bg dark:bg-bg-dark
+ rounded-lg shadow-xl w-full max-w-lg"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="text-lg font-semibold text-red-700">
-            Delete Location
-          </h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-bg dark:border-bg-dark">
+          <h2 className="text-lg font-semibold text-reddel">Delete Location</h2>
           <button
-            className="text-gray-500 hover:text-gray-700"
+            className="text-text-muted dark:text-text-darkMuted hover:text-text-primary dark:text-text-darkPrimary"
             onClick={onCancel}
             disabled={deleting}
           >
@@ -48,7 +49,7 @@ const ConfirmDeleteLocationModal: React.FC<ConfirmDeleteLocationModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-4 text-sm text-gray-800">
+        <div className="p-6 space-y-4 text-sm text-text-primary dark:text-text-darkPrimary">
           <p className="font-medium">
             Are you sure you want to permanently delete{" "}
             <span className="font-semibold">&quot;{location.name}&quot;</span>?
@@ -92,7 +93,7 @@ const ConfirmDeleteLocationModal: React.FC<ConfirmDeleteLocationModalProps> = ({
             </li>
           </ul>
 
-          <p className="text-gray-700">
+          <p className="text-text-primary dark:text-text-darkPrimary">
             If any appointments still reference this location, deletion will be{" "}
             <span className="font-semibold">blocked</span> and you will be
             notified.
@@ -100,9 +101,9 @@ const ConfirmDeleteLocationModal: React.FC<ConfirmDeleteLocationModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between items-center px-6 py-4 border-t bg-gray-50">
+        <div className="flex justify-between items-center px-6 py-4 border-t border-bg dark:border-bg-dark">
           <button
-            className="px-4 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-100"
+            className="px-4 py-2 rounded border border-mBorder dark:border-dButton-mborder text-text-primary dark:text-text-darkPrimary bg-side dark:bg-dButton-mbg hover:bg-top hover:dark:bg-dButton-mhover transition"
             onClick={onCancel}
             disabled={deleting}
           >
@@ -110,10 +111,10 @@ const ConfirmDeleteLocationModal: React.FC<ConfirmDeleteLocationModalProps> = ({
           </button>
 
           <button
-            className={`px-4 py-2 rounded text-white transition ${
+            className={`px-4 py-2 rounded text-input-lighter transition ${
               deleting
                 ? "bg-red-400 cursor-wait"
-                : "bg-red-600 hover:bg-red-700"
+                : "bg-reddel dark:bg-reddel-dark border border-reddel-border dark:border-reddel-dborder hover:bg-reddel-hover dark:hover:bg-reddel-dhover"
             }`}
             onClick={handleConfirm}
             disabled={deleting}

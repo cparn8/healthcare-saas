@@ -45,6 +45,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
       <FormField
         label="First Name"
         type="text"
+        className="border border-mBorder dark:border-border-dark rounded p-2 bg-input dark:bg-surface-dark"
         value={formData.first_name}
         error={errors.first_name}
         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -55,6 +56,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
       <FormField
         label="Last Name"
         type="text"
+        className="border border-mBorder dark:border-border-dark rounded p-2 bg-input dark:bg-surface-dark"
         value={formData.last_name}
         error={errors.last_name}
         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -65,6 +67,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
       <FormField
         label="Date of Birth"
         type="date"
+        className="border border-mBorder dark:border-border-dark rounded p-2 bg-input dark:bg-surface-dark"
         value={formData.date_of_birth}
         error={errors.date_of_birth}
         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -75,6 +78,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
       <FormField
         as="select"
         label="Gender"
+        className="border border-mBorder dark:border-border-dark rounded p-2 bg-input dark:bg-surface-dark"
         value={formData.gender}
         error={errors.gender}
         onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
@@ -92,7 +96,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
       <FormField
         label="Email"
         type="email"
-        className="col-span-2"
+        className="border border-mBorder dark:border-border-dark rounded p-2 bg-input dark:bg-surface-dark col-span-2"
         value={formData.email}
         error={errors.email}
         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -103,6 +107,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
       <FormField
         label="Phone"
         type="text"
+        className="border border-mBorder dark:border-border-dark rounded p-2 bg-input dark:bg-surface-dark"
         value={formData.phone}
         error={errors.phone}
         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -113,7 +118,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
       <FormField
         label="Address"
         type="text"
-        className="col-span-2"
+        className="border border-mBorder dark:border-border-dark rounded p-2 bg-input dark:bg-surface-dark col-span-2"
         value={formData.address}
         error={errors.address}
         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>

@@ -24,7 +24,7 @@ const AppointmentTypeSelect: React.FC<AppointmentTypeSelectProps> = ({
       </label>
 
       <select
-        className="w-full border rounded p-2"
+        className="w-full border border-border dark:border-top-dborder bg-grid-slot dark:bg-input-dlight rounded p-2"
         value={value}
         onChange={(e) => {
           const selected = appointmentTypes.find(

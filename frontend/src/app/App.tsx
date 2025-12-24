@@ -10,15 +10,9 @@ import Charts from "../features/charts/pages/Charts";
 import PatientChart from "../features/charts/pages/PatientChart";
 import Messaging from "../features/messaging/pages/Messaging";
 import PatientsList from "../features/patients/pages/PatientsList";
-import PatientProfile from "../features/patients/pages/PatientProfile";
 import ProvidersList from "../features/providers/pages/ProvidersList";
-import ProviderProfile from "../features/providers/pages/ProviderProfile";
-import CreateProvider from "../features/providers/pages/CreateProvider";
-import EditInfo from "../features/providers/pages/EditInfo";
-import ProviderOptions from "../features/providers/pages/ProviderOptions";
 import ManageUsers from "../features/settings/pages/SettingsPage";
 import BusinessSettingsPage from "../features/locations/pages/BusinessSettingsPage";
-import Notifications from "../features/providers/pages/Notifications";
 import Tasks from "../features/tasks/pages/Tasks";
 
 const App: React.FC = () => {
@@ -113,25 +107,14 @@ const App: React.FC = () => {
             <Route path="tasks" element={<Tasks />} />
             <Route path="charts" element={<Charts />} />
             <Route path="messaging" element={<Messaging />} />
-            <Route path="edit-info" element={<EditInfo />} />
-            <Route path="provider-options" element={<ProviderOptions />} />
-            <Route path="notifications" element={<Notifications />} />
-            <Route path="manage-users" element={<ManageUsers />} />
+            <Route path="settings" element={<ManageUsers />} />
+            <Route
+              path="manage-users/*"
+              element={<Navigate to="/doctor/settings" replace />}
+            />
             <Route path="manage-users/patients" element={<PatientsList />} />
             <Route path="manage-users/providers" element={<ProvidersList />} />
-            <Route
-              path="manage-users/providers/new"
-              element={<CreateProvider />}
-            />
             <Route path="charts/:id" element={<PatientChart />} />
-            <Route
-              path="manage-users/patients/:id"
-              element={<PatientProfile />}
-            />
-            <Route
-              path="manage-users/providers/:id"
-              element={<ProviderProfile />}
-            />
             <Route
               path="settings/business"
               element={<BusinessSettingsPage />}

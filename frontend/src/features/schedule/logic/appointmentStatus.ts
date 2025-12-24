@@ -19,13 +19,21 @@ export const STATUS_OPTIONS: {
   dotClass: string; // Tailwind bg class
 }[] = [
   { key: "pending", label: "Pending arrival", dotClass: "bg-green-500" },
-  { key: "arrived", label: "Arrived", dotClass: "bg-yellow-200" },
+  { key: "arrived", label: "Arrived", dotClass: "bg-primary" },
   { key: "in_room", label: "In room", dotClass: "bg-orange-500" },
   { key: "no_show", label: "No show", dotClass: "bg-red-500" },
   { key: "cancelled", label: "Cancelled", dotClass: "bg-red-900" },
-  { key: "in_lobby", label: "In lobby", dotClass: "bg-yellow-500" },
-  { key: "seen", label: "Seen", dotClass: "bg-gray-300" },
-  { key: "tentative", label: "Tentative", dotClass: "bg-gray-600" },
+  { key: "in_lobby", label: "In lobby", dotClass: "bg-yellow-200" },
+  {
+    key: "seen",
+    label: "Seen",
+    dotClass: "bg-dButton-border dark:bg-input-lighter",
+  },
+  {
+    key: "tentative",
+    label: "Tentative",
+    dotClass: "bg-side-dark dark:bg-side",
+  },
 ];
 
 // Block-time specific status options
@@ -34,7 +42,7 @@ export const BLOCK_STATUS_OPTIONS: {
   label: string;
   dotClass: string;
 }[] = [
-  { key: "na", label: "N/A", dotClass: "bg-white" },
+  { key: "na", label: "N/A", dotClass: "bg-top-dark dark:bg-top" },
   { key: "in_room", label: "In room", dotClass: "bg-orange-500" },
 ];
 

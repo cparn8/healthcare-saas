@@ -170,17 +170,17 @@ const EditAppointmentModal: React.FC<EditAppointmentModalProps> = ({
   // ------------------ Provider Section ------------------
   const providerSection = (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
+      <label className="block text-sm font-medium text-text-primary dark:text-text-darkPrimary mb-1">
         Provider
       </label>
 
       {providersLoading ? (
-        <div className="border rounded p-2 text-gray-500 bg-gray-50">
+        <div className="border border-border dark:border-border-dark bg-input dark:bg-input-dark rounded p-2 text-text-secondary dark:text-text-darkSecondary">
           Loading providers…
         </div>
       ) : (
         <select
-          className="w-full border rounded p-2"
+          className="w-full border border-border dark:border-top-dborder bg-grid-slot dark:bg-input-dlight rounded p-2"
           value={formData.provider ?? ""}
           onChange={(e) =>
             setFormData({
@@ -228,11 +228,11 @@ const EditAppointmentModal: React.FC<EditAppointmentModalProps> = ({
 
       {/* Chief Complaint */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-text-primary dark:text-text-darkPrimary mb-1">
           Chief Complaint
         </label>
         <textarea
-          className="w-full border rounded p-2"
+          className="w-full border border-border dark:border-border-dark bg-input-light dark:bg-input-dark rounded p-2"
           rows={2}
           value={formData.chief_complaint || ""}
           onChange={(e) =>
@@ -244,13 +244,13 @@ const EditAppointmentModal: React.FC<EditAppointmentModalProps> = ({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+    <div className="fixed inset left-0 right-0 bottom-0 top-10 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-bg dark:bg-bg-dark rounded-lg shadow-xl w-full max-w-lg">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-bg dark:border-bg-dark">
           <h2 className="text-xl font-semibold">Edit Appointment</h2>
           <button
-            className="text-gray-500 hover:text-gray-700"
+            className="text-text-secondary dark:text-text-darkSecondary hover:text-text-primary dark:text-text-darkPrimary"
             onClick={onClose}
           >
             <X size={20} />
@@ -270,15 +270,15 @@ const EditAppointmentModal: React.FC<EditAppointmentModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between items-center px-6 py-4 border-t bg-gray-50">
+        <div className="flex justify-between items-center px-6 py-4 border-t border-bg dark:border-bg-dark">
           {/* Delete */}
           <button
             onClick={() => setShowConfirm(true)}
             disabled={isDeleting}
-            className={`flex items-center gap-2 px-4 py-2 rounded text-white transition ${
+            className={`flex items-center gap-2 px-4 py-2 rounded text-input-lighter transition ${
               isDeleting
                 ? "bg-gray-400 cursor-wait"
-                : "bg-red-600 hover:bg-red-700"
+                : "bg-reddel hover:bg-reddel-hover"
             }`}
           >
             <Trash size={16} />
@@ -297,10 +297,10 @@ const EditAppointmentModal: React.FC<EditAppointmentModalProps> = ({
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className={`px-4 py-2 rounded text-white transition ${
+            className={`px-4 py-2 rounded text-input-lighter transition ${
               isSaving
-                ? "bg-gray-400 cursor-wait"
-                : "bg-green-600 hover:bg-green-700"
+                ? "bg-bg dark:bg-bg-dark cursor-wait"
+                : "bg-grncon hover:bg-grncon-hover"
             }`}
           >
             {isSaving ? "Saving..." : "Save Changes"}

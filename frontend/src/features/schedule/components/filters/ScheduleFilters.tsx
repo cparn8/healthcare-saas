@@ -61,7 +61,7 @@ const ScheduleFiltersComponent: React.FC<ScheduleFiltersProps> = ({
   /* ------------------------------------------------------------------ */
 
   return (
-    <div className="w-60 p-4 bg-gray-100 border-r space-y-6 text-sm">
+    <div className="w-60 p-4 bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded space-y-6 text-sm">
       <h3 className="text-lg font-semibold mb-2">Filters</h3>
 
       {/* ---------------- Providers ---------------- */}
@@ -189,9 +189,9 @@ const ScheduleFiltersComponent: React.FC<ScheduleFiltersProps> = ({
         </summary>
         <div className="mt-2 space-y-2">
           <div>
-            <span className="text-xs text-gray-600">Default View:</span>
+            <span className="text-xs text-text-secondary dark:text-text-darkSecondary">Default View:</span>
             <select
-              className="mt-1 w-full border rounded p-1 text-sm"
+              className="mt-1 w-full border border-mBorder-lighter dark:border-dButton-mborder bg-input dark:bg-input-dlight px-2 py-1 hover:bg-grid-slot dark:hover:bg-grid-dslot rounded p-1 text-sm"
               value={currentFilters.defaultView}
               onChange={(e) =>
                 onUpdateFilters({

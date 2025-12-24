@@ -20,7 +20,7 @@ const OfficeSelect: React.FC<OfficeSelectProps> = ({
 
   return (
     <div className="flex flex-col">
-      <label className="block text-sm font-medium text-gray-700 mb-1">
+      <label className="block text-sm font-medium text-text-primary dark:text-text-darkPrimary mb-1">
         {label}
       </label>
 
@@ -28,7 +28,7 @@ const OfficeSelect: React.FC<OfficeSelectProps> = ({
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled || activeLocations.length === 0}
-        className="w-full border rounded p-2 disabled:bg-gray-100"
+        className="w-full border border-border dark:border-top-dborder bg-grid-slot dark:bg-input-dlight rounded p-2 disabled:bg-gray-100"
       >
         {activeLocations.length === 0 && (
           <option value="" disabled>

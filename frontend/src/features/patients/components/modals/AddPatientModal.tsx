@@ -69,13 +69,15 @@ const AddPatientModal: React.FC<AddPatientModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 my-10">
+      <div className="bg-bg dark:bg-bg-dark rounded-lg shadow-xl w-full max-w-lg mx-4 my-10">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="text-lg font-semibold">Add New Patient</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-bg dark:border-bg-dark">
+          <h2 className="text-lg font-semibold text-text-primary dark:text-text-darkPrimary">
+            Add New Patient
+          </h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-text-muted dark:text-text-darkMuted hover:text-text-primary dark:text-text-darkPrimary"
           >
             <X size={22} />
           </button>
@@ -91,20 +93,20 @@ const AddPatientModal: React.FC<AddPatientModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between px-6 py-4 border-t bg-gray-50">
+        <div className="flex justify-between px-6 py-4 border-t border-bg dark:border-bg-dark">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
+            className="px-4 py-2 rounded bg-side dark:bg-dButton-mbg border border-mBorder dark:border-dButton-mborder text-text-primary dark:text-text-darkPrimary hover:bg-top hover:dark:bg-dButton-mhover transition"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className={`px-4 py-2 rounded text-white transition ${
+            className={`px-4 py-2 rounded text-input-lighter transition ${
               isSaving
-                ? "bg-gray-400 cursor-wait"
-                : "bg-green-600 hover:bg-green-700"
+                ? "bg-top dark:bg-top-dark cursor-wait"
+                : "bg-grncon hover:bg-grncon-hover"
             }`}
           >
             {isSaving ? "Saving…" : "Save Patient"}

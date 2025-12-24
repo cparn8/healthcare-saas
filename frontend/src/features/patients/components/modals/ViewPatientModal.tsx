@@ -31,20 +31,20 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl w-auto mx-4 my-10">
+      <div className="bg-bg dark:bg-bg-dark rounded-lg shadow-xl w-auto mx-4 my-10">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-bg dark:border-bg-dark">
           <h2 className="text-xl font-semibold">Patient Info</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-text-muted dark:text-text-darkMuted hover:text-text-primary dark:text-text-darkPrimary transition"
           >
             <X size={22} />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-8">
+        <div className="px-8 py-2">
           <div className="flex items-center gap-6 m-auto flex-wrap">
             <div className="space-y-1 justify-center text-center">
               <img
@@ -52,48 +52,69 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
                   patient.profile_picture || "/images/patient-placeholder.png"
                 }
                 alt="profile"
-                className="w-24 h-24 rounded-full object-cover shadow justify-center m-auto"
+                className="w-20 h-20 rounded-full object-cover shadow justify-center m-auto"
               />
 
-              <p className="text-lg font-semibold whitespace-nowrap">
+              <p className="text-lg font-semibold whitespace-nowrap text-text-primary dark:text-text-darkPrimary">
                 {fullName}
               </p>
             </div>
             <div className="space-y-1 pr-2">
-              <p className="text-sm pb-2 whitespace-nowrap">
-                PRN: <span className="text-gray-600">{patient.prn}</span>
-              </p>
               {patient.gender && (
-                <p className="text-sm pb-2 whitespace-nowrap">
-                  Gender:{" "}
-                  <span className="text-gray-600">{patient.gender}</span>
-                </p>
+                <div>
+                  <p className="text-sm whitespace-nowrap text-text-secondary dark:text-text-darkSecondary">
+                    Gender:
+                  </p>
+                  <div></div>
+                  <p className="text-text-primary dark:text-text-darkPrimary">
+                    {patient.gender}
+                  </p>
+                </div>
               )}
-
               <div>
-                <p className="text-sm font-medium whitespace-nowrap">
+                <p className="text-sm whitespace-nowrap text-text-secondary dark:text-text-darkSecondary">
+                  PRN:
+                </p>
+                <div></div>
+                <p className="text-text-primary dark:text-text-darkPrimary">
+                  {patient.prn}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-1 pr-2">
+              <div>
+                <p className="text-sm font-medium whitespace-nowrap text-text-secondary dark:text-text-darkSecondary">
                   Date of Birth:
                 </p>
-                <p className="text-gray-800 whitespace-nowrap">
+                <p className="text-text-primary dark:text-text-darkPrimary whitespace-nowrap">
                   {patient.date_of_birth
                     ? formatDate(patient.date_of_birth)
                     : "—"}
                 </p>
               </div>
-            </div>
-            <div>
-              <p className="text-sm font-medium">Contact:</p>
-              <div className="text-gray-800 pb-2 whitespace-nowrap">
+              <p className="text-sm font-medium text-text-secondary dark:text-text-darkSecondary">
+                Phone:
+              </p>
+              <div className="text-text-primary dark:text-text-darkPrimary whitespace-nowrap">
                 {patient.phone && <p>{patient.phone}</p>}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-text-secondary dark:text-text-darkSecondary">
+                Email:
+              </p>
+              <div className="text-text-primary dark:text-text-darkPrimary pb-2 whitespace-nowrap">
                 {patient.email && <p>{patient.email}</p>}
               </div>
 
               {patient.address && (
                 <div>
-                  <p className="text-sm font-medium whitespace-nowrap">
+                  <p className="text-sm font-medium whitespace-nowrap text-text-secondary dark:text-text-darkSecondary">
                     Address:
                   </p>
-                  <p className="text-gray-800 whitespace-nowrap">
+                  <p className="text-text-primary dark:text-text-darkPrimary whitespace-nowrap">
                     {patient.address}
                   </p>
                 </div>
@@ -103,20 +124,29 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between px-6 py-4 border-t bg-gray-50">
+        <div className="flex justify-between px-6 py-4 border-t border-bg dark:border-bg-dark">
           <Link
             to={`/doctor/charts/${patient.id}`}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+            className="px-4 py-2 bg-primary text-input-lighter rounded hover:bg-primary-hover transition"
           >
             View Chart →
           </Link>
 
-          <button
-            onClick={onEdit}
-            className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition"
-          >
-            Edit Patient
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={onEdit}
+              className="px-4 py-2 bg-yellow-500 text-input-lighter rounded hover:bg-yellow-600 transition"
+            >
+              Edit Patient
+            </button>
+
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded bg-side dark:bg-dButton-mbg border border-mBorder dark:border-dButton-mborder text-text-primary dark:text-text-darkPrimary hover:bg-top hover:dark:bg-dButton-mhover transition"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>

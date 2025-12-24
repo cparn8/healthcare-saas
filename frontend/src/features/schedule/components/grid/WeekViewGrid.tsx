@@ -107,7 +107,7 @@ export default function WeekViewGrid({
         return [
           <div
             key={`cluster-${day.toISOString()}-${idx}`}
-            className="absolute rounded bg-orange-500 text-white text-xs p-1.5 shadow-sm cursor-pointer hover:brightness-105 transition-all flex items-center justify-center text-center"
+            className="absolute rounded bg-orange-500 text-text-darkPrimary text-xs p-1.5 shadow-sm cursor-pointer hover:brightness-105 transition-all flex items-center justify-center text-center"
             style={{
               top: collapsedBox.top,
               height: collapsedBox.height,
@@ -138,7 +138,7 @@ export default function WeekViewGrid({
         return (
           <div
             key={`${appt.id}-${appt.date}-${appt.start_time}`}
-            className="absolute rounded text-white text-xs p-1.5 shadow-sm cursor-pointer hover:brightness-105 transition-all flex flex-col"
+            className="absolute rounded text-text-darkPrimary text-xs p-1.5 shadow-sm cursor-pointer hover:brightness-105 transition-all flex flex-col"
             style={{
               top,
               height,
@@ -229,33 +229,36 @@ export default function WeekViewGrid({
   /* ---------------------------------- RENDER ---------------------------------- */
 
   return (
-    <div className="border rounded overflow-hidden bg-white select-none relative">
+    <div className="border border-grid-border dark:border-grid-dborder rounded overflow-hidden bg-grid-slot dark:bg-grid-dslot select-none relative">
       {/* Header */}
       <div
-        className="grid border-b text-sm font-semibold bg-gray-100"
+        className="grid border-b border-grid-border dark:border-grid-dborder text-sm font-semibold bg-grid-top dark:bg-grid-dtop"
         style={{
           gridTemplateColumns: `120px repeat(${openDays.length}, 1fr)`,
         }}
       >
-        <div className="p-2 border-r text-right text-gray-700 font-semibold">
+        <div className="p-2 border-r border-grid-border dark:border-grid-dborder text-right text-text-primary dark:text-text-darkPrimary font-semibold">
           Time
         </div>
 
         {openDays.map((day) => (
-          <div key={day.toISOString()} className="p-2 text-center border-r">
+          <div
+            key={day.toISOString()}
+            className="p-2 text-center border-r border-grid-border dark:border-grid-dborder"
+          >
             {format(day, "EEE dd")}
           </div>
         ))}
       </div>
 
       {/* Provider Label */}
-      <div className="px-4 py-2 text-sm text-gray-700 border-b bg-gray-50">
+      <div className="px-4 py-2 text-sm text-text-primary dark:text-text-darkPrimary border-b border-r border-border dark:border-border-dark bg-grid dark:bg-grid-dark">
         Viewing appointments for{" "}
         <span className="font-semibold">{providerName}</span>
       </div>
 
       {loading ? (
-        <div className="p-6 text-center text-gray-500 italic">
+        <div className="p-6 text-center text-text-secondary dark:text-text-darkSecondary italic">
           Loading appointments…
         </div>
       ) : (
@@ -275,8 +278,10 @@ export default function WeekViewGrid({
                 return (
                   <div
                     key={i}
-                    className={`border-r border-b p-2 h-12 text-right pr-3 font-medium ${
-                      Math.floor(h) % 2 === 0 ? "bg-gray-50" : "bg-gray-100/40"
+                    className={`border-r border-b border-grid-border dark:border-grid-dborder p-2 h-12 text-right pr-3 font-medium ${
+                      Math.floor(h) % 2 === 0
+                        ? "bg-grid-top dark:bg-grid-dtop"
+                        : "bg-grid dark:bg-grid-dark"
                     }`}
                   >
                     {formatTimeLabel(h, m)}
@@ -302,7 +307,7 @@ export default function WeekViewGrid({
             return (
               <div
                 key={day.toISOString()}
-                className="relative border-l"
+                className="relative border-r border-border dark:border-border-dark"
                 onMouseUp={handleMouseUp}
                 onMouseLeave={resetSelection}
               >
@@ -319,8 +324,10 @@ export default function WeekViewGrid({
                   return (
                     <div
                       key={idx}
-                      className={`border-b h-12 cursor-crosshair ${
-                        selected ? "bg-gray-300" : "hover:bg-gray-50"
+                      className={`border-b border-border dark:border-border-dark h-12 cursor-crosshair ${
+                        selected
+                          ? "bg-grid-hover dark:bg-grid-dhover"
+                          : "hover:bg-grid-hover hover:dark:bg-grid-dhover"
                       }`}
                       onMouseDown={() => handleMouseDown(day, idx)}
                       onMouseEnter={() => handleMouseEnter(idx)}
@@ -331,14 +338,14 @@ export default function WeekViewGrid({
                 {/* Closed-Hours Overlays */}
                 {topOverlayHeightPx > 0 && (
                   <div
-                    className="absolute top-0 left-0 right-0 bg-gray-100 opacity-60 pointer-events-none"
+                    className="absolute top-0 left-0 right-0 bg-side dark:bg-side-dark opacity-60 pointer-events-none"
                     style={{ height: `${topOverlayHeightPx}px` }}
                   />
                 )}
 
                 {bottomOverlayTopPx !== null && (
                   <div
-                    className="absolute left-0 right-0 bg-gray-100 opacity-60 pointer-events-none"
+                    className="absolute left-0 right-0 bg-side dark:bg-side-dark opacity-60 pointer-events-none"
                     style={{ top: `${bottomOverlayTopPx}px`, bottom: 0 }}
                   />
                 )}

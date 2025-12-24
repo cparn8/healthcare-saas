@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { deletePatient } from "../services/patients";
 import { usePatientsList, Patient } from "../hooks/usePatientsList";
 import PatientsTable from "../components/table/PatientsTable";
@@ -8,6 +9,7 @@ import ViewPatientModal from "../components/modals/ViewPatientModal";
 import { toastError, toastSuccess } from "../../../utils/toastUtils";
 
 const PatientsList: React.FC = () => {
+  const navigate = useNavigate();
   const {
     patients,
     loading,
@@ -41,32 +43,43 @@ const PatientsList: React.FC = () => {
 
   return (
     <div className="p-6">
+      {/* Back */}
+      <button
+        onClick={() => navigate("/doctor/settings")}
+        className="mb-4 text-sm inline-flex items-center bg-primary border border-primary px-3 py-1.5 rounded-md text-text-darkPrimary hover:bg-primary-hover"
+      >
+        ← Back to Settings
+      </button>
       {/* Header: Search + Add */}
-      <h1 className="text-xl font-bold mb-4">Patients</h1>
+      <h1 className="text-xl text-text-primary dark:text-text-darkPrimary font-bold mb-4">
+        Patients
+      </h1>
       <div className="flex justify-between items-center mb-4 gap-4">
         <input
           type="text"
           placeholder="Search patients by name or PRN..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="border p-2 w-full max-w-md rounded"
+          className="border border-border dark:border-input-dborder bg-input-lighter dark:bg-input-dlight p-2 w-full max-w-md rounded"
         />
         <button
           onClick={() => setShowAddModal(true)}
-          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+          className="px-4 py-2 bg-grncon text-input-lighter rounded hover:bg-grncon-hover transition"
         >
           + Add Patient
         </button>
       </div>
 
       {loading && (
-        <p className="text-sm text-gray-500 mb-2">Loading patients…</p>
+        <p className="text-sm text-text-muted dark:text-text-darkMuted mb-2">
+          Loading patients…
+        </p>
       )}
-      {error && <p className="text-sm text-red-500 mb-2">{error}</p>}
+      {error && <p className="text-sm text-reddel mb-2">{error}</p>}
 
       {/* Table */}
 
-      <div className="bg-white rounded-lg border shadow-sm overflow-visible">
+      <div className="bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-lg shadow-sm overflow-visible">
         <PatientsTable
           patients={patients}
           onView={(p) => setViewingPatient(p)}

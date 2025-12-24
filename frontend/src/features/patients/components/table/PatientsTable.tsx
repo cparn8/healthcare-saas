@@ -19,7 +19,7 @@ const PatientsTable: React.FC<PatientsTableProps> = ({
   return (
     <table className="w-full">
       <thead>
-        <tr className="text-left">
+        <tr className="text-left text-text-primary dark:text-text-darkPrimary">
           <th className="py-2 pr-2 pl-9">Photo</th>
           <th className="p-2">Name</th>
           <th className="p-2">DOB</th>
@@ -31,7 +31,10 @@ const PatientsTable: React.FC<PatientsTableProps> = ({
 
       <tbody>
         {patients.map((p) => (
-          <tr key={p.id} className="border-t hover:bg-gray-100 align-middle">
+          <tr
+            key={p.id}
+            className="border-t border-border dark:border-border-dark hover:bg-surface-hover hover:dark:bg-surface-dhover align-middle"
+          >
             {/* Photo */}
             <td className="py-2 pr-2 pl-9">
               <img
@@ -48,27 +51,37 @@ const PatientsTable: React.FC<PatientsTableProps> = ({
                 onClick={() => onView(p)}
                 className="text-left"
               >
-                <div className="hover:underline">
+                <div className="text-text-primary dark:text-text-darkPrimary hover:underline">
                   {p.first_name} {p.last_name}
                 </div>
-                <div className="text-xs text-gray-500">PRN {p.prn}</div>
+                <div className="text-xs text-text-muted dark:text-text-darkMuted">
+                  PRN {p.prn}
+                </div>
               </button>
             </td>
 
             {/* DOB */}
-            <td className="p-2 text-sm text-gray-800">
+            <td className="p-2 text-sm text-text-primary dark:text-text-darkPrimary">
               {p.date_of_birth ? formatDate(p.date_of_birth) : "—"}
             </td>
 
             {/* Gender */}
-            <td className="p-2 text-sm text-gray-800">{p.gender || "—"}</td>
+            <td className="p-2 text-sm text-text-primary dark:text-text-darkPrimary">
+              {p.gender || "—"}
+            </td>
 
             {/* Contact */}
-            <td className="p-2 text-sm text-gray-800">
+            <td className="p-2 text-sm text-text-primary dark:text-text-darkPrimary">
               {p.phone && <div>{p.phone}</div>}
-              {p.email && <div className="text-gray-600">{p.email}</div>}
+              {p.email && (
+                <div className="text-text-secondary dark:text-text-darkSecondary">
+                  {p.email}
+                </div>
+              )}
               {p.address && (
-                <div className="text-gray-500 text-xs mt-1">{p.address}</div>
+                <div className="text-text-muted dark:text-text-darkMuted text-xs mt-1">
+                  {p.address}
+                </div>
               )}
             </td>
 
@@ -78,7 +91,7 @@ const PatientsTable: React.FC<PatientsTableProps> = ({
                 trigger={({ toggle }) => (
                   <button
                     onClick={toggle}
-                    className="px-6 text-xl text-gray-800 hover:text-black"
+                    className="px-6 text-xl text-text-muted dark:text-text-darkMuted hover:text-text-primary hover:dark:text-text-darkPrimary"
                   >
                     ⋮
                   </button>
@@ -86,19 +99,19 @@ const PatientsTable: React.FC<PatientsTableProps> = ({
               >
                 <button
                   onClick={() => onView(p)}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                  className="block w-full text-left px-4 py-2 bg-side dark:bg-side-dark hover:bg-top dark:hover:bg-top-dark text-sm"
                 >
                   View
                 </button>
                 <button
                   onClick={() => onEdit(p)}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                  className="block w-full text-left px-4 py-2 bg-side dark:bg-side-dark hover:bg-top dark:hover:bg-top-dark text-sm"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => onDelete(p)}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-red-600"
+                  className="block w-full text-left px-4 py-2 bg-side dark:bg-side-dark hover:bg-top dark:hover:bg-top-dark text-sm text-reddel"
                 >
                   Delete
                 </button>
@@ -111,7 +124,7 @@ const PatientsTable: React.FC<PatientsTableProps> = ({
           <tr>
             <td
               colSpan={6}
-              className="p-4 text-center text-sm text-gray-500 border-t"
+              className="p-4 text-center text-sm text-text-muted dark:text-text-darkMuted border-t"
             >
               No patients found.
             </td>

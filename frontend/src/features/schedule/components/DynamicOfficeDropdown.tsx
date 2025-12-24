@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { LocationDTO } from "../../locations/services/locationApi";
 
 interface Props {
@@ -13,6 +13,7 @@ const DynamicOfficeDropdown: React.FC<Props> = ({
   onChange,
 }) => {
   const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   const activeLocations = locations.filter((l) => l.is_active);
 
@@ -45,18 +46,34 @@ const DynamicOfficeDropdown: React.FC<Props> = ({
           .filter(Boolean)
           .join(", ");
 
+  /* ---------------- Click outside ---------------- */
+  useEffect(() => {
+    if (!open) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [open]);
+
   return (
-    <div className="relative inline-block">
+    <div ref={rootRef} className="relative inline-block">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="px-3 py-1.5 border rounded bg-white min-w-[200px] text-left"
+        className="px-3 py-1.5 bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded hover:bg-surface-hover hover:dark:bg-surface-dhover min-w-[200px] text-left"
       >
         {displayLabel}
       </button>
 
       {open && (
-        <div className="absolute mt-1 w-56 bg-white border rounded shadow-lg z-30 p-2">
+        <div className="absolute mt-1 w-56 bg-side dark:bg-side-dark border border-top-border dark:border-top-dborder rounded shadow-lg z-30 p-2">
           {/* ALL */}
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -67,7 +84,7 @@ const DynamicOfficeDropdown: React.FC<Props> = ({
             <span>Select All</span>
           </label>
 
-          <hr className="my-2" />
+          <hr className="my-2 border-border dark:border-border-dark" />
 
           {/* INDIVIDUAL LOCATIONS */}
           {activeLocations.map((loc) => (

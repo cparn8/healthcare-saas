@@ -22,20 +22,20 @@ const DateTimeFields: React.FC<DateTimeFieldsProps> = ({
     <div className="flex gap-12">
       {/* Date */}
       <div className="w-[150px]">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-text-primary dark:text-text-darkPrimary mb-1">
           Date
         </label>
         <input
           type="date"
           value={formData.date || ""}
           onChange={(e) => onChange({ date: e.target.value })}
-          className="w-full border rounded p-2"
+          className="w-full border border-border dark:border-border-dark bg-input-light dark:bg-input-dark rounded p-2"
         />
       </div>
 
       {/* Start Time */}
       <div className="w-[110px]">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-text-primary dark:text-text-darkPrimary mb-1">
           Start Time
         </label>
         <input
@@ -45,13 +45,13 @@ const DateTimeFields: React.FC<DateTimeFieldsProps> = ({
           onChange={(e) =>
             onChange({ start_time: normalizeTime(e.target.value) })
           }
-          className="w-full border rounded p-2"
+          className="w-full border border-border dark:border-border-dark bg-input-light dark:bg-input-dark rounded p-2"
         />
       </div>
 
       {/* End Time */}
       <div className="w-[110px]">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-text-primary dark:text-text-darkPrimary mb-1">
           End Time
         </label>
         <input
@@ -61,7 +61,7 @@ const DateTimeFields: React.FC<DateTimeFieldsProps> = ({
           onChange={(e) =>
             onChange({ end_time: normalizeTime(e.target.value) })
           }
-          className="w-full border rounded p-2"
+          className="w-full border border-border dark:border-border-dark bg-input-light dark:bg-input-dark rounded p-2"
         />
       </div>
     </div>

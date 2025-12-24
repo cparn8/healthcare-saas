@@ -138,14 +138,14 @@ const AppointmentTypesModal: React.FC<AppointmentTypesModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset left-0 right-0 bottom-0 top-8 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-bg dark:bg-bg-dark rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-bg dark:border-bg-dark">
           <h2 className="text-lg font-semibold">Appointment Types</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-text-muted dark:text-text-darkMuted hover:text-text-primary hover:dark:text-text-darkPrimary"
           >
             <X size={20} />
           </button>
@@ -154,11 +154,13 @@ const AppointmentTypesModal: React.FC<AppointmentTypesModalProps> = ({
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
-            <p className="text-gray-500 text-sm">Loading...</p>
+            <p className="text-text-muted dark:text-text-darkMuted text-sm">
+              Loading...
+            </p>
           ) : (
             <>
               {types.length === 0 && (
-                <p className="text-gray-500 text-sm mb-4">
+                <p className="text-text-muted dark:text-text-darkMuted text-sm mb-4">
                   No appointment types defined yet. Add one below.
                 </p>
               )}
@@ -167,12 +169,12 @@ const AppointmentTypesModal: React.FC<AppointmentTypesModalProps> = ({
                 {types.map((type, idx) => (
                   <div
                     key={idx}
-                    className="grid grid-cols-1 md:grid-cols-4 gap-3 items-center bg-gray-50 rounded-md p-3"
+                    className="grid grid-cols-1 md:grid-cols-4 gap-3 items-center bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-md p-3"
                   >
                     {/* Name */}
                     <input
                       type="text"
-                      className="border rounded px-2 py-1 text-sm"
+                      className="border bg-input-lighter dark:bg-input-dlight border-mBorder-lighter dark:border-input-dborder rounded px-2 py-1 text-sm"
                       placeholder="Type name"
                       value={type.name}
                       onChange={(e) =>
@@ -182,7 +184,7 @@ const AppointmentTypesModal: React.FC<AppointmentTypesModalProps> = ({
 
                     {/* Duration */}
                     <select
-                      className="border rounded px-2 py-1 text-sm"
+                      className="border border-border dark:border-border-dark rounded px-2 py-1 text-sm bg-bg dark:bg-bg-dark"
                       value={type.default_duration}
                       onChange={(e) =>
                         updateType(idx, {
@@ -202,7 +204,7 @@ const AppointmentTypesModal: React.FC<AppointmentTypesModalProps> = ({
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
-                        className="w-10 h-10 border rounded"
+                        className="w-10 h-10 rounded"
                         value={type.color_code}
                         onChange={(e) =>
                           updateType(idx, { color_code: e.target.value })
@@ -210,7 +212,7 @@ const AppointmentTypesModal: React.FC<AppointmentTypesModalProps> = ({
                       />
                       <input
                         type="text"
-                        className="border rounded px-2 py-1 text-xs w-24"
+                        className="border bg-input-lighter dark:bg-input-dlight border-mBorder-lighter dark:border-input-dborder rounded px-2 py-1 text-xs w-24"
                         value={type.color_code}
                         onChange={(e) =>
                           updateType(idx, { color_code: e.target.value })
@@ -245,12 +247,12 @@ const AppointmentTypesModal: React.FC<AppointmentTypesModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end px-6 py-4 border-t bg-gray-50 gap-2">
+        <div className="flex justify-end px-6 py-4 border-t border-bg dark:border-bg-dark gap-2">
           <button
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300 disabled:opacity-50"
+            className="px-4 py-2 rounded border border-mBorder dark:border-dButton-mborder bg-side dark:bg-dButton-mbg text-text-primary dark:text-text-darkPrimary hover:bg-top hover:dark:bg-dButton-mhover transition disabled:opacity-50"
           >
             Cancel
           </button>
@@ -258,7 +260,7 @@ const AppointmentTypesModal: React.FC<AppointmentTypesModalProps> = ({
             type="button"
             onClick={handleSave}
             disabled={saving || loading || !settings}
-            className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+            className="px-4 py-2 rounded bg-grncon text-input-lighter hover:bg-grncon-hover disabled:opacity-50"
           >
             {saving ? "Saving..." : "Save Changes"}
           </button>

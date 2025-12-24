@@ -1,9 +1,9 @@
 // frontend/src/features/locations/pages/BusinessSettingsPage.tsx
 
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useBusinessSettings, useLocations } from "../hooks";
 import { toastError, toastSuccess } from "../../../utils";
-import Pencil from "lucide-react/dist/esm/icons/pencil";
 import MoreVertical from "lucide-react/dist/esm/icons/more-vertical";
 import PlusCircle from "lucide-react/dist/esm/icons/plus-circle";
 import { formatLocationHours } from "../utils/formatHours";
@@ -22,12 +22,17 @@ import {
 } from "../services/locationApi";
 
 const BusinessSettingsPage: React.FC = () => {
+  const navigate = useNavigate();
   const [editNameOpen, setEditNameOpen] = useState(false);
   const [addLocationOpen, setAddLocationOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<LocationDTO | null>(
     null
   );
   const [deleteTarget, setDeleteTarget] = useState<LocationDTO | null>(null);
+  const [openMenuLocationId, setOpenMenuLocationId] = useState<number | null>(
+    null
+  );
+
   const [hoursModalLocation, setHoursModalLocation] =
     useState<LocationDTO | null>(null);
 
@@ -58,7 +63,11 @@ const BusinessSettingsPage: React.FC = () => {
 
   /* ------------------------------- Loading UI ----------------------------- */
   if (loadingBusiness || loadingLocations || !businessSettings) {
-    return <div className="p-6 text-gray-700">Loading business settings…</div>;
+    return (
+      <div className="p-6 text-text-primary dark:text-text-darkPrimary">
+        Loading business settings…
+      </div>
+    );
   }
 
   /* --------------------------- Handlers: Locations ------------------------ */
@@ -134,212 +143,237 @@ const BusinessSettingsPage: React.FC = () => {
   /* ====================================================================== */
 
   return (
-    <div className="p-6 space-y-10">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Business Settings</h1>
-        <p className="text-gray-600 mt-1">
-          Manage business name visibility, locations, and office hours.
-        </p>
-      </div>
+    <div className="p-6">
+      {/* Back */}
+      <button
+        onClick={() => navigate("/doctor/settings")}
+        className="mb-4 text-sm inline-flex items-center bg-primary border border-primary px-3 py-1.5 rounded-md text-text-darkPrimary hover:bg-primary-hover"
+      >
+        ← Back to Settings
+      </button>
+      <div className="max-w-6xl mx-auto space-y-10 flex flex-col items-center">
+        {/* Page Header */}
+        <div>
+          <h1 className="text-2xl text-center font-bold text-text-primary dark:text-text-darkPrimary">
+            Business Settings
+          </h1>
+          <p className="text-center text-text-secondary dark:text-text-darkSecondary mt-1">
+            Manage business name visibility, locations, and office hours.
+          </p>
+        </div>
 
-      {/* ================================================================== */}
-      {/*                    BUSINESS NAME + NAV VISIBILITY                   */}
-      {/* ================================================================== */}
-      <section className="bg-white border rounded-xl shadow-sm p-5">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Business Name
-            </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              This name can appear on the top navigation bar.
-            </p>
+        {/* ================================================================== */}
+        {/*                    BUSINESS NAME + NAV VISIBILITY                   */}
+        {/* ================================================================== */}
+        <section className="bg-surface dark:bg-surface-dark inline-block max-w-xl border border border-border dark:border-border-dark rounded-xl shadow-sm p-5">
+          <div className="flex items-start text-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-text-primary dark:text-text-darkPrimary">
+                Business Name
+              </h2>
+              <p className="text-md text-text-secondary dark:text-text-darkSecondary mt-1">
+                This name can appear on the top navigation bar.
+              </p>
 
-            <div className="mt-4">
-              <p className="text-md font-medium text-gray-800">
-                {businessSettings.name || "No name set"}
-              </p>
-              <p className="text-sm text-gray-500 mt-1">
-                Visible in navigation:{" "}
-                <span className="font-semibold">
-                  {businessSettings.show_name_in_nav ? "Yes" : "No"}
-                </span>
-              </p>
+              <div className="mt-4">
+                <p className="text-lg font-semibold font-medium text-text-primary dark:text-text-darkPrimary">
+                  {businessSettings.name || "No name set"}
+                </p>
+                <p className="text-md text-text-secondary dark:text-text-darkSecondary mt-1">
+                  Visible in navigation:{" "}
+                  <span className="font-semibold">
+                    {businessSettings.show_name_in_nav ? "Yes" : "No"}
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            {/* Ellipses → Edit business name */}
+            <div className="relative">
+              <button
+                className="p-2 rounded"
+                onClick={() => setEditNameOpen(true)}
+              >
+                <MoreVertical className="h-5 w-5 text-text-muted dark:text-text-darkMuted hover:text-text-primary dark:hover:text-text-darkPrimary" />
+              </button>
             </div>
           </div>
+        </section>
 
-          {/* Ellipses → Edit business name */}
-          <div className="relative">
+        {/* ================================================================== */}
+        {/*                               LOCATIONS                            */}
+        {/* ================================================================== */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-text-primary dark:text-text-darkPrimary">
+                Locations
+              </h2>
+              <p className="text-md text-text-secondary dark:text-text-darkSecondary mt-1">
+                Manage multiple physical or logical practice locations.
+              </p>
+            </div>
+
             <button
-              className="p-2 rounded hover:bg-gray-100"
-              onClick={() => setEditNameOpen(true)}
+              className="inline-flex items-center gap-2 bg-grncon text-input px-4 py-2 rounded-lg hover:bg-grncon-hover text-sm"
+              onClick={() => setAddLocationOpen(true)}
             >
-              <MoreVertical className="h-5 w-5 text-gray-600" />
+              <PlusCircle className="h-4 w-4" />
+              Add Location
             </button>
           </div>
-        </div>
-      </section>
 
-      {/* ================================================================== */}
-      {/*                               LOCATIONS                            */}
-      {/* ================================================================== */}
-      <section className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">Locations</h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Manage multiple physical or logical practice locations.
-            </p>
-          </div>
+          {/* ------------------------ Locations List ------------------------- */}
+          <div className="flex flex-wrap gap-6">
+            {locations.length === 0 && (
+              <p className="text-sm text-text-secondary dark:text-text-darkSecondary italic">
+                No locations found.
+              </p>
+            )}
 
-          <button
-            className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm"
-            onClick={() => setAddLocationOpen(true)}
-          >
-            <PlusCircle className="h-4 w-4" />
-            Add Location
-          </button>
-        </div>
+            {locations.map((loc) => {
+              const summary = formatLocationHours(loc.hours);
 
-        {/* ------------------------ Locations List ------------------------- */}
-        <div className="space-y-6">
-          {locations.length === 0 && (
-            <p className="text-sm text-gray-500 italic">No locations found.</p>
-          )}
+              return (
+                <div
+                  key={loc.id}
+                  className="bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-sm p-5 w-full sm:w-[340px]"
+                >
+                  <div className="flex items-start justify-normal">
+                    {/* ----------------------- INFO SECTION ----------------------- */}
+                    <div className="flex-1 pr-6">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold text-text-primary dark:text-text-darkPrimary">
+                          {loc.name}
+                        </h3>
+                        {!loc.is_active && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-surface dark:bg-surface-dark text-text-secondary dark:text-text-darkSecondary border border-border dark:border-border-dark">
+                            Inactive
+                          </span>
+                        )}
+                      </div>
 
-          {locations.map((loc) => {
-            const summary = formatLocationHours(loc.hours); // <-- FIX: here inside the loop
+                      <div className="mt-3 space-y-1 text-sm text-text-secondary dark:text-text-darkSecondary">
+                        {loc.phone && <p>Phone: {loc.phone}</p>}
+                        {loc.email && <p>Email: {loc.email}</p>}
+                        {loc.address && <p>Address: {loc.address}</p>}
+                        {!loc.phone && !loc.email && !loc.address && (
+                          <p className="text-text-muted dark:text-text-darkMuted italic">
+                            No contact information provided.
+                          </p>
+                        )}
 
-            return (
-              <div
-                key={loc.id}
-                className="bg-white border rounded-xl shadow-sm p-5"
-              >
-                <div className="flex items-start justify-between">
-                  {/* ----------------------- INFO SECTION ----------------------- */}
-                  <div className="flex-1 pr-6">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {loc.name}
-                      </h3>
-                      {!loc.is_active && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
-                          Inactive
-                        </span>
-                      )}
+                        <p className="text-xs text-text-muted dark:text-text-darkMuted mt-2">
+                          Key: <span className="font-mono">{loc.slug}</span>
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="mt-3 space-y-1 text-sm text-gray-700">
-                      {loc.phone && <p>Phone: {loc.phone}</p>}
-                      {loc.email && <p>Email: {loc.email}</p>}
-                      {loc.address && <p>Address: {loc.address}</p>}
-                      {!loc.phone && !loc.email && !loc.address && (
-                        <p className="text-gray-500 italic">
-                          No contact information provided.
-                        </p>
+                    {/* ------------------ ACTION MENU ------------------ */}
+                    <div className="relative">
+                      <button
+                        className="p-2 rounded"
+                        onClick={() =>
+                          setOpenMenuLocationId(
+                            openMenuLocationId === loc.id ? null : loc.id
+                          )
+                        }
+                      >
+                        <MoreVertical className="h-5 w-5 text-text-muted dark:text-text-darkMuted hover:text-text-primary dark:hover:text-text-darkPrimary" />
+                      </button>
+
+                      {openMenuLocationId === loc.id && (
+                        <div className="absolute right-0 mt-2 w-40 bg-bg dark:bg-bg-dark border border-bg dark:border-border-dark rounded-lg shadow-lg z-20">
+                          <button
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-side hover:dark:bg-side-dark"
+                            onClick={() => {
+                              setEditingLocation(loc);
+                              setOpenMenuLocationId(null);
+                            }}
+                          >
+                            Edit Info
+                          </button>
+
+                          <button
+                            className="w-full text-left px-3 py-2 text-sm text-reddel hover:bg-side hover:dark:bg-side-dark"
+                            onClick={() => {
+                              handleRequestDeleteFromCard(loc);
+                              setOpenMenuLocationId(null);
+                            }}
+                          >
+                            Delete Location...
+                          </button>
+                        </div>
                       )}
+                    </div>
+                  </div>
 
-                      <p className="text-xs text-gray-500 mt-2">
-                        Key: <span className="font-mono">{loc.slug}</span>
-                      </p>
-
-                      <div className="text-xs text-gray-600 mt-3 space-y-0.5">
+                  {/* ------------------ BUSINESS HOURS PLACEHOLDER ------------------ */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div>
+                      <h4 className="font-medium text-text-primary dark:text-text-darkPrimary mb-2">
+                        Business Hours
+                      </h4>
+                      <div className="text-xs text-text-secondary dark:text-text-darkSecondary mb-1 space-y-0.5">
                         {summary.map((line, idx) => (
                           <div key={idx}>{line}</div>
                         ))}
                       </div>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded border border-border dark:border-dButton-border text-xs font-medium text-text-primary dark:text-text-darkPrimary bg-bg dark:bg-dButton hover:bg-side hover:dark:bg-dButton-hover"
+                        onClick={() => setHoursModalLocation(loc)}
+                      >
+                        Edit Hours
+                      </button>
                     </div>
                   </div>
-
-                  {/* ------------------ ACTION MENU ------------------ */}
-                  <div className="relative flex flex-col items-end gap-2">
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                      onClick={() => setEditingLocation(loc)}
-                    >
-                      <Pencil className="h-3 w-3" />
-                      Edit
-                    </button>
-
-                    <button
-                      className="p-2 rounded hover:bg-gray-100"
-                      onClick={() => handleRequestDeleteFromCard(loc)}
-                      title="Delete location…"
-                    >
-                      <MoreVertical className="h-5 w-5 text-gray-600" />
-                    </button>
-                  </div>
                 </div>
+              );
+            })}
+          </div>
+        </section>
 
-                {/* ------------------ BUSINESS HOURS PLACEHOLDER ------------------ */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                  <div>
-                    <h4 className="font-medium text-gray-800 mb-2">
-                      Business Hours
-                    </h4>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                      onClick={() => setHoursModalLocation(loc)}
-                    >
-                      Edit Hours
-                    </button>
-                  </div>
+        {/* ========================= MODALS ========================= */}
 
-                  {/* Sidebar / additional settings placeholder */}
-                  <div>
-                    <p className="text-gray-500 text-sm italic">
-                      Additional location-level settings will appear here.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+        {/* Business Name */}
+        <BusinessNameModal
+          open={editNameOpen}
+          initial={businessSettings}
+          onClose={() => setEditNameOpen(false)}
+          onSave={saveBusinessSettings}
+        />
 
-      {/* ========================= MODALS ========================= */}
+        {/* Add Location */}
+        <AddLocationModal
+          open={addLocationOpen}
+          onClose={() => setAddLocationOpen(false)}
+          onCreate={handleCreateLocation}
+        />
 
-      {/* Business Name */}
-      <BusinessNameModal
-        open={editNameOpen}
-        initial={businessSettings}
-        onClose={() => setEditNameOpen(false)}
-        onSave={saveBusinessSettings}
-      />
+        {/* Edit Location */}
+        <EditLocationModal
+          open={!!editingLocation}
+          location={editingLocation}
+          onClose={() => setEditingLocation(null)}
+          onSave={handleSaveLocation}
+          onRequestDelete={handleRequestDeleteFromEdit}
+        />
 
-      {/* Add Location */}
-      <AddLocationModal
-        open={addLocationOpen}
-        onClose={() => setAddLocationOpen(false)}
-        onCreate={handleCreateLocation}
-      />
-
-      {/* Edit Location */}
-      <EditLocationModal
-        open={!!editingLocation}
-        location={editingLocation}
-        onClose={() => setEditingLocation(null)}
-        onSave={handleSaveLocation}
-        onRequestDelete={handleRequestDeleteFromEdit}
-      />
-
-      {/* Confirm Delete */}
-      <ConfirmDeleteLocationModal
-        open={!!deleteTarget}
-        location={deleteTarget}
-        onCancel={() => setDeleteTarget(null)}
-        onConfirm={handleConfirmDelete}
-      />
-      <EditLocationHoursModal
-        open={!!hoursModalLocation}
-        location={hoursModalLocation}
-        onClose={() => setHoursModalLocation(null)}
-        onUpdated={reloadLocations}
-      />
+        {/* Confirm Delete */}
+        <ConfirmDeleteLocationModal
+          open={!!deleteTarget}
+          location={deleteTarget}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={handleConfirmDelete}
+        />
+        <EditLocationHoursModal
+          open={!!hoursModalLocation}
+          location={hoursModalLocation}
+          onClose={() => setHoursModalLocation(null)}
+          onUpdated={reloadLocations}
+        />
+      </div>
     </div>
   );
 };
