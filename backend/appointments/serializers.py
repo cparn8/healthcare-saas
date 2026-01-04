@@ -15,6 +15,9 @@ class AppointmentSerializer(serializers.ModelSerializer):
     """
 
     patient_name = serializers.SerializerMethodField()
+    patient_dob = serializers.SerializerMethodField()
+    patient_gender = serializers.SerializerMethodField()
+
     provider_name = serializers.SerializerMethodField()
 
     # NOTE: office_display removed because Appointment.office is a slug CharField
@@ -59,6 +62,8 @@ class AppointmentSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "patient_name",
+            "patient_dob",
+            "patient_gender",
             "provider_name",
             "allow_overlap",
         ]
@@ -66,6 +71,17 @@ class AppointmentSerializer(serializers.ModelSerializer):
 
     def get_patient_name(self, obj):
         return str(obj.patient) if obj.patient else None
+    
+    def get_patient_dob(self, obj):
+        if obj.patient and obj.patient.date_of_birth:
+            return obj.patient.date_of_birth.isoformat()
+        return None
+
+    def get_patient_gender(self, obj):
+        if obj.patient and obj.patient.gender:
+            return obj.patient.gender
+        return None
+
 
     def get_provider_name(self, obj):
         return str(obj.provider) if obj.provider else None

@@ -1,8 +1,20 @@
 from rest_framework import viewsets, permissions, filters
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.exceptions import ValidationError
+
 from .models import Appointment
 from .serializers import AppointmentSerializer
-from rest_framework.exceptions import ValidationError
 from schedule.models import ScheduleSettings
+
+
+class AppointmentPagination(PageNumberPagination):
+    """
+    Appointments are dense time-series data.
+    Use a larger page size to reduce request fan-out in schedule views.
+    """
+    page_size = 200
+    page_size_query_param = "page_size"
+    max_page_size = 500
 
 
 class AppointmentViewSet(viewsets.ModelViewSet):
@@ -12,6 +24,8 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     queryset = Appointment.objects.all().order_by("-start_time")
     serializer_class = AppointmentSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = AppointmentPagination
+
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["patient__first_name", "patient__last_name", "chief_complaint"]
     ordering_fields = ["start_time", "end_time", "created_at", "status", "date"]
@@ -33,7 +47,10 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
         ss = ScheduleSettings.objects.first()
         if ss and isinstance(ss.appointment_types, list):
-            match = next((t for t in ss.appointment_types if t.get("name") == appt_type), None)
+            match = next(
+                (t for t in ss.appointment_types if t.get("name") == appt_type),
+                None,
+            )
             if match:
                 color = match.get("color_code", color)
                 duration = match.get("default_duration", duration)
@@ -48,6 +65,20 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         if office:
             qs = qs.filter(office__iexact=str(office).strip())
 
+        # ---- Single-provider filter (backward compatible) ----
+        provider = self.request.query_params.get("provider")
+        if provider:
+            qs = qs.filter(provider_id=provider)
+
+        # ---- Multi-provider filter (schedule view) ----
+        provider_ids = self.request.query_params.getlist("providers")
+        if provider_ids:
+            qs = qs.filter(provider_id__in=provider_ids)
+
+        # ---- Date Range Filtering ----
+        start_date = self.request.query_params.get("start_date")
+        end_date = self.request.query_params.get("end_date")
+        if start_date and end_date:
+            qs = qs.filter(date__gte=start_date, date__lte=end_date)
+
         return qs
-
-

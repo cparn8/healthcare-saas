@@ -155,6 +155,7 @@ const SchedulePage: React.FC = () => {
   } = useScheduleData({
     cursorDate,
     providerId,
+    providerIds: filters.providers,
   });
 
   /* ----------------------------- Derived Values ----------------------- */

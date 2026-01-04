@@ -100,7 +100,7 @@ export default function DayViewGrid({
         return [
           <div
             key={`cluster-${date.toISOString()}-${clusterIndex}`}
-            className="absolute rounded text-text-darkPrimary text-xs p-1.5 shadow-sm hover:brightness-105 transition-all pointer-events-auto flex items-center justify-center text-center bg-orange-500"
+            className="absolute rounded text-text-darkPrimary text-xs p-1.5 shadow-sm hover:brightness-105 transition-all pointer-events-auto flex items-center justify-center text-center bg-bg-orange"
             style={{
               top: collapsedBox.top,
               height: collapsedBox.height,

@@ -37,9 +37,9 @@ const ViewProviderModal: React.FC<ViewProviderModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-bg dark:bg-bg-dark rounded-lg shadow-xl w-full max-w-xl max-h-[90vh] flex flex-col">
+      <div className="bg-bg dark:bg-bg-dark rounded-lg shadow-xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-bg dark:border-bg-dark">
+        <div className="flex items-center justify-between px-6 py-3 border-b border-bg dark:border-bg-dark">
           <h2 className="text-xl font-semibold text-text-primary dark:text-text-darkPrimary">
             Provider Info
           </h2>
@@ -52,7 +52,7 @@ const ViewProviderModal: React.FC<ViewProviderModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="px-8 py-2">
+        <div className="px-8">
           <div className="flex items-center gap-6 m-auto flex-wrap">
             <div className="space-y-1 justify-center text-center">
               <img
@@ -71,7 +71,7 @@ const ViewProviderModal: React.FC<ViewProviderModalProps> = ({
               <p className="text-sm font-medium text-text-secondary dark:text-text-darkSecondary">
                 Specialty:
               </p>
-              <div className="text-base font-medium text-text-primary dark:text-text-darkPrimary pb-2 whitespace-nowrap">
+              <div className="text-base font-medium text-text-primary dark:text-text-darkPrimary whitespace-nowrap">
                 {provider.specialty && <p>{provider.specialty}</p>}
               </div>
             </div>
@@ -79,7 +79,7 @@ const ViewProviderModal: React.FC<ViewProviderModalProps> = ({
               <p className="text-sm font-medium text-text-secondary dark:text-text-darkSecondary">
                 Phone:
               </p>
-              <div className="text-text-primary dark:text-text-darkPrimary pb-2 whitespace-nowrap">
+              <div className="text-text-primary dark:text-text-darkPrimary whitespace-nowrap">
                 {provider.phone && <p>{provider.phone}</p>}
               </div>
             </div>
@@ -87,7 +87,7 @@ const ViewProviderModal: React.FC<ViewProviderModalProps> = ({
               <p className="text-sm font-medium text-text-secondary dark:text-text-darkSecondary">
                 Email:
               </p>
-              <div className="text-text-primary dark:text-text-darkPrimary pb-2 whitespace-nowrap">
+              <div className="text-text-primary dark:text-text-darkPrimary whitespace-nowrap">
                 {provider.email && <p>{provider.email}</p>}
               </div>
             </div>
@@ -95,7 +95,7 @@ const ViewProviderModal: React.FC<ViewProviderModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between items-center px-6 py-4 border-t border-bg dark:border-bg-dark">
+        <div className="flex justify-between items-center px-6 py-2 border-t border-bg dark:border-bg-dark">
           <div className="flex gap-2">
             {canChangePassword && (
               <button

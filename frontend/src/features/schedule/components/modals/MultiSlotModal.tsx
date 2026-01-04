@@ -43,15 +43,15 @@ const MultiSlotModal: React.FC<MultiSlotModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-xl max-h-[80vh] flex flex-col">
+      <div className="bg-bg dark:bg-bg-dark rounded-lg shadow-xl w-full max-w-xl max-h-[80vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b">
-          <h2 className="text-lg font-semibold">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-bg dark:border-bg-dark">
+          <h2 className="text-lg font-semibold text-text-primary dark:text-text-darkPrimary">
             {appointments.length} appointments in this slot
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-text-secondary dark:text-text-darkSecondary hover:text-text-primary hover:dark:text-text-darkPrimary"
           >
             <X size={18} />
           </button>
@@ -61,7 +61,7 @@ const MultiSlotModal: React.FC<MultiSlotModalProps> = ({
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
           {Object.entries(grouped).map(([office, list]) => (
             <div key={office} className="space-y-2">
-              <div className="text-sm font-semibold text-gray-600">
+              <div className="text-sm font-semibold text-text-primary dark:text-text-darkPrimary">
                 {OFFICE_LABEL[office as keyof typeof OFFICE_LABEL] ??
                   office.toUpperCase()}
               </div>
@@ -79,7 +79,7 @@ const MultiSlotModal: React.FC<MultiSlotModalProps> = ({
                       onEditAppointment(appt);
                       onClose();
                     }}
-                    className="w-full text-left border rounded-md px-3 py-2 flex flex-col gap-0.5 hover:bg-gray-50 transition"
+                    className="w-full text-left border border-bg dark:border-bg-dark rounded-md px-3 py-2 flex flex-col gap-0.5 hover:bg-gray-50 transition"
                     style={{
                       backgroundColor:
                         appt.appointment_type === "Block Time"
@@ -88,27 +88,32 @@ const MultiSlotModal: React.FC<MultiSlotModalProps> = ({
                     }}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-900">
+                      <span className="text-xs font-medium text-text-darkPrimary">
                         {timeRange || appt.date}
                       </span>
                     </div>
 
                     {isBlock(appt) ? (
                       <>
-                        <div className="text-sm font-semibold text-white">
+                        <div className="text-sm font-semibold text-text-darkPrimary">
                           {appt.appointment_type || "Block Time"}
                         </div>
-                        <div className="text-xs text-white opacity-90">
+
+                        <div className="text-xs text-text-darkPrimary opacity-90">
                           {appt.provider_name}
                         </div>
                       </>
                     ) : (
                       <>
-                        <div className="text-sm font-semibold text-white">
+                        <div className="text-sm font-semibold text-text-darkPrimary">
                           {appt.patient_name || "(No Patient)"}
                         </div>
-                        <div className="text-xs text-white opacity-90">
-                          {appt.appointment_type}
+                        <div>
+                          <span className="text-xs text-text-darkPrimary opacity-90">
+                            {appt.appointment_type}{" "}
+                            <span className="pr-3"></span> Provider:{" "}
+                            {appt.provider_name}
+                          </span>
                         </div>
                       </>
                     )}
@@ -120,10 +125,10 @@ const MultiSlotModal: React.FC<MultiSlotModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t flex justify-end">
+        <div className="px-4 py-3 border-t border-bg dark:border-bg-dark flex justify-end">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 text-sm border rounded-md hover:bg-gray-50"
+            className="px-4 py-2 rounded bg-side dark:bg-dButton-mbg border border-mBorder dark:border-dButton-mborder text-text-primary dark:text-text-darkPrimary hover:bg-top hover:dark:bg-dButton-mhover transition"
           >
             Close
           </button>

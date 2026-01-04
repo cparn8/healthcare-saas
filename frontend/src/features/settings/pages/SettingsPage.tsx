@@ -3,11 +3,14 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCurrentProvider } from "../../providers/hooks/useCurrentProvider";
 import AppointmentTypesModal from "../components/AppointmentTypesModal";
+import API from "../../../services/api";
 
 const SettingsPage: React.FC = () => {
   const navigate = useNavigate();
   const { isAdmin } = useCurrentProvider();
   const [appointmentTypesOpen, setAppointmentTypesOpen] = useState(false);
+  const [demoConfirmOpen, setDemoConfirmOpen] = useState(false);
+  const [demoResetting, setDemoResetting] = useState(false);
 
   const handleOpenBusinessSettings = () => {
     if (!isAdmin) return;
@@ -17,6 +20,22 @@ const SettingsPage: React.FC = () => {
   const handleOpenAppointmentTypes = () => {
     if (!isAdmin) return;
     setAppointmentTypesOpen(true);
+  };
+
+  const handleResetDemo = async () => {
+    try {
+      setDemoResetting(true);
+      await API.post("demo/reset/");
+      setDemoConfirmOpen(false);
+      // simplest deterministic refresh to reload schedule + lists
+      window.location.reload();
+    } catch (err) {
+      console.error("Demo reset failed:", err);
+      setDemoResetting(false);
+      setDemoConfirmOpen(false);
+      // If you have a toast util, swap this for a toast
+      alert("Demo reset failed. Check server logs for details.");
+    }
   };
 
   return (
@@ -141,24 +160,70 @@ const SettingsPage: React.FC = () => {
           </button>
         </section>
 
-        {/* Demo Data Reset (placeholder) */}
+        {/* Demo Data Reset */}
         <section className="bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-sm p-5">
           <h2 className="text-lg font-semibold">Demo Data</h2>
           <p className="text-sm text-text-secondary dark:text-text-darkSecondary mt-1">
             Reset the application to its original demo state.
           </p>
 
-          <button
-            disabled
-            className="mt-4 w-full px-4 py-2 rounded-lg border border-dashed border-border dark:border-dButton-border text-sm text-text-muted dark:text-text-darkMuted cursor-not-allowed"
-          >
-            Reset Demo Data (Coming Soon)
-          </button>
+          {!isAdmin ? (
+            <div className="mt-4 text-xs text-text-muted dark:text-text-darkMuted">
+              Admin only.
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setDemoConfirmOpen(true)}
+                className="mt-4 w-full px-4 py-2 rounded-lg text-sm font-medium transition bg-primary text-input-lighter hover:bg-primary-hover"
+              >
+                Reset Demo Data
+              </button>
 
-          <p className="text-xs text-text-muted dark:text-text-darkMuted mt-2">
-            This will eventually delete and recreate demo providers, patients,
-            locations, appointments, and types.
-          </p>
+              <p className="text-xs text-text-muted dark:text-text-darkMuted mt-2">
+                This will delete and recreate demo providers, patients,
+                locations, appointments, and types.
+              </p>
+            </>
+          )}
+
+          {/* Local confirm modal (avoids relying on unknown ConfirmDialog props) */}
+          {demoConfirmOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+              <div className="w-full max-w-md bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-lg p-5">
+                <h3 className="text-lg font-semibold">Reset demo data?</h3>
+                <p className="mt-2 text-sm text-text-secondary dark:text-text-darkSecondary">
+                  This action will delete all appointments, patients, providers,
+                  locations, and appointment types, then recreate a
+                  deterministic demo dataset.
+                </p>
+
+                <div className="mt-4 flex gap-3 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setDemoConfirmOpen(false)}
+                    className="px-4 py-2 rounded-lg text-sm font-medium border border-border dark:border-dButton-border bg-bg dark:bg-dButton hover:border-primary-light hover:bg-primary-lighter hover:dark:bg-primary-dlight transition"
+                    disabled={demoResetting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResetDemo}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                      demoResetting
+                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                        : "bg-primary text-input-lighter hover:bg-primary-hover"
+                    }`}
+                    disabled={demoResetting}
+                  >
+                    {demoResetting ? "Resetting..." : "Confirm Reset"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
       </div>
       {appointmentTypesOpen && (

@@ -19,7 +19,7 @@ export function useScheduleFilters(providerId: number | null) {
     providers: [],
     types: [],
     statuses: [],
-    defaultView: "day",
+    defaultView: "week",
     includeBlockedTimes: true,
     offices: ["north"], // still present in type but not used for filtering
   });

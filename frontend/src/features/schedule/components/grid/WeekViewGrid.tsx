@@ -107,7 +107,7 @@ export default function WeekViewGrid({
         return [
           <div
             key={`cluster-${day.toISOString()}-${idx}`}
-            className="absolute rounded bg-orange-500 text-text-darkPrimary text-xs p-1.5 shadow-sm cursor-pointer hover:brightness-105 transition-all flex items-center justify-center text-center"
+            className="absolute rounded bg-bg-orange text-text-darkPrimary text-xs p-1.5 shadow-sm cursor-pointer hover:brightness-105 transition-all flex items-center justify-center text-center"
             style={{
               top: collapsedBox.top,
               height: collapsedBox.height,

@@ -26,6 +26,7 @@ module.exports = {
           dark: "#252529ff",
           hover: "#b9b9bdff",
           dhover: "#1f1f22ff",
+          orange: "#aa5e17ff",
         },
         surface: {
           DEFAULT: "#d4d5d8ff",

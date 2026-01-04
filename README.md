@@ -189,7 +189,6 @@ healthcare-saas
 │  │  │  │  │  └─ usePatientsList.ts
 │  │  │  │  ├─ logic
 │  │  │  │  ├─ pages
-│  │  │  │  │  ├─ PatientProfile.tsx
 │  │  │  │  │  └─ PatientsList.tsx
 │  │  │  │  └─ services
 │  │  │  │     ├─ patients.ts
@@ -209,11 +208,6 @@ healthcare-saas
 │  │  │  │  │  ├─ useCurrentProvider.ts
 │  │  │  │  │  └─ useProvidersList.tsx
 │  │  │  │  ├─ pages
-│  │  │  │  │  ├─ CreateProvider.tsx
-│  │  │  │  │  ├─ EditInfo.tsx
-│  │  │  │  │  ├─ Notifications.tsx
-│  │  │  │  │  ├─ ProviderOptions.tsx
-│  │  │  │  │  ├─ ProviderProfile.tsx
 │  │  │  │  │  └─ ProvidersList.tsx
 │  │  │  │  └─ services
 │  │  │  │     ├─ providers.ts
@@ -270,8 +264,7 @@ healthcare-saas
 │  │  │  │  │  ├─ usePrefilledAppointmentFields.ts
 │  │  │  │  │  ├─ useScheduleData.ts
 │  │  │  │  │  ├─ useScheduleFilters.ts
-│  │  │  │  │  ├─ useVisibleAppointments.ts
-│  │  │  │  │  └─ _useScheduleView.experimental.ts
+│  │  │  │  │  └─ useVisibleAppointments.ts
 │  │  │  │  ├─ logic
 │  │  │  │  │  ├─ appointmentPositioning.ts
 │  │  │  │  │  ├─ appointmentRange.ts
@@ -298,10 +291,6 @@ healthcare-saas
 │  │  │  ├─ settings
 │  │  │  │  ├─ components
 │  │  │  │  │  └─ AppointmentTypesModal.tsx
-│  │  │  │  ├─ organization
-│  │  │  │  │  ├─ components
-│  │  │  │  │  ├─ services
-│  │  │  │  │  └─ types
 │  │  │  │  └─ pages
 │  │  │  │     └─ SettingsPage.tsx
 │  │  │  └─ tasks

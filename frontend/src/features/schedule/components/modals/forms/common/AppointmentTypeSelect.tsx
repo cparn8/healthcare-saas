@@ -19,7 +19,7 @@ const AppointmentTypeSelect: React.FC<AppointmentTypeSelectProps> = ({
 }) => {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
+      <label className="block text-sm font-medium text-text-primary dark:text-text-darkPrimary mb-1">
         Appointment Type
       </label>
 

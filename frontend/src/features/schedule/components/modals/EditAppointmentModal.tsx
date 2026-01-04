@@ -250,7 +250,7 @@ const EditAppointmentModal: React.FC<EditAppointmentModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-bg dark:border-bg-dark">
           <h2 className="text-xl font-semibold">Edit Appointment</h2>
           <button
-            className="text-text-secondary dark:text-text-darkSecondary hover:text-text-primary dark:text-text-darkPrimary"
+            className="text-text-secondary dark:text-text-darkSecondary hover:text-text-primary hover:dark:text-text-darkPrimary"
             onClick={onClose}
           >
             <X size={20} />

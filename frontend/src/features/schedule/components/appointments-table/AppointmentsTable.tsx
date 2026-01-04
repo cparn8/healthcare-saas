@@ -404,49 +404,31 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
   /* PATIENT INFO RENDER                                                     */
   /* ---------------------------------------------------------------------- */
 
-  const renderPatientInfo = (appt: Appointment) => {
+  const renderPatientMeta = (appt: Appointment) => {
     const anyAppt = appt as any;
 
     const dobRaw: string | undefined = anyAppt.patient_dob;
     const genderRaw: string | undefined = anyAppt.patient_gender;
 
-    const formatGender = (value?: string) => {
+    if (!dobRaw && !genderRaw) return null;
+
+    const genderMap = (value?: string) => {
       if (!value) return "";
       const v = value.toLowerCase();
       if (v.startsWith("m")) return "M";
       if (v.startsWith("f")) return "F";
       if (v.startsWith("non")) return "NB";
-      if (v.startsWith("other")) return "O";
-      return "";
+      return value.slice(0, 1).toUpperCase();
     };
 
-    const gender = formatGender(genderRaw);
+    const gender = genderMap(genderRaw);
 
-    const dob = dobRaw
-      ? (() => {
-          try {
-            return format(new Date(dobRaw), "MM/dd/yyyy");
-          } catch {
-            return "";
-          }
-        })()
-      : "";
-
-    const meta =
-      gender || dob ? `${gender}${gender && dob ? " " : ""}${dob}` : null;
+    const dobFormatted = dobRaw ? format(new Date(dobRaw), "MM/dd/yyyy") : "";
 
     return (
-      <div className="flex flex-col">
-        <div className="text-sm font-medium text-text-primary dark:text-text-darkPrimary hover:underline cursor-pointer">
-          {appt.patient_name || "(No Patient)"}
-        </div>
-
-        {meta && (
-          <div className="text-xs text-text-secondary dark:text-text-darkSecondary">
-            {meta}
-          </div>
-        )}
-      </div>
+      <span className="text-s text-text-primary dark:text-text-darkPrimary">
+        {gender} {dobFormatted}
+      </span>
     );
   };
 
@@ -481,6 +463,7 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
             )}
             <th className="px-2 py-2 text-left">Status</th>
             <th className="px-2 py-2 text-left">Patient</th>
+            <th className="px-2 py-2 text-left">Gender/DOB</th>
             <th className="px-2 py-2 text-left">
               <button
                 type="button"
@@ -629,9 +612,20 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
                   )}
                 </td>
 
-                {/* PATIENT */}
+                {/* PATIENT NAME */}
                 <td className="px-2 py-2 align-top">
-                  {isBlock ? "BLOCK TIME" : renderPatientInfo(appt)}
+                  {isBlock ? (
+                    "BLOCK TIME"
+                  ) : (
+                    <div className="text-sm font-medium text-text-primary dark:text-text-darkPrimary">
+                      {appt.patient_name || "(No Patient)"}
+                    </div>
+                  )}
+                </td>
+
+                {/* PATIENT INFO (DOB + GENDER) */}
+                <td className="px-2 py-2 align-top whitespace-nowrap">
+                  {!isBlock && renderPatientMeta(appt)}
                 </td>
 
                 {/* TIME */}
@@ -661,7 +655,7 @@ const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
                       )}
                     </div>
                   ) : (
-                    <span className="text-gray-400 italic text-xs">
+                    <span className="text-text-muted dark:text-text-darkMuted italic text-xs">
                       (No chief complaint)
                     </span>
                   )}

@@ -22,8 +22,10 @@ type ProviderInfo = {
 
 type TopbarProps = {
   onLogout: () => void;
-  onOpenProfile?: () => void; // 🔹 modal hook (wired later)
+  onOpenProfile?: () => void;
 };
+
+const DEMO_FLAG_KEY = "demoDataCreated";
 
 const TopNavbar: React.FC<TopbarProps> = ({ onLogout, onOpenProfile }) => {
   const [provider, setProvider] = useState<ProviderInfo | null>(null);
@@ -31,6 +33,14 @@ const TopNavbar: React.FC<TopbarProps> = ({ onLogout, onOpenProfile }) => {
     document.documentElement.classList.contains("dark") ? "dark" : "light"
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [showDemoButton, setShowDemoButton] = useState<boolean>(
+    !localStorage.getItem(DEMO_FLAG_KEY)
+  );
+  const [confirmDemoOpen, setConfirmDemoOpen] = useState(false);
+  const [creatingDemo, setCreatingDemo] = useState(false);
+
+  /* --------------------- Theme --------------------- */
   const toggleTheme = () => {
     const next = theme === "light" ? "dark" : "light";
     setTheme(next);
@@ -65,6 +75,23 @@ const TopNavbar: React.FC<TopbarProps> = ({ onLogout, onOpenProfile }) => {
     ? `${provider.first_name} ${provider.last_name}`
     : "Loading…";
 
+  /* --------------------- Demo Data ---------------------- */
+
+  const handleCreateDemo = async () => {
+    try {
+      setCreatingDemo(true);
+      await API.post("/demo/reset/");
+      localStorage.setItem(DEMO_FLAG_KEY, "true");
+      setShowDemoButton(false);
+      window.location.reload();
+    } catch (err) {
+      console.error("Demo creation failed:", err);
+      alert("Failed to create demo data. Check server logs.");
+      setCreatingDemo(false);
+      setConfirmDemoOpen(false);
+    }
+  };
+
   return (
     <div className="flex justify-between items-center bg-top dark:bg-top-dark px-4 py-2 gap-4">
       {/* ---------------- LEFT: Business Name ---------------- */}
@@ -78,6 +105,45 @@ const TopNavbar: React.FC<TopbarProps> = ({ onLogout, onOpenProfile }) => {
 
       {/* ---------------- RIGHT: Provider Menu ---------------- */}
       <div className="flex items-center gap-4">
+        {confirmDemoOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-md bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-lg p-5">
+              <h3 className="text-lg font-semibold">Create demo data?</h3>
+
+              <p className="mt-2 text-sm text-text-secondary dark:text-text-darkSecondary">
+                This will populate the app with realistic demo providers,
+                patients, locations, and appointments.
+              </p>
+
+              <p className="mt-2 text-xs text-text-muted dark:text-text-darkMuted">
+                You can reset demo data later from{" "}
+                <strong>Settings → Demo Data</strong>.
+              </p>
+
+              <div className="mt-4 flex gap-3 justify-end">
+                <button
+                  onClick={() => setConfirmDemoOpen(false)}
+                  className="px-4 py-2 rounded-lg text-sm font-medium border border-border bg-bg hover:bg-primary-lighter transition"
+                  disabled={creatingDemo}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateDemo}
+                  disabled={creatingDemo}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                    creatingDemo
+                      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      : "bg-primary text-input-lighter hover:bg-primary-hover"
+                  }`}
+                >
+                  {creatingDemo ? "Creating…" : "Create Demo Data"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <Dropdown
           trigger={({ open, toggle }) => (
             <button

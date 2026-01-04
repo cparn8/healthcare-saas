@@ -10,6 +10,7 @@ from appointments.views import AppointmentViewSet
 from schedule.urls import router as schedule_router
 from locations.urls import router as locations_router
 from locations.views import BusinessSettingsView
+from core.views_demo import DemoResetView
 
 router = routers.DefaultRouter()
 router.register(r"patients", PatientViewSet)
@@ -23,5 +24,6 @@ urlpatterns = [
     path("api/", include(router.urls)),
     path("api/business/settings/", BusinessSettingsView.as_view(),
          name="business-settings"),
+    path("api/demo/reset/", DemoResetView.as_view(), name="demo-reset"),     
     path("api/auth/", include("authapp.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

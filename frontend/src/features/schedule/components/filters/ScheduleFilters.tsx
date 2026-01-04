@@ -1,5 +1,5 @@
 // src/features/schedule/components/ScheduleFilters.tsx
-import React, { useEffect, useState, useCallback } from "react";
+import React from "react";
 import { AppointmentTypeDef, ScheduleFilters } from "../../types";
 import { STATUS_OPTIONS } from "../../logic/appointmentStatus";
 
@@ -189,7 +189,9 @@ const ScheduleFiltersComponent: React.FC<ScheduleFiltersProps> = ({
         </summary>
         <div className="mt-2 space-y-2">
           <div>
-            <span className="text-xs text-text-secondary dark:text-text-darkSecondary">Default View:</span>
+            <span className="text-xs text-text-secondary dark:text-text-darkSecondary">
+              Default View:
+            </span>
             <select
               className="mt-1 w-full border border-mBorder-lighter dark:border-dButton-mborder bg-input dark:bg-input-dlight px-2 py-1 hover:bg-grid-slot dark:hover:bg-grid-dslot rounded p-1 text-sm"
               value={currentFilters.defaultView}

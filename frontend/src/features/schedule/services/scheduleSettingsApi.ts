@@ -2,36 +2,19 @@
 import API from "../../../services/api";
 import { ScheduleSettings } from "../types";
 
-const LOCAL_STORAGE_KEY = "scheduleSettings";
-const SETTINGS_ID = 1; // the single row in DB
-
 async function get(): Promise<ScheduleSettings> {
-  try {
-    const res = await API.get(`/schedule-settings/${SETTINGS_ID}/`);
-    return res.data;
-  } catch (error: any) {
-    // fallback only if no record exists yet
-    if (error.response?.status === 404) {
-      const localSettings = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (localSettings) {
-        return JSON.parse(localSettings);
-      }
-    }
-    throw error;
+  const res = await API.get("/schedule-settings/");
+
+  if (!Array.isArray(res.data) || res.data.length === 0) {
+    throw new Error("No ScheduleSettings row returned from API");
   }
+
+  return res.data[0];
 }
 
 async function save(payload: ScheduleSettings): Promise<ScheduleSettings> {
-  try {
-    const res = await API.put(`/schedule-settings/${SETTINGS_ID}/`, payload);
-    return res.data;
-  } catch (error: any) {
-    if (error.response?.status === 404) {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(payload));
-      return payload;
-    }
-    throw error;
-  }
+  const res = await API.put(`/schedule-settings/${payload.id}/`, payload);
+  return res.data;
 }
 
 async function getAppointmentTypes() {

@@ -1,5 +1,5 @@
 // src/features/schedule/hooks/useScheduleData.ts
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { appointmentsApi, Appointment, scheduleSettingsApi } from "../services";
 import { ScheduleSettings, AppointmentTypeDef } from "../types";
 import { getWeekRangeForApi } from "../logic";
@@ -7,18 +7,13 @@ import { getWeekRangeForApi } from "../logic";
 interface UseScheduleDataOptions {
   cursorDate: Date;
   providerId: number | null;
+  providerIds: number[] | null;
 }
 
-/**
- * Centralized data hook for the Schedule page.
- * Loads:
- *  - schedule settings
- *  - appointment types
- *  - ALL appointments for the visible provider + week (pagination-safe)
- */
 export function useScheduleData({
   cursorDate,
   providerId,
+  providerIds,
 }: UseScheduleDataOptions) {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingAppts, setLoadingAppts] = useState(false);
@@ -30,7 +25,7 @@ export function useScheduleData({
     AppointmentTypeDef[]
   >([]);
 
-  /* ------------------------ Schedule Settings (hours) ------------------------ */
+  /* ------------------------ Schedule Settings ------------------------ */
 
   useEffect(() => {
     let cancelled = false;
@@ -71,7 +66,13 @@ export function useScheduleData({
     };
   }, []);
 
-  /* ------------------------ Appointments (full week, all pages) ------------------------ */
+  /* ------------------------ Provider filter normalization ------------------------ */
+  const normalizedProviderIds = useMemo(() => {
+    if (!providerIds || providerIds.length === 0) return undefined;
+    return providerIds;
+  }, [providerIds]);
+
+  /* ------------------------ Appointments (all pages) ------------------------ */
 
   const reloadAppointments = useCallback(async () => {
     if (!providerId) return;
@@ -81,14 +82,12 @@ export function useScheduleData({
     try {
       const { start_date, end_date } = getWeekRangeForApi(cursorDate);
 
-      // pagination-safe fetch of ALL relevant appointments
       const fullList = await appointmentsApi.listAllAppointments({
-        provider: providerId,
+        providers: normalizedProviderIds, // undefined => all providers
         start_date,
         end_date,
       });
 
-      // Sort locally by (date, start_time)
       fullList.sort((a, b) => {
         const da = new Date(a.date + "T00:00").getTime();
         const db = new Date(b.date + "T00:00").getTime();
@@ -99,18 +98,15 @@ export function useScheduleData({
       setAppointments(fullList);
     } catch (err) {
       console.error("❌ Failed to load appointments:", err);
+      setAppointments([]);
     } finally {
       setLoadingAppts(false);
     }
-  }, [providerId, cursorDate]);
+  }, [providerId, cursorDate, normalizedProviderIds]);
 
   useEffect(() => {
-    if (providerId) {
-      void reloadAppointments();
-    }
-  }, [providerId, cursorDate, reloadAppointments]);
-
-  /* -------------------------------- OUTPUT -------------------------------- */
+    void reloadAppointments();
+  }, [reloadAppointments]);
 
   return {
     appointments,

@@ -34,8 +34,11 @@ export interface AppointmentTypeDef {
 
 /**
  * Root schedule settings structure.
+ * Backend guarantees a single persisted row.
  */
 export interface ScheduleSettings {
+  id: number; // ← REQUIRED (singleton row primary key)
   business_hours: LocationKeyedHours;
   appointment_types: AppointmentTypeDef[];
+  updated_at?: string;
 }

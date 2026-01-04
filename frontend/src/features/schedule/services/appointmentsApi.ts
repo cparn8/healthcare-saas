@@ -125,15 +125,15 @@ export const appointmentsApi = {
      Eliminates disappearing appointments (pagination bug).
      ------------------------------------------------------------------- */
   async listAllAppointments(options: {
-    provider?: number | null;
+    providers?: number[];
     start_date: string;
     end_date: string;
-  }): Promise<Appointment[]> {
-    return fetchPaginated<Appointment>("/appointments/", {
-      provider: options.provider ?? undefined,
-      start_date: options.start_date,
-      end_date: options.end_date,
-    });
+}): Promise<Appointment[]> {
+  return fetchPaginated<Appointment>("/appointments/", {
+    providers: options.providers,
+    start_date: options.start_date,
+    end_date: options.end_date,
+  });
   },
 
   /* -------------------------------------------------------------------
