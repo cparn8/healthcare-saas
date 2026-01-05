@@ -98,6 +98,23 @@ const EditAppointmentModal: React.FC<EditAppointmentModalProps> = ({
   // ------------------ Save ------------------
   const handleSave = async () => {
     setIsSaving(true);
+
+    if (!formData.provider) {
+      toastError("No provider selected.");
+      setIsSaving(false);
+      return;
+    }
+
+    if (
+      formData.start_time &&
+      formData.end_time &&
+      formData.start_time >= formData.end_time
+    ) {
+      toastError("Start time must be before end time.");
+      setIsSaving(false);
+      return;
+    }
+
     if (!formData.office) {
       toastError("Appointment location is missing.");
       setIsSaving(false);
@@ -124,13 +141,24 @@ const EditAppointmentModal: React.FC<EditAppointmentModalProps> = ({
 
         if (!allowed) {
           if (!overlapInfo.isOverlap) {
-            toastError("Unexpected error.");
+            const detail =
+              (err as any)?.response?.data?.detail ||
+              (err as any)?.response?.data?.provider ||
+              null;
+
+            if (detail) {
+              toastError(
+                typeof detail === "string"
+                  ? detail
+                  : "Invalid appointment data."
+              );
+            } else {
+              toastError("Unexpected error.");
+            }
           }
-          // If overlap but user canceled, no additional toast.
           return;
         }
 
-        // User approved overlap → retry with allow_overlap = true
         const overlapPayload: AppointmentPayload = {
           ...formData,
           allow_overlap: true,
@@ -289,6 +317,7 @@ const EditAppointmentModal: React.FC<EditAppointmentModalProps> = ({
             open={showConfirm}
             title="Delete Appointment"
             message="Are you sure?"
+            confirmLabel="Delete"
             onConfirm={handleDelete}
             onCancel={() => setShowConfirm(false)}
           />

@@ -343,15 +343,24 @@ def reset_and_seed_demo_data() -> dict:
         for idx, p in enumerate(DEMO_PROVIDERS):
             username = (p.first_name[0] + p.last_name).lower()
 
-            user = User.objects.create_user(
+            user, created = User.objects.get_or_create(
                 username=username,
-                email=p.email,
-                password=p.password,
-                first_name=p.first_name,
-                last_name=p.last_name,
+                defaults={
+                    "email": p.email,
+                    "first_name": p.first_name,
+                    "last_name": p.last_name,
+                    "is_staff": bool(p.is_staff),
+                    "is_superuser": bool(p.is_superuser),
+                },
             )
+
+            # Always enforce correct credentials & roles
+            user.set_password(p.password)
             user.is_staff = bool(p.is_staff)
             user.is_superuser = bool(p.is_superuser)
+            user.email = p.email
+            user.first_name = p.first_name
+            user.last_name = p.last_name
             user.save()
 
             prov = Provider.objects.create(
@@ -363,6 +372,7 @@ def reset_and_seed_demo_data() -> dict:
                 phone=_fake_phone(idx + 1),
             )
             providers.append(prov)
+
 
         # -------------------------
         # Patients (24)

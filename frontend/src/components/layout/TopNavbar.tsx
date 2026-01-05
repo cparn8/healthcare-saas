@@ -25,20 +25,14 @@ type TopbarProps = {
   onOpenProfile?: () => void;
 };
 
-const DEMO_FLAG_KEY = "demoDataCreated";
-
 const TopNavbar: React.FC<TopbarProps> = ({ onLogout, onOpenProfile }) => {
   const [provider, setProvider] = useState<ProviderInfo | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">(
     document.documentElement.classList.contains("dark") ? "dark" : "light"
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [showDemoButton, setShowDemoButton] = useState<boolean>(
-    !localStorage.getItem(DEMO_FLAG_KEY)
-  );
   const [confirmDemoOpen, setConfirmDemoOpen] = useState(false);
-  const [creatingDemo, setCreatingDemo] = useState(false);
+  const [resettingDemo, setResettingDemo] = useState(false);
 
   /* --------------------- Theme --------------------- */
   const toggleTheme = () => {
@@ -75,19 +69,17 @@ const TopNavbar: React.FC<TopbarProps> = ({ onLogout, onOpenProfile }) => {
     ? `${provider.first_name} ${provider.last_name}`
     : "Loading…";
 
-  /* --------------------- Demo Data ---------------------- */
-
-  const handleCreateDemo = async () => {
+  /* --------------------- Demo Reset ---------------------- */
+  const handleResetDemo = async () => {
     try {
-      setCreatingDemo(true);
+      setResettingDemo(true);
       await API.post("/demo/reset/");
-      localStorage.setItem(DEMO_FLAG_KEY, "true");
-      setShowDemoButton(false);
       window.location.reload();
     } catch (err) {
-      console.error("Demo creation failed:", err);
-      alert("Failed to create demo data. Check server logs.");
-      setCreatingDemo(false);
+      console.error("Demo reset failed:", err);
+      alert("Failed to reset demo data. Please check server logs.");
+    } finally {
+      setResettingDemo(false);
       setConfirmDemoOpen(false);
     }
   };
@@ -103,41 +95,53 @@ const TopNavbar: React.FC<TopbarProps> = ({ onLogout, onOpenProfile }) => {
         )}
       </div>
 
-      {/* ---------------- RIGHT: Provider Menu ---------------- */}
+      {/* ---------------- RIGHT: Actions ---------------- */}
       <div className="flex items-center gap-4">
+        {/* Demo Reset Button */}
+        <button
+          onClick={() => setConfirmDemoOpen(true)}
+          className="px-3 py-2 rounded-md text-sm font-medium bg-primary text-text-darkPrimary hover:bg-primary-hover transition"
+        >
+          Create / Reset Demo Data
+        </button>
+
+        {/* Confirm Dialog */}
         {confirmDemoOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
             <div className="w-full max-w-md bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-lg p-5">
-              <h3 className="text-lg font-semibold">Create demo data?</h3>
+              <h3 className="text-lg font-semibold">Reset demo data?</h3>
 
-              <p className="mt-2 text-sm text-text-secondary dark:text-text-darkSecondary">
-                This will populate the app with realistic demo providers,
-                patients, locations, and appointments.
+              <p className="mt-2 text-sm text-text-primary dark:text-text-darkPrimary">
+                This will delete and recreate all demo providers, patients,
+                locations, and appointments.
               </p>
 
-              <p className="mt-2 text-xs text-text-muted dark:text-text-darkMuted">
-                You can reset demo data later from{" "}
-                <strong>Settings → Demo Data</strong>.
+              <p className="mt-1 text-sm text-text-primary dark:text-text-darkPrimary">
+                You will have to log in again afterwards.
+              </p>
+
+              <p className="mt-1 text-xs text-text-secondary dark:text-text-darkSecondary">
+                This action is safe and intended for demo use.
               </p>
 
               <div className="mt-4 flex gap-3 justify-end">
                 <button
                   onClick={() => setConfirmDemoOpen(false)}
-                  className="px-4 py-2 rounded-lg text-sm font-medium border border-border bg-bg hover:bg-primary-lighter transition"
-                  disabled={creatingDemo}
+                  className="px-4 py-2 rounded border bg-side dark:bg-dButton-mbg border border-mBorder dark:border-dButton-mborder text-text-primary dark:text-text-darkPrimary hover:bg-top hover:dark:bg-dButton-mhover transition"
+                  disabled={resettingDemo}
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleCreateDemo}
-                  disabled={creatingDemo}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                    creatingDemo
-                      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                      : "bg-primary text-input-lighter hover:bg-primary-hover"
+                  onClick={handleResetDemo}
+                  disabled={resettingDemo}
+                  className={`px-4 py-2 rounded text-text-darkPrimary transition ${
+                    resettingDemo
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-reddel hover:bg-reddel-hover"
                   }`}
                 >
-                  {creatingDemo ? "Creating…" : "Create Demo Data"}
+                  {resettingDemo ? "Resetting…" : "Reset Demo Data"}
                 </button>
               </div>
             </div>

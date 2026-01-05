@@ -37,6 +37,17 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
   const canChange = isAdmin || isSelf;
 
+  const PASSWORD_REQUIREMENTS =
+    "Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a special character.";
+
+  function isPasswordValid(value: string): boolean {
+    const hasUpper = /[A-Z]/.test(value);
+    const hasLower = /[a-z]/.test(value);
+    const hasNumber = /\d/.test(value);
+    const hasSpecial = /[^A-Za-z0-9]/.test(value);
+    return value.length >= 8 && hasUpper && hasLower && hasNumber && hasSpecial;
+  }
+
   const handleSave = async () => {
     if (!canChange) {
       toastError("You do not have permission to change this password.");
@@ -44,6 +55,14 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     }
     if (!targetProvider.id) {
       toastError("Invalid provider.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      toastError("Password fields do not match.");
+      return;
+    }
+    if (!isPasswordValid(password)) {
+      toastError(PASSWORD_REQUIREMENTS);
       return;
     }
 

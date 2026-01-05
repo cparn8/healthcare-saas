@@ -80,6 +80,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     }
   };
 
+  const fillDemo = () => {
+    setUsername("ademouser");
+    setPassword("DemoPass1!");
+    setError("");
+  };
+
   return (
     <div className="flex justify-center items-center h-screen bg-bg dark:bg-bg-dark">
       <form
@@ -90,6 +96,36 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <h2 className="text-2xl text-text-primary dark:text-text-darkPrimary font-bold mb-4 text-center">
           Provider Login
         </h2>
+
+        {/* Demo credential helpers */}
+        <div className="mb-4 p-3 rounded border border-mBorder-lighter dark:border-top-dborder bg-grid-slot dark:bg-input-dlight">
+          <div className="text-sm font-medium text-text-primary dark:text-text-darkPrimary">
+            Demo Credentials
+          </div>
+
+          <div className="mt-2 space-y-2 text-xs text-text-secondary dark:text-text-darkSecondary">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="font-medium text-text-primary dark:text-text-darkPrimary">
+                  Demo Provider
+                </div>
+                <div>Username: ademouser</div>
+                <div>Password: DemoPass1!</div>
+              </div>
+              <button
+                type="button"
+                onClick={fillDemo}
+                className="px-3 py-1 rounded bg-side dark:bg-dButton border border-mBorder dark:border-dButton-mborder text-text-primary dark:text-text-darkPrimary hover:bg-top hover:dark:bg-dButton-mhover transition"
+              >
+                Use
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-2 text-[11px] text-text-muted dark:text-text-darkMuted">
+            The demo dataset can be created/reset from Settings.
+          </div>
+        </div>
 
         <label className="block mb-2 text-sm font-medium text-text-primary dark:text-text-darkPrimary">
           Username

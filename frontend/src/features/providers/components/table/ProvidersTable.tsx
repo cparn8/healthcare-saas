@@ -54,7 +54,7 @@ const ProvidersTable: React.FC<ProvidersTableProps> = ({
           providers.map((p) => (
             <tr
               key={p.id}
-              className="border-t border-border dark:border-border-dark hover:bg-surface-hover hover:dark:bg-surface-dhover align-middle"
+              className="border-t border-border dark:border-border-dark align-middle"
             >
               <td className="py-2 pr-2 pl-12">
                 <img
@@ -101,7 +101,7 @@ const ProvidersTable: React.FC<ProvidersTableProps> = ({
                   {/* View */}
                   <button
                     onClick={() => onOpenProfile(p)}
-                    className="block w-full text-left px-4 py-2 bg-side dark:bg-side-dark hover:bg-top dark:hover:bg-top-dark text-sm"
+                    className="block w-full text-left px-4 py-2 bg-bg dark:bg-bg-dark hover:bg-side dark:hover:bg-side-dark text-sm"
                   >
                     View Profile
                   </button>
@@ -110,7 +110,7 @@ const ProvidersTable: React.FC<ProvidersTableProps> = ({
                   {canEdit(p) && (
                     <button
                       onClick={() => onEditProvider(p)}
-                      className="block w-full text-left px-4 py-2 bg-side dark:bg-side-dark hover:bg-top dark:hover:bg-top-dark text-sm"
+                      className="block w-full text-left px-4 py-2 bg-bg dark:bg-bg-dark hover:bg-side dark:hover:bg-side-dark text-sm"
                     >
                       Edit Profile
                     </button>
@@ -120,7 +120,7 @@ const ProvidersTable: React.FC<ProvidersTableProps> = ({
                   {canChangePassword(p) && (
                     <button
                       onClick={() => onOpenPasswordModal(p)}
-                      className="block w-full text-left px-4 py-2 bg-side dark:bg-side-dark hover:bg-top dark:hover:bg-top-dark text-sm"
+                      className="block w-full text-left px-4 py-2 bg-bg dark:bg-bg-dark hover:bg-side dark:hover:bg-side-dark text-sm"
                     >
                       Change Password
                     </button>
@@ -131,7 +131,7 @@ const ProvidersTable: React.FC<ProvidersTableProps> = ({
                     <button
                       onClick={() => onRequestDelete(p)}
                       disabled={deletingId === p.id}
-                      className="block w-full text-left px-4 py-2 bg-side dark:bg-side-dark hover:bg-top dark:hover:bg-top-dark text-sm text-reddel"
+                      className="block w-full text-left px-4 py-2 bg-bg dark:bg-bg-dark hover:bg-side dark:hover:bg-side-dark text-sm text-reddel"
                     >
                       {deletingId === p.id ? "Deleting…" : "Delete"}
                     </button>

@@ -138,7 +138,7 @@ export default function WeekViewGrid({
         return (
           <div
             key={`${appt.id}-${appt.date}-${appt.start_time}`}
-            className="absolute rounded text-text-darkPrimary text-xs p-1.5 shadow-sm cursor-pointer hover:brightness-105 transition-all flex flex-col"
+            className="absolute rounded text-text-darkPrimary text-xs p-1 shadow-sm cursor-pointer hover:brightness-105 transition-all flex flex-col"
             style={{
               top,
               height,
@@ -156,18 +156,22 @@ export default function WeekViewGrid({
                 <div className="font-semibold uppercase truncate">
                   {appt.appointment_type}
                 </div>
-                <div className="truncate text-xs opacity-90">
-                  {appt.provider_name}
-                </div>
+                {slotMinutes < 60 && (
+                  <div className="truncate text-xs opacity-90">
+                    {appt.provider_name}
+                  </div>
+                )}
               </div>
             ) : (
               <>
                 <div className="truncate font-semibold">
                   {appt.patient_name || "(No Patient)"}
                 </div>
-                <div className="truncate opacity-90">
-                  {appt.appointment_type}
-                </div>
+                {slotMinutes < 60 && (
+                  <div className="truncate opacity-90">
+                    {appt.appointment_type}
+                  </div>
+                )}
               </>
             )}
           </div>

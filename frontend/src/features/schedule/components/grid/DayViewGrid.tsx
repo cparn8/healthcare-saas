@@ -131,7 +131,7 @@ export default function DayViewGrid({
         return (
           <div
             key={`${appt.id}-${appt.date}-${appt.start_time}`}
-            className="absolute rounded text-text-darkPrimary text-xs p-1.5 shadow-sm hover:brightness-105 transition-all pointer-events-auto cursor-pointer flex flex-col items-center justify-center text-center"
+            className="absolute rounded text-text-darkPrimary text-xs p-1 shadow-sm hover:brightness-105 transition-all pointer-events-auto cursor-pointer flex flex-col items-center justify-center text-center"
             style={{
               top,
               height,
@@ -151,18 +151,22 @@ export default function DayViewGrid({
                 <div className="text-[11px] uppercase tracking-wide">
                   {appt.appointment_type}
                 </div>
-                <div className="text-[11px] opacity-90">
-                  {appt.provider_name}
-                </div>
+                {slotMinutes < 60 && (
+                  <div className="text-[11px] opacity-90">
+                    {appt.provider_name}
+                  </div>
+                )}
               </>
             ) : (
               <>
                 <div className="font-semibold truncate">
                   {appt.patient_name || "(No Patient)"}
                 </div>
-                <div className="truncate opacity-90">
-                  {appt.appointment_type}
-                </div>
+                {slotMinutes < 60 && (
+                  <div className="truncate opacity-90">
+                    {appt.appointment_type}
+                  </div>
+                )}
               </>
             )}
           </div>

@@ -170,8 +170,25 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
       toastError("Provider ID missing — please log in as a provider.");
       return;
     }
+    if (activeTab === "withPatient" && !formData.patient) {
+      toastError("No patient selected.");
+      return;
+    }
     if (!formData.start_time || !formData.end_time) {
       toastError("Please provide valid start and end times.");
+      return;
+    }
+    if (formData.start_time >= formData.end_time) {
+      toastError("Start time must be before end time.");
+      return;
+    }
+    if (
+      formData.is_recurring &&
+      formData.repeat_end_date &&
+      formData.date &&
+      formData.repeat_end_date < formData.date
+    ) {
+      toastError("Start date must be before end date.");
       return;
     }
 

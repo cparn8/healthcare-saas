@@ -436,7 +436,7 @@ const SchedulePage: React.FC = () => {
                 className={`px-3 py-1.5 border border-top-border dark:border-dButton-mborder rounded ${
                   activeTab === "appointments"
                     ? "bg-surface dark:bg-side-dark text-text-muted dark:text-text-darkMuted cursor-not-allowed"
-                    : "bg-side dark:bg-dButton-mbg hover:bg-top dark:hover:bg-dButton-mhover"
+                    : "bg-side dark:bg-dButton-mbg hover:bg-top dark:hover:bg-dButton-mhover cursor-pointer"
                 }`}
                 value={slotSize}
                 onChange={(e) =>

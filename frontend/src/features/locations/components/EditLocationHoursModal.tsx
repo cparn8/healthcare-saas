@@ -46,8 +46,21 @@ const EditLocationHoursModal: React.FC<Props> = ({
     load();
   }, [open, location]);
 
+  const hasInvalidTimeRange = (hours: LocationHoursDTO[]) => {
+    return hours.some((h) => {
+      if (!h.open) return false;
+      if (!h.start || !h.end) return false;
+      return h.start >= h.end;
+    });
+  };
+
   const handleSave = async () => {
     if (!location) return;
+
+    if (hasInvalidTimeRange(hours)) {
+      toastError("Start time must be before end time.");
+      return;
+    }
 
     setSaving(true);
     try {

@@ -6,6 +6,7 @@ import PatientsTable from "../components/table/PatientsTable";
 import AddPatientModal from "../components/modals/AddPatientModal";
 import EditPatientModal from "../components/modals/EditPatientModal";
 import ViewPatientModal from "../components/modals/ViewPatientModal";
+import ConfirmDialog from "../../../components/common/ConfirmDialog";
 import { toastError, toastSuccess } from "../../../utils/toastUtils";
 
 const PatientsList: React.FC = () => {
@@ -24,23 +25,25 @@ const PatientsList: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [viewingPatient, setViewingPatient] = useState<Patient | null>(null);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
+  const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  const handleDelete = async (patient: Patient) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${patient.first_name} ${patient.last_name}?`
-    );
-    if (!confirmed) return;
+  const handleConfirmDelete = async () => {
+    if (!patientToDelete) return;
 
     try {
-      await deletePatient(patient.id);
-      removeLocal(patient.id);
+      setDeleting(true);
+      await deletePatient(patientToDelete.id);
+      removeLocal(patientToDelete.id);
       toastSuccess("Patient deleted.");
     } catch (err) {
       console.error(err);
       toastError("Failed to delete patient.");
+    } finally {
+      setDeleting(false);
+      setPatientToDelete(null);
     }
   };
-
   return (
     <div className="p-6">
       {/* Back */}
@@ -84,7 +87,7 @@ const PatientsList: React.FC = () => {
           patients={patients}
           onView={(p) => setViewingPatient(p)}
           onEdit={(p) => setEditingPatient(p)}
-          onDelete={handleDelete}
+          onRequestDelete={setPatientToDelete}
         />
       </div>
 
@@ -115,6 +118,17 @@ const PatientsList: React.FC = () => {
           onDeleted={(id) => removeLocal(id)}
         />
       )}
+
+      <ConfirmDialog
+        open={!!patientToDelete}
+        title="Delete Patient"
+        message={`Are you sure you want to delete ${patientToDelete?.first_name} ${patientToDelete?.last_name}?`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setPatientToDelete(null)}
+      />
     </div>
   );
 };

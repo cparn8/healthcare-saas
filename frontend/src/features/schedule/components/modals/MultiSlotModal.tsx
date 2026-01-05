@@ -1,6 +1,7 @@
 import React from "react";
 import X from "lucide-react/dist/esm/icons/x";
 import { Appointment } from "../../services";
+import { parseHHMM, format12Hour } from "../grid/logic/timeFormatting";
 
 interface MultiSlotModalProps {
   appointments: Appointment[];
@@ -27,9 +28,18 @@ const MultiSlotModal: React.FC<MultiSlotModalProps> = ({
   );
 
   const formatTimeRange = (appt: Appointment) => {
-    const start = appt.start_time ?? "";
-    const end = appt.end_time ?? "";
-    return start && end ? `${start} – ${end}` : start || end || "";
+    if (!appt.start_time || !appt.end_time) return "";
+
+    const startMins = parseHHMM(appt.start_time);
+    const endMins = parseHHMM(appt.end_time);
+
+    const startH = Math.floor(startMins / 60);
+    const startM = startMins % 60;
+
+    const endH = Math.floor(endMins / 60);
+    const endM = endMins % 60;
+
+    return `${format12Hour(startH, startM)} – ${format12Hour(endH, endM)}`;
   };
 
   const isBlock = (appt: Appointment) =>

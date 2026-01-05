@@ -1,6 +1,6 @@
 // frontend/src/components/common/ConfirmDialog.tsx
-import React from 'react';
-import { toastInfo } from '../../utils/toastUtils';
+import React from "react";
+import { toastInfo } from "../../utils/toastUtils";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -10,6 +10,7 @@ interface ConfirmDialogProps {
   cancelLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
+  loading?: boolean;
 }
 
 /**
@@ -21,8 +22,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   open,
   title,
   message,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
   onConfirm,
   onCancel,
 }) => {
@@ -34,32 +35,36 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   };
 
   const handleCancel = () => {
-    toastInfo('Action canceled');
+    toastInfo("Action canceled");
     onCancel();
   };
 
   return (
-    <div className='fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm'>
-      <div className='bg-white rounded-lg shadow-xl w-full max-w-sm'>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-bg dark:bg-bg-dark rounded-lg shadow-xl w-full max-w-sm">
         {/* Header */}
-        <div className='px-6 py-4 border-b'>
-          <h2 className='text-lg font-semibold text-gray-800'>{title}</h2>
+        <div className="px-6 py-4 border-b border-bg dark:border-bg-dark">
+          <h2 className="text-lg font-semibold text-text-primary dark:text-text-darkPrimary">
+            {title}
+          </h2>
         </div>
 
         {/* Message */}
-        <div className='px-6 py-4 text-sm text-gray-700'>{message}</div>
+        <div className="px-6 py-4 text-sm text-text-primary dark:text-text-darkPrimary">
+          {message}
+        </div>
 
         {/* Footer */}
-        <div className='flex justify-end gap-2 px-6 py-4 border-t bg-gray-50'>
+        <div className="flex justify-end gap-2 px-6 py-4 border-t border-bg dark:border-bg-dark">
           <button
             onClick={handleCancel}
-            className='px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300 transition'
+            className="px-4 py-2 rounded bg-side dark:bg-dButton-mbg border border-mBorder dark:border-dButton-mborder text-text-primary dark:text-text-darkPrimary hover:bg-top hover:dark:bg-dButton-mhover transition"
           >
             {cancelLabel}
           </button>
           <button
             onClick={handleConfirm}
-            className='px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 transition'
+            className="px-4 py-2 rounded bg-reddel text-text-darkPrimary hover:bg-reddel-hover transition"
           >
             {confirmLabel}
           </button>

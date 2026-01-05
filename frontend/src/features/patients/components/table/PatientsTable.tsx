@@ -7,14 +7,14 @@ interface PatientsTableProps {
   patients: Patient[];
   onView: (patient: Patient) => void;
   onEdit: (patient: Patient) => void;
-  onDelete: (patient: Patient) => void;
+  onRequestDelete: (patient: Patient) => void;
 }
 
 const PatientsTable: React.FC<PatientsTableProps> = ({
   patients,
   onView,
   onEdit,
-  onDelete,
+  onRequestDelete,
 }) => {
   return (
     <table className="w-full">
@@ -33,7 +33,7 @@ const PatientsTable: React.FC<PatientsTableProps> = ({
         {patients.map((p) => (
           <tr
             key={p.id}
-            className="border-t border-border dark:border-border-dark hover:bg-surface-hover hover:dark:bg-surface-dhover align-middle"
+            className="border-t border-border dark:border-border-dark align-middle"
           >
             {/* Photo */}
             <td className="py-2 pr-2 pl-9">
@@ -99,19 +99,19 @@ const PatientsTable: React.FC<PatientsTableProps> = ({
               >
                 <button
                   onClick={() => onView(p)}
-                  className="block w-full text-left px-4 py-2 bg-side dark:bg-side-dark hover:bg-top dark:hover:bg-top-dark text-sm"
+                  className="block w-full text-left px-4 py-2 bg-bg dark:bg-bg-dark hover:bg-side dark:hover:bg-side-dark text-sm"
                 >
                   View
                 </button>
                 <button
                   onClick={() => onEdit(p)}
-                  className="block w-full text-left px-4 py-2 bg-side dark:bg-side-dark hover:bg-top dark:hover:bg-top-dark text-sm"
+                  className="block w-full text-left px-4 py-2 bg-bg dark:bg-bg-dark hover:bg-side dark:hover:bg-side-dark text-sm"
                 >
                   Edit
                 </button>
                 <button
-                  onClick={() => onDelete(p)}
-                  className="block w-full text-left px-4 py-2 bg-side dark:bg-side-dark hover:bg-top dark:hover:bg-top-dark text-sm text-reddel"
+                  onClick={() => onRequestDelete(p)}
+                  className="block w-full px-4 py-2 text-left bg-bg dark:bg-bg-dark hover:bg-side dark:hover:bg-side-dark text-sm text-reddel"
                 >
                   Delete
                 </button>

@@ -103,7 +103,7 @@ module.exports = {
         reddel: {
           DEFAULT: "#d40404ff",
           border: "#c50303ff",
-          hover: "#c70404ff",
+          hover: "#be0606ff",
           dark: "#e00505ff",
           dborder: "#c50303ff",
           dhover: "#c70404ff",
