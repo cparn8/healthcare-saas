@@ -17,7 +17,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # -------------------------------------------------
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-zca1vw+o6rg^ib)zbin!c@v203(p)=x75d_apy465t-097lio7")
 DEBUG = os.getenv("DJANGO_DEBUG", "True") == "True"
-ALLOWED_HOSTS = ["*"]
+if DEBUG:
+    ALLOWED_HOSTS = [
+        "localhost",
+        "127.0.0.1",
+    ]
+else:
+    ALLOWED_HOSTS = [
+        "clayparnell.com",
+        "www.clayparnell.com",
+        "api.clayparnell.com",
+    ]
 
 print(f"🌍 DJANGO_ENV: {os.getenv('DJANGO_ENV', 'dev')} — Loaded settings for {'Debug' if DEBUG else 'Production'} mode")
 # -------------------------------------------------
@@ -128,7 +138,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "core.wsgi.application"
 
 # -------------------------------------------------
-# Database (Dockerized PostgreSQL)
+# Database (Dockerized PostgreSQL / RDS)
 # -------------------------------------------------
 DATABASES = {
     "default": {
@@ -140,6 +150,14 @@ DATABASES = {
         "PORT": os.getenv("POSTGRES_PORT", 5432),
     }
 }
+
+# -------------------------------------------------
+# RDS requires SSL in production
+# -------------------------------------------------
+if not DEBUG:
+    DATABASES["default"]["OPTIONS"] = {
+        "sslmode": "require",
+    }
 
 # -------------------------------------------------
 # Authentication

@@ -36,9 +36,18 @@ healthcare-saas
 │  │  ├─ views.py
 │  │  └─ __init__.py
 │  ├─ core
+│  │  ├─ admin.py
+│  │  ├─ apps.py
 │  │  ├─ asgi.py
+│  │  ├─ bootstrap.py
+│  │  ├─ demo_reset.py
+│  │  ├─ migrations
+│  │  │  ├─ 0001_initial.py
+│  │  │  └─ __init__.py
+│  │  ├─ models.py
 │  │  ├─ settings.py
 │  │  ├─ urls.py
+│  │  ├─ views_demo.py
 │  │  ├─ wsgi.py
 │  │  └─ __init__.py
 │  ├─ Dockerfile
