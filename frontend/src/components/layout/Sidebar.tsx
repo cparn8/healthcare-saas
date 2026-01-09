@@ -8,7 +8,7 @@ const Sidebar: React.FC = () => {
     <aside className="w-56 bg-side dark:bg-side-dark h-screen pt-6 flex flex-col">
       {/* App Name */}
       <div className="px-4 mb-6 text-lg font-bold text-text-primary dark:text-text-darkPrimary">
-        HealthCapstone
+        ClinicalPlatform
       </div>
 
       {/* Core */}

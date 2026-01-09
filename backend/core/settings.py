@@ -29,6 +29,10 @@ else:
         "api.clayparnell.com",
     ]
 
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+
+
 print(f"🌍 DJANGO_ENV: {os.getenv('DJANGO_ENV', 'dev')} — Loaded settings for {'Debug' if DEBUG else 'Production'} mode")
 # -------------------------------------------------
 # Installed Apps
@@ -74,12 +78,8 @@ MIDDLEWARE = [
 ]
 
 # -------------------------------------------------
-# Dynamic CORS & CSRF Configuration (fixed)
+# Dynamic CORS & CSRF Configuration
 # -------------------------------------------------
-
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
-parsed = urlparse(FRONTEND_URL)
-frontend_origin = f"{parsed.scheme}://{parsed.netloc}"
 
 # Shared headers (needed for JWT + API calls)
 CORS_ALLOW_HEADERS = [
@@ -98,21 +98,23 @@ CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 CORS_ALLOW_CREDENTIALS = True
 
 if DEBUG:
-    # --- Development Mode ---
     CORS_ALLOW_ALL_ORIGINS = True
     CSRF_TRUSTED_ORIGINS = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ]
-    print(f"🌍 DEBUG mode — trusting {CSRF_TRUSTED_ORIGINS}")
-
 else:
-    # --- Production Mode ---
-    CORS_ALLOW_ALL_ORIGINS = False  # lock down explicitly
-    CORS_ALLOWED_ORIGINS = [frontend_origin]
-    CSRF_TRUSTED_ORIGINS = [frontend_origin]
-    print(f"🔒 Production CORS locked to {frontend_origin}")
+    CORS_ALLOW_ALL_ORIGINS = False
 
+    CORS_ALLOWED_ORIGINS = [
+        "https://clayparnell.com",
+        "https://www.clayparnell.com",
+    ]
+
+    CSRF_TRUSTED_ORIGINS = [
+        "https://clayparnell.com",
+        "https://www.clayparnell.com",
+    ]
 
 
 # -------------------------------------------------
