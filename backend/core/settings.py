@@ -25,8 +25,9 @@ if DEBUG:
 else:
     ALLOWED_HOSTS = [
         "clayparnell.com",
-        "www.clayparnell.com",
+        "app.clayparnell.com",
         "api.clayparnell.com",
+        "www.clayparnell.com",
     ]
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -81,7 +82,12 @@ MIDDLEWARE = [
 # Dynamic CORS & CSRF Configuration
 # -------------------------------------------------
 
-# Shared headers (needed for JWT + API calls)
+from urllib.parse import urlparse
+
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+parsed = urlparse(FRONTEND_URL)
+frontend_origin = f"{parsed.scheme}://{parsed.netloc}"
+
 CORS_ALLOW_HEADERS = [
     "Authorization",
     "Content-Type",
@@ -105,16 +111,11 @@ if DEBUG:
     ]
 else:
     CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOWED_ORIGINS = [frontend_origin]
+    CSRF_TRUSTED_ORIGINS = [frontend_origin]
 
-    CORS_ALLOWED_ORIGINS = [
-        "https://clayparnell.com",
-        "https://www.clayparnell.com",
-    ]
+print(f"🔒 Production CORS locked to {frontend_origin}")
 
-    CSRF_TRUSTED_ORIGINS = [
-        "https://clayparnell.com",
-        "https://www.clayparnell.com",
-    ]
 
 
 # -------------------------------------------------

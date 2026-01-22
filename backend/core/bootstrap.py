@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 
 from django.contrib.auth.models import User
 from django.db import connection
@@ -6,6 +7,9 @@ from django.db.utils import OperationalError, ProgrammingError
 
 from providers.models import Provider
 
+if os.environ.get("PYTEST_RUNNING") == "1":
+    def ensure_bootstrap_accounts():
+        return
 
 # These must match demo_reset.py exactly (same usernames/passwords).
 DEMO_USERNAME = "ademouser"

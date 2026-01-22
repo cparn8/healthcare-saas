@@ -4,9 +4,8 @@ import axios from "axios";
 const API_BASE_URL = process.env.REACT_APP_API_URL ?? "http://localhost:8000";
 
 const API = axios.create({
-  baseURL: `${API_BASE_URL}/api/`,
+  baseURL: `${API_BASE_URL.replace(/\/$/, "")}/api/`,
 });
-
 // --- Token helpers --------------------------------------------------
 export const setAuthToken = (token: string | null) => {
   if (token) {
@@ -36,9 +35,10 @@ API.interceptors.response.use(
       if (refresh) {
         try {
           console.log("♻️ Refreshing expired token...");
-          const res = await axios.post(`${API_BASE_URL}/api/auth/refresh/`, {
-            refresh,
-          });
+          const res = await axios.post(
+            `${API_BASE_URL.replace(/\/$/, "")}/api/auth/refresh/`,
+            { refresh }
+          );
 
           const newAccess = res.data.access;
 

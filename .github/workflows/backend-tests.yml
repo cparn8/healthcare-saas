@@ -1,0 +1,54 @@
+name: Backend Test Suite
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: healthcare
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend container
+        run: |
+          docker build -t healthcare-backend ./backend
+
+      - name: Run backend tests
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/healthcare
+          DJANGO_SETTINGS_MODULE: core.settings
+          PYTEST_RUNNING: 1
+        run: |
+          docker run \
+            --network=host \
+            -e DATABASE_URL \
+            -e DJANGO_SETTINGS_MODULE \
+            -e PYTEST_RUNNING \
+            healthcare-backend \
+            sh -c "
+              python manage.py migrate &&
+              pytest
+            "

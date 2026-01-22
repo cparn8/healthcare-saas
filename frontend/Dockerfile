@@ -1,16 +1,18 @@
-# Use official Node image
-FROM node:20
-
+# Build stage
+FROM node:20-alpine AS build
 WORKDIR /app
-
-# Copy package.json first
 COPY package*.json ./
-
-# Install dependencies
-RUN npm install
-
-# Copy the rest of the code
+RUN npm ci
 COPY . .
+RUN npm run build
 
-# Start React
-CMD ["npm", "start"]
+# Run stage
+FROM nginx:alpine
+COPY --from=build /app/build /usr/share/nginx/html
+
+# SPA routing support
+RUN rm /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
