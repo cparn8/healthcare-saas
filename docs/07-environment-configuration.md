@@ -93,7 +93,6 @@ Typical values include:
 
 - `DEBUG=1`
 - `DJANGO_SECRET_KEY=dev-only-secret`
-- `DATABASE_URL=postgres://...`
 - `ALLOWED_HOSTS=*`
 
 Secrets in this file are **never used in production**.

@@ -38,13 +38,21 @@ jobs:
 
       - name: Run backend tests
         env:
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/healthcare
+          POSTGRES_DB: healthcare
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
           DJANGO_SETTINGS_MODULE: core.settings
           PYTEST_RUNNING: 1
         run: |
           docker run \
             --network=host \
-            -e DATABASE_URL \
+            -e POSTGRES_DB \
+            -e POSTGRES_USER \
+            -e POSTGRES_PASSWORD \
+            -e POSTGRES_HOST \
+            -e POSTGRES_PORT \
             -e DJANGO_SETTINGS_MODULE \
             -e PYTEST_RUNNING \
             healthcare-backend \
